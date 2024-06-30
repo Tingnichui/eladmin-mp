@@ -9,7 +9,22 @@
         <label class="el-form-item-label">描述</label>
         <el-input v-model="query.courseDescribe" clearable placeholder="描述" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
         <label class="el-form-item-label">类型</label>
-        <el-input v-model="query.courseType" clearable placeholder="类型" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+        <el-select
+          v-model="query.courseType"
+          clearable
+          size="small"
+          placeholder="类型"
+          class="filter-item"
+          style="width: 90px"
+          @change="crud.toQuery"
+        >
+          <el-option
+            v-for="item in dict.jljs_course_type"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
         <date-range-picker
           v-model="query.courseUsePeriodDays"
           start-placeholder="courseUsePeriodDaysStart"
@@ -33,19 +48,19 @@
             <el-input v-model="form.courseName" style="width: 370px;" />
           </el-form-item>
           <el-form-item label="价格" prop="coursePrice">
-            <el-input v-model="form.coursePrice" style="width: 370px;" />
+            <el-input v-model="form.coursePrice" type="number" style="width: 370px;" />
           </el-form-item>
           <el-form-item label="描述">
             <el-input v-model="form.courseDescribe" style="width: 370px;" />
           </el-form-item>
           <el-form-item label="类型" prop="courseType">
-            未设置字典，请手动设置 Radio
+            <el-radio v-for="item in dict.jljs_course_type" :key="item.id" v-model="form.courseType" :label="item.value">{{ item.label }}</el-radio>
           </el-form-item>
           <el-form-item label="使用期限" prop="courseUsePeriodDays">
-            <el-input v-model="form.courseUsePeriodDays" style="width: 370px;" />
+            <el-input v-model="form.courseUsePeriodDays" type="number" style="width: 370px;" />
           </el-form-item>
           <el-form-item label="可使用数量" prop="courseAvailableQuantity">
-            <el-input v-model="form.courseAvailableQuantity" style="width: 370px;" />
+            <el-input v-model="form.courseAvailableQuantity" type="number" style="width: 370px;" />
           </el-form-item>
         </el-form>
         <div slot="footer" class="dialog-footer">
@@ -59,7 +74,11 @@
         <el-table-column prop="courseName" label="名称" />
         <el-table-column prop="coursePrice" label="价格" />
         <el-table-column prop="courseDescribe" label="描述" />
-        <el-table-column prop="courseType" label="类型" />
+        <el-table-column prop="courseType" label="类型">
+          <template slot-scope="scope">
+            {{ dict.label.jljs_course_type[scope.row.courseType] }}
+          </template>
+        </el-table-column>
         <el-table-column prop="courseUsePeriodDays" label="使用期限" />
         <el-table-column prop="courseAvailableQuantity" label="可使用数量" />
         <el-table-column v-if="checkPer(['admin','jljsCourseInfo:edit','jljsCourseInfo:del'])" label="操作" width="150px" align="center">
@@ -90,6 +109,7 @@ export default {
   name: 'JljsCourseInfo',
   components: { pagination, crudOperation, rrOperation, udOperation },
   mixins: [presenter(), header(), form(defaultForm), crud()],
+  dicts: ['jljs_course_type'],
   cruds() {
     return CRUD({ title: '课程管理', url: 'api/jljsCourseInfo', idField: 'id', sort: 'id,desc', crudMethod: { ...crudJljsCourseInfo }})
   },

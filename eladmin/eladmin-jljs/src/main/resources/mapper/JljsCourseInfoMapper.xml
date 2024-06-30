@@ -24,7 +24,7 @@
         select
         <include refid="Base_Column_List"/>
         from jljs_course_info
-        <where>
+        where del_flag = '0'
             <if test="criteria.courseName != null">
                 and course_name like concat('%',#{criteria.courseName},'%')
             </if>
@@ -40,7 +40,6 @@
             <if test="criteria.courseAvailableQuantity != null and criteria.courseAvailableQuantity.size() > 0">
                 AND course_available_quantity BETWEEN #{criteria.courseAvailableQuantity[0]} AND #{criteria.courseAvailableQuantity[1]}
             </if>
-        </where>
         order by id desc
     </select>
 </mapper>

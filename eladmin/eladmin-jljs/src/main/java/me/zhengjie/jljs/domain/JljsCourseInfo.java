@@ -15,15 +15,16 @@
 */
 package me.zhengjie.jljs.domain;
 
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import lombok.Data;
 import cn.hutool.core.bean.BeanUtil;
 import io.swagger.annotations.ApiModelProperty;
 import cn.hutool.core.bean.copier.CopyOptions;
-import java.sql.Timestamp;
 import java.math.BigDecimal;
 import java.io.Serializable;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import me.zhengjie.base.BaseEntity;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -35,47 +36,37 @@ import javax.validation.constraints.NotNull;
 **/
 @Data
 @TableName("jljs_course_info")
-public class JljsCourseInfo implements Serializable {
+public class JljsCourseInfo extends BaseEntity implements Serializable {
 
     @TableId(value = "id")
+    @NotNull(groups = Update.class)
     @ApiModelProperty(value = "主键")
     private String id;
 
-    @ApiModelProperty(value = "创建人id")
-    private String createBy;
-
-    @ApiModelProperty(value = "创建时间")
-    private Timestamp createTime;
-
-    @ApiModelProperty(value = "更新人id")
-    private String updateBy;
-
-    @ApiModelProperty(value = "更新时间")
-    private Timestamp updateTime;
-
+    @TableLogic(value = "0", delval = "1")
     @ApiModelProperty(value = "是否删除;0未删除；秒级时间戳 已删除")
     private String delFlag;
 
-    @NotBlank
+    @NotBlank(message = "名称不能为空")
     @ApiModelProperty(value = "名称")
     private String courseName;
 
-    @NotNull
+    @NotNull(message = "价格不能为空")
     @ApiModelProperty(value = "价格")
     private BigDecimal coursePrice;
 
     @ApiModelProperty(value = "描述")
     private String courseDescribe;
 
-    @NotBlank
+    @NotBlank(message = "类型不能为空")
     @ApiModelProperty(value = "类型")
     private String courseType;
 
-    @NotNull
+    @NotNull(message = "使用期限不能为空")
     @ApiModelProperty(value = "使用期限")
     private Integer courseUsePeriodDays;
 
-    @NotNull
+    @NotNull(message = "可使用数量不能为空")
     @ApiModelProperty(value = "可使用数量")
     private Integer courseAvailableQuantity;
 
