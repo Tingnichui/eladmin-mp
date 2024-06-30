@@ -23,7 +23,7 @@
         select
         <include refid="Base_Column_List"/>
         from jljs_member_info
-        <where>
+        where del_flag = '0'
             <if test="criteria.memberName != null">
                 and member_name like concat('%',#{criteria.memberName},'%')
             </if>
@@ -39,7 +39,6 @@
             <if test="criteria.memberAge != null and criteria.memberAge.size() > 0">
                 AND member_age BETWEEN #{criteria.memberAge[0]} AND #{criteria.memberAge[1]}
             </if>
-        </where>
         order by id desc
     </select>
 </mapper>

@@ -7,7 +7,22 @@
         <label class="el-form-item-label">姓名</label>
         <el-input v-model="query.memberName" clearable placeholder="姓名" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
         <label class="el-form-item-label">性别</label>
-        <el-input v-model="query.memberGender" clearable placeholder="性别" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+        <el-select
+          v-model="query.memberGender"
+          clearable
+          size="small"
+          placeholder="性别"
+          class="filter-item"
+          style="width: 90px"
+          @change="crud.toQuery"
+        >
+          <el-option
+            v-for="item in dict.jljs_member_gender"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
         <label class="el-form-item-label">手机号</label>
         <el-input v-model="query.memberPhoneNum" clearable placeholder="手机号" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
         <label class="el-form-item-label">生日</label>
@@ -32,7 +47,7 @@
             <el-radio v-for="item in dict.jljs_member_gender" :key="item.id" v-model="form.memberGender" :label="item.value">{{ item.label }}</el-radio>
           </el-form-item>
           <el-form-item label="年龄">
-            <el-input v-model="form.memberAge" style="width: 370px;" />
+            <el-input v-model="form.memberAge" type="number" style="width: 370px;" />
           </el-form-item>
           <el-form-item label="手机号">
             <el-input v-model="form.memberPhoneNum" style="width: 370px;" />
