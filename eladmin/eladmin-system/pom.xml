@@ -86,6 +86,18 @@
             <artifactId>oshi-core</artifactId>
             <version>6.1.4</version>
         </dependency>
+
+        <dependency>
+            <groupId>me.zhengjie</groupId>
+            <artifactId>eladmin-jljs</artifactId>
+            <version>1.1</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>me.zhengjie</groupId>
+                    <artifactId>eladmin-tools</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
     </dependencies>
 
     <!-- 打包 -->

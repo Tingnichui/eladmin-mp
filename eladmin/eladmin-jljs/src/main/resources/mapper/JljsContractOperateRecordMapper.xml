@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="me.zhengjie.jljs.mapper.JljsContractOperateRecordMapper">
+    <resultMap id="BaseResultMap" type="me.zhengjie.jljs.domain.JljsContractOperateRecord">
+        <id column="id" property="id"/>
+        <result column="create_by" property="createBy"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_by" property="updateBy"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="del_flag" property="delFlag"/>
+        <result column="contract_info_id" property="contractInfoId"/>
+        <result column="contract_operate_type" property="contractOperateType"/>
+        <result column="interval_days" property="intervalDays"/>
+        <result column="operate_begin_date" property="operateBeginDate"/>
+        <result column="operate_end_date" property="operateEndDate"/>
+        <result column="operate_reason" property="operateReason"/>
+        <result column="operate_amount" property="operateAmount"/>
+        <result column="operate_status" property="operateStatus"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, create_by, create_time, update_by, update_time, del_flag, contract_info_id, contract_operate_type, interval_days, operate_begin_date, operate_end_date, operate_reason, operate_amount, operate_status
+    </sql>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List"/>
+        from jljs_contract_operate_record
+        <where>
+            <if test="criteria.contractOperateType != null">
+                and contract_operate_type = #{criteria.contractOperateType}
+            </if>
+            <if test="criteria.operateStatus != null">
+                and operate_status = #{criteria.operateStatus}
+            </if>
+            <if test="criteria.operateBeginDate != null and criteria.operateBeginDate.size() > 0">
+                AND operate_begin_date BETWEEN #{criteria.operateBeginDate[0]} AND #{criteria.operateBeginDate[1]}
+            </if>
+        </where>
+        order by id desc
+    </select>
+</mapper>

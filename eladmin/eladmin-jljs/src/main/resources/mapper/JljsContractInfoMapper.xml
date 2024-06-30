@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="me.zhengjie.jljs.mapper.JljsContractInfoMapper">
+    <resultMap id="BaseResultMap" type="me.zhengjie.jljs.domain.JljsContractInfo">
+        <id column="id" property="id"/>
+        <result column="create_by" property="createBy"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_by" property="updateBy"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="del_flag" property="delFlag"/>
+        <result column="member_id" property="memberId"/>
+        <result column="belong_coach_id" property="belongCoachId"/>
+        <result column="contract_amount" property="contractAmount"/>
+        <result column="contract_status" property="contractStatus"/>
+        <result column="use_begin_date" property="useBeginDate"/>
+        <result column="use_end_date" property="useEndDate"/>
+        <result column="buy_time" property="buyTime"/>
+        <result column="contract_remark" property="contractRemark"/>
+        <result column="actual_charge_amount" property="actualChargeAmount"/>
+        <result column="course_info_id" property="courseInfoId"/>
+        <result column="course_type" property="courseType"/>
+        <result column="course_use_period_days" property="courseUsePeriodDays"/>
+        <result column="course_available_quantity" property="courseAvailableQuantity"/>
+        <result column="course_remain_quantity" property="courseRemainQuantity"/>
+        <result column="course_use_quantity" property="courseUseQuantity"/>
+        <result column="course_total_stop_days" property="courseTotalStopDays"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, create_by, create_time, update_by, update_time, del_flag, member_id, belong_coach_id, contract_amount, contract_status, use_begin_date, use_end_date, buy_time, contract_remark, actual_charge_amount, course_info_id, course_type, course_use_period_days, course_available_quantity, course_remain_quantity, course_use_quantity, course_total_stop_days
+    </sql>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List"/>
+        from jljs_contract_info
+        <where>
+            <if test="criteria.contractStatus != null">
+                and contract_status = #{criteria.contractStatus}
+            </if>
+        </where>
+        order by id desc
+    </select>
+</mapper>
