@@ -15,7 +15,7 @@
       <!--表单组件-->
       <el-dialog :close-on-click-modal="false" :before-close="crud.cancelCU" :visible.sync="crud.status.cu > 0" :title="crud.status.title" width="500px">
         <el-form ref="form" :model="form" :rules="rules" size="small" label-width="80px">
-          <el-form-item label="教练姓名">
+          <el-form-item label="教练姓名" prop="coachName">
             <el-input v-model="form.coachName" style="width: 370px;" />
           </el-form-item>
           <el-form-item label="电话号码">
@@ -71,6 +71,9 @@ export default {
         del: ['admin', 'jljsCoachInfo:del']
       },
       rules: {
+        coachName: [
+          { required: true, message: '教练姓名不能为空', trigger: 'blur' }
+        ]
       },
       queryTypeOptions: [
         { key: 'coachName', display_name: '教练姓名' },

@@ -15,6 +15,7 @@
 */
 package me.zhengjie.jljs.domain;
 
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import lombok.Data;
 import cn.hutool.core.bean.BeanUtil;
 import io.swagger.annotations.ApiModelProperty;
@@ -23,6 +24,10 @@ import java.sql.Timestamp;
 import java.io.Serializable;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import me.zhengjie.base.BaseEntity;
+
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 
 /**
 * @description /
@@ -31,27 +36,18 @@ import com.baomidou.mybatisplus.annotation.TableName;
 **/
 @Data
 @TableName("jljs_coach_info")
-public class JljsCoachInfo implements Serializable {
+public class JljsCoachInfo extends BaseEntity implements Serializable {
 
     @TableId(value = "id")
+    @NotNull(groups = Update.class)
     @ApiModelProperty(value = "主键")
     private String id;
 
-    @ApiModelProperty(value = "创建人id")
-    private String createBy;
-
-    @ApiModelProperty(value = "创建时间")
-    private Timestamp createTime;
-
-    @ApiModelProperty(value = "更新人id")
-    private String updateBy;
-
-    @ApiModelProperty(value = "更新时间")
-    private Timestamp updateTime;
-
+    @TableLogic(value = "0", delval = "1")
     @ApiModelProperty(value = "是否删除;0未删除；秒级时间戳 已删除")
     private String delFlag;
 
+    @NotBlank(message = "教练姓名不能为空")
     @ApiModelProperty(value = "教练姓名")
     private String coachName;
 
