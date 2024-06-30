@@ -23,5 +23,8 @@ import lombok.Data;
 **/
 @Data
 public class JljsContractInfoQueryCriteria{
+    private String memberId;
+    private String belongCoachId;
     private String contractStatus;
+    private String contractRemark;
 }

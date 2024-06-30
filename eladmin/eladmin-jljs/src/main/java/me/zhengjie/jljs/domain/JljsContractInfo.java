@@ -15,6 +15,7 @@
 */
 package me.zhengjie.jljs.domain;
 
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import lombok.Data;
 import cn.hutool.core.bean.BeanUtil;
 import io.swagger.annotations.ApiModelProperty;
@@ -24,8 +25,10 @@ import java.math.BigDecimal;
 import java.io.Serializable;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import me.zhengjie.base.BaseEntity;
 
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 
 /**
 * @description /
@@ -34,76 +37,71 @@ import javax.validation.constraints.NotBlank;
 **/
 @Data
 @TableName("jljs_contract_info")
-public class JljsContractInfo implements Serializable {
+public class JljsContractInfo extends BaseEntity implements Serializable {
 
     @TableId(value = "id")
+    @NotNull(groups = BaseEntity.Update.class)
     @ApiModelProperty(value = "主键")
     private String id;
 
-    @ApiModelProperty(value = "创建人id")
-    private String createBy;
-
-    @ApiModelProperty(value = "创建时间")
-    private Timestamp createTime;
-
-    @ApiModelProperty(value = "更新人id")
-    private String updateBy;
-
-    @ApiModelProperty(value = "更新时间")
-    private Timestamp updateTime;
-
+    @TableLogic(value = "0", delval = "1")
     @ApiModelProperty(value = "是否删除;0未删除；秒级时间戳 已删除")
     private String delFlag;
 
     @NotBlank
-    @ApiModelProperty(value = "会员id")
+    @ApiModelProperty(value = "会员")
     private String memberId;
 
     @NotBlank
-    @ApiModelProperty(value = "开单教练id")
+    @ApiModelProperty(value = "开单教练")
     private String belongCoachId;
 
+    @NotNull
     @ApiModelProperty(value = "合同金额")
     private BigDecimal contractAmount;
 
-    @ApiModelProperty(value = "合同状态;1 未生效；2生效中；3完成；4暂停；5终止；")
+    @ApiModelProperty(value = "合同状态")
     private String contractStatus;
 
-    @ApiModelProperty(value = "使用开始日期")
+    @ApiModelProperty(value = "开始日期")
     private Timestamp useBeginDate;
 
-    @ApiModelProperty(value = "使用结束日期")
+    @ApiModelProperty(value = "结束日期")
     private Timestamp useEndDate;
 
     @ApiModelProperty(value = "购买日期")
     private Timestamp buyTime;
 
-    @ApiModelProperty(value = "合同备注")
+    @ApiModelProperty(value = "备注")
     private String contractRemark;
 
+    @NotNull
     @ApiModelProperty(value = "实际收取金额")
     private BigDecimal actualChargeAmount;
 
     @NotBlank
-    @ApiModelProperty(value = "课程id")
+    @ApiModelProperty(value = "课程")
     private String courseInfoId;
 
-    @ApiModelProperty(value = "课程类型；1按次消费；2按天计时；")
+    @NotBlank
+    @ApiModelProperty(value = "课程类型")
     private String courseType;
 
-    @ApiModelProperty(value = "课程使用期限")
+    @NotNull
+    @ApiModelProperty(value = "使用期限")
     private Integer courseUsePeriodDays;
 
-    @ApiModelProperty(value = "课程可使用数量")
+    @NotNull
+    @ApiModelProperty(value = "可使用数量")
     private Integer courseAvailableQuantity;
 
-    @ApiModelProperty(value = "课程剩余数量")
+    @ApiModelProperty(value = "剩余数量")
     private Integer courseRemainQuantity;
 
-    @ApiModelProperty(value = "课程已使用数量")
+    @ApiModelProperty(value = "已使用数量")
     private Integer courseUseQuantity;
 
-    @ApiModelProperty(value = "课程总暂停天数")
+    @ApiModelProperty(value = "总暂停天数")
     private Integer courseTotalStopDays;
 
     public void copy(JljsContractInfo source){

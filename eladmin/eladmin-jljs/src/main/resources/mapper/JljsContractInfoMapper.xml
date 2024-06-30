@@ -34,11 +34,19 @@
         select
         <include refid="Base_Column_List"/>
         from jljs_contract_info
-        <where>
+        where del_flag = '0'
+            <if test="criteria.memberId != null">
+                and member_id = #{criteria.memberId}
+            </if>
+            <if test="criteria.belongCoachId != null">
+                and belong_coach_id = #{criteria.belongCoachId}
+            </if>
             <if test="criteria.contractStatus != null">
                 and contract_status = #{criteria.contractStatus}
             </if>
-        </where>
+            <if test="criteria.contractRemark != null">
+                and contract_remark like concat('%',#{criteria.contractRemark},'%')
+            </if>
         order by id desc
     </select>
 </mapper>
