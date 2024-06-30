@@ -24,4 +24,15 @@ export function edit(data) {
   })
 }
 
-export default { add, edit, del }
+export function listAllMember(params) {
+  return request({
+    url: 'api/jljsMemberInfo',
+    method: 'get',
+    params: {
+      size: -1,
+      ...params
+    }
+  })
+}
+
+export default { add, edit, del, listAllMember }

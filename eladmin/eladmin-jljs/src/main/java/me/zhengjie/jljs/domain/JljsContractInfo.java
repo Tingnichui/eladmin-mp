@@ -15,6 +15,7 @@
 */
 package me.zhengjie.jljs.domain;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import lombok.Data;
 import cn.hutool.core.bean.BeanUtil;
@@ -52,9 +53,17 @@ public class JljsContractInfo extends BaseEntity implements Serializable {
     @ApiModelProperty(value = "会员")
     private String memberId;
 
+    @TableField(exist = false)
+    @ApiModelProperty(value = "会员姓名")
+    private String memberName;
+
     @NotBlank
     @ApiModelProperty(value = "开单教练")
     private String belongCoachId;
+
+    @TableField(exist = false)
+    @ApiModelProperty(value = "开单教练姓名")
+    private String belongCoachName;
 
     @NotNull
     @ApiModelProperty(value = "合同金额")

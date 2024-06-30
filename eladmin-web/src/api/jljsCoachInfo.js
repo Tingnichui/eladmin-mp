@@ -24,4 +24,14 @@ export function edit(data) {
   })
 }
 
-export default { add, edit, del }
+export function listAllCoach(params) {
+  return request({
+    url: 'api/jljsCoachInfo',
+    method: 'get',
+    params: {
+      size: -1,
+      ...params
+    }
+  })
+}
+export default { add, edit, del, listAllCoach }
