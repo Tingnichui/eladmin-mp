@@ -57,6 +57,23 @@
             :value="item.value"
           />
         </el-select>
+        <label class="el-form-item-label">课程</label>
+        <el-select
+          v-model="query.courseInfoId"
+          clearable
+          size="small"
+          placeholder="课程"
+          class="filter-item"
+          style="width: 90px"
+          @change="crud.toQuery"
+        >
+          <el-option
+            v-for="item in courseList"
+            :key="item.id"
+            :label="item.courseName"
+            :value="item.id"
+          />
+        </el-select>
         <label class="el-form-item-label">备注</label>
         <el-input v-model="query.contractRemark" clearable placeholder="备注" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
         <rrOperation :crud="crud" />
@@ -104,34 +121,94 @@
         <el-table-column type="selection" width="55" />
         <el-table-column prop="memberName" label="会员" />
         <el-table-column prop="belongCoachName" label="开单教练" />
-        <el-table-column prop="contractAmount" label="合同金额" />
+        <el-table-column prop="courseName" label="课程" />
         <el-table-column prop="contractStatus" label="合同状态">
           <template slot-scope="scope">
             {{ dict.label.jljs_contract_status[scope.row.contractStatus] }}
           </template>
         </el-table-column>
+        <el-table-column
+          label="已收/总计"
+        >
+          <template #default="scope">
+            <span
+              :style="scope.row.actualChargeAmount/scope.row.contractAmount === 0 ? 'color:#f56c6c' :
+                (scope.row.actualChargeAmount/scope.row.contractAmount === 1 ? 'color:#67c23a' : 'color:#FF9800')"
+            >
+              {{ scope.row.actualChargeAmount }} / {{ scope.row.contractAmount }}
+            </span>
+          </template>
+        </el-table-column>
+        <!-- <el-table-column
+            label="起始日期"
+        >
+          <template #default="scope">
+            <div v-if="scope.row.useBeginDate && scope.row.useEndDate">
+              {{
+                `${scope.row.useBeginDate} ~ ${scope.row.useEndDate}`
+              }}
+            </div>
+            <div v-else>
+              -
+            </div>
+          </template>
+        </el-table-column> -->
+        <!-- <el-table-column prop="actualChargeAmount" label="实际收取金额" /> -->
+        <!-- <el-table-column prop="contractAmount" label="合同金额" /> -->
         <el-table-column prop="useBeginDate" label="开始日期" />
         <el-table-column prop="useEndDate" label="结束日期" />
-        <el-table-column prop="buyTime" label="购买日期" />
+        <el-table-column
+          label="剩余数量"
+          prop="courseRemainQuantity"
+        >
+          <template #default="scope">
+            <div v-if="scope.row.courseRemainQuantity || scope.row.courseRemainQuantity === 0">
+              {{ `${scope.row.courseRemainQuantity}${scope.row.courseType === '1' ? '次' : '天'}` }}
+            </div>
+            <div v-else>
+              -
+            </div>
+          </template>
+        </el-table-column>
+        <!-- <el-table-column prop="buyTime" label="购买日期" /> -->
         <el-table-column prop="contractRemark" label="备注" />
-        <el-table-column prop="actualChargeAmount" label="实际收取金额" />
-        <el-table-column prop="courseInfoId" label="课程" />
-        <el-table-column prop="courseType" label="课程类型">
+        <!-- <el-table-column prop="courseType" label="课程类型">
           <template slot-scope="scope">
             {{ dict.label.jljs_course_type[scope.row.courseType] }}
           </template>
-        </el-table-column>
-        <el-table-column prop="courseUsePeriodDays" label="使用期限" />
-        <el-table-column prop="courseAvailableQuantity" label="可使用数量" />
-        <el-table-column prop="courseRemainQuantity" label="剩余数量" />
-        <el-table-column prop="courseUseQuantity" label="已使用数量" />
+        </el-table-column> -->
+        <!-- <el-table-column prop="courseUsePeriodDays" label="使用期限" /> -->
+        <!-- <el-table-column prop="courseAvailableQuantity" label="可使用数量" /> -->
+        <!-- <el-table-column prop="courseRemainQuantity" label="剩余数量" /> -->
+        <!-- <el-table-column prop="courseUseQuantity" label="已使用数量" /> -->
         <el-table-column prop="courseTotalStopDays" label="总暂停天数" />
         <el-table-column v-if="checkPer(['admin','jljsContractInfo:edit','jljsContractInfo:del'])" label="操作" width="150px" align="center">
           <template slot-scope="scope">
-            <udOperation
-              :data="scope.row"
-              :permission="permission"
-            />
+            <el-button v-permission="['admin','jljsContractInfo:edit']" size="mini" style="margin-right: 3px;" type="text" @click="crud.toEdit(scope.row)">编辑</el-button>
+            <el-dropdown v-permission="['admin','jljsContractInfo:del']" style="margin-left: -2px">
+              <span style="cursor: pointer;color: #1890ff;font-size: 12px;">
+                操作
+              </span>
+              <el-dropdown-menu slot="dropdown">
+                <el-dropdown-item v-if="scope.row.contractStatus === '1'">开卡</el-dropdown-item>
+                <el-dropdown-item v-if="scope.row.contractStatus === '2' || scope.row.contractStatus === '4'">暂停</el-dropdown-item>
+                <el-dropdown-item v-if="scope.row.contractStatus !== '5'">退课</el-dropdown-item>
+                <!-- <el-dropdown-item>补缴</el-dropdown-item> -->
+              </el-dropdown-menu>
+            </el-dropdown>
+            <el-popover
+              :ref="scope.row.id"
+              v-permission="['admin','jljsContractInfo:del']"
+              placement="top"
+              width="200"
+            >
+              <p>确定删除该合同吗？</p>
+              <div style="text-align: right; margin: 0">
+                <el-button size="mini" type="text" @click="$refs[scope.row.id].doClose()">取消</el-button>
+                <el-button :loading="delLoading" type="primary" size="mini" @click="delMethod(scope.row.id)">确定</el-button>
+              </div>
+              <el-button slot="reference" type="text" size="mini">删除</el-button>
+            </el-popover>
           </template>
         </el-table-column>
       </el-table>
@@ -146,15 +223,15 @@ import crudJljsContractInfo from '@/api/jljsContractInfo'
 import CRUD, { presenter, header, form, crud } from '@crud/crud'
 import rrOperation from '@crud/RR.operation'
 import crudOperation from '@crud/CRUD.operation'
-import udOperation from '@crud/UD.operation'
 import pagination from '@crud/Pagination'
 import { listAllMember } from '@/api/jljsMemberInfo'
 import { listAllCoach } from '@/api/jljsCoachInfo'
+import { listAllCourse } from '../../../api/jljsCourseInfo'
 
 const defaultForm = { id: null, createBy: null, createTime: null, updateBy: null, updateTime: null, delFlag: null, memberId: null, belongCoachId: null, contractAmount: null, contractStatus: null, useBeginDate: null, useEndDate: null, buyTime: null, contractRemark: null, actualChargeAmount: null, courseInfoId: null, courseType: null, courseUsePeriodDays: null, courseAvailableQuantity: null, courseRemainQuantity: null, courseUseQuantity: null, courseTotalStopDays: null }
 export default {
   name: 'JljsContractInfo',
-  components: { pagination, crudOperation, rrOperation, udOperation },
+  components: { pagination, crudOperation, rrOperation },
   mixins: [presenter(), header(), form(defaultForm), crud()],
   dicts: ['jljs_contract_status', 'jljs_course_type'],
   cruds() {
@@ -199,13 +276,16 @@ export default {
         { key: 'contractStatus', display_name: '合同状态' },
         { key: 'contractRemark', display_name: '备注' }
       ],
+      delLoading: false,
       memberList: [],
-      coachList: []
+      coachList: [],
+      courseList: []
     }
   },
   mounted() {
     this.refreshMemberList()
     this.refreshCoachList()
+    this.refreshCourseList()
   },
   methods: {
     // 钩子：在获取表格数据之前执行，false 则代表不获取数据
@@ -220,6 +300,24 @@ export default {
     refreshCoachList() {
       listAllCoach().then(data => {
         this.coachList = data.content
+      })
+    },
+    refreshCourseList() {
+      listAllCourse().then(data => {
+        this.courseList = data.content
+      })
+    },
+    delMethod(id) {
+      this.delLoading = true
+      crudJljsContractInfo.del([id]).then(() => {
+        this.delLoading = false
+        this.$refs[id].doClose()
+        this.crud.dleChangePage(1)
+        this.crud.delSuccessNotify()
+        this.crud.toQuery()
+      }).catch(() => {
+        this.delLoading = false
+        this.$refs[id].doClose()
       })
     }
   }

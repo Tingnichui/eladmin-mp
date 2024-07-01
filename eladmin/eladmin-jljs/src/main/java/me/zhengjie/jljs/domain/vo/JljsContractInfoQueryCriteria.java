@@ -27,4 +27,5 @@ public class JljsContractInfoQueryCriteria{
     private String belongCoachId;
     private String contractStatus;
     private String contractRemark;
+    private String courseInfoId;
 }

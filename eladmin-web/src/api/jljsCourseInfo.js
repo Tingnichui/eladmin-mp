@@ -24,4 +24,15 @@ export function edit(data) {
   })
 }
 
+export function listAllCourse(params) {
+  return request({
+    url: 'api/jljsCourseInfo',
+    method: 'get',
+    params: {
+      size: -1,
+      ...params
+    }
+  })
+}
+
 export default { add, edit, del }

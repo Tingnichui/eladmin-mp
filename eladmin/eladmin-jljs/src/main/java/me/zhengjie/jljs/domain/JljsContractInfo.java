@@ -89,8 +89,12 @@ public class JljsContractInfo extends BaseEntity implements Serializable {
     private BigDecimal actualChargeAmount;
 
     @NotBlank
-    @ApiModelProperty(value = "课程")
+    @ApiModelProperty(value = "课程id")
     private String courseInfoId;
+
+    @TableField(exist = false)
+    @ApiModelProperty(value = "课程名称")
+    private String courseName;
 
     @NotBlank
     @ApiModelProperty(value = "课程类型")
