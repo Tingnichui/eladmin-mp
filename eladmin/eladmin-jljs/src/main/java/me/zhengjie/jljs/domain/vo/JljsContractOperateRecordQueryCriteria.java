@@ -16,16 +16,14 @@
 package me.zhengjie.jljs.domain.vo;
 
 import lombok.Data;
-import java.sql.Timestamp;
-import java.util.List;
 
 /**
 * @author genghui
-* @date 2024-06-30
+* @date 2024-07-02
 **/
 @Data
 public class JljsContractOperateRecordQueryCriteria{
+    private String contractInfoId;
     private String contractOperateType;
     private String operateStatus;
-    private List<Timestamp> operateBeginDate;
 }

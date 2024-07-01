@@ -37,7 +37,7 @@ import me.zhengjie.utils.PageResult;
 /**
 * @description 服务实现
 * @author genghui
-* @date 2024-06-30
+* @date 2024-07-02
 **/
 @Service
 @RequiredArgsConstructor
@@ -92,7 +92,7 @@ public class JljsContractOperateRecordServiceImpl extends ServiceImpl<JljsContra
             map.put("结束时间", jljsContractOperateRecord.getOperateEndDate());
             map.put("操作原因", jljsContractOperateRecord.getOperateReason());
             map.put("操作金额", jljsContractOperateRecord.getOperateAmount());
-            map.put("操作状态；1成功2撤销", jljsContractOperateRecord.getOperateStatus());
+            map.put("状态", jljsContractOperateRecord.getOperateStatus());
             list.add(map);
         }
         FileUtil.downloadExcel(list, response);

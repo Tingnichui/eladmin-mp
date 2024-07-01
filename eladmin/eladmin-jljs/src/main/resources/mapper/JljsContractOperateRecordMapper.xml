@@ -16,6 +16,8 @@
         <result column="operate_reason" property="operateReason"/>
         <result column="operate_amount" property="operateAmount"/>
         <result column="operate_status" property="operateStatus"/>
+        <result column="member_name" property="memberName"/>
+        <result column="course_name" property="courseName"/>
     </resultMap>
 
     <sql id="Base_Column_List">
@@ -24,19 +26,36 @@
 
     <select id="findAll" resultMap="BaseResultMap">
         select
-        <include refid="Base_Column_List"/>
-        from jljs_contract_operate_record
-        <where>
+            t1.id,
+            t1.create_by,
+            t1.create_time,
+            t1.update_by,
+            t1.update_time,
+            t1.del_flag,
+            t1.contract_info_id,
+            t1.contract_operate_type,
+            t1.interval_days,
+            t1.operate_begin_date,
+            t1.operate_end_date,
+            t1.operate_reason,
+            t1.operate_amount,
+            t1.operate_status,
+            t3.member_name,
+            t4.course_name
+        from jljs_contract_operate_record t1
+            left join jljs_contract_info t2 on t1.contract_info_id = t2.id
+            left join jljs_member_info t3 on t2.member_id = t3.id
+            left join jljs_course_info t4 on t2.course_info_id = t4.id
+        where t1.del_flag = '0'
+            <if test="criteria.contractInfoId != null">
+                and t1.contract_info_id = #{criteria.contractInfoId}
+            </if>
             <if test="criteria.contractOperateType != null">
-                and contract_operate_type = #{criteria.contractOperateType}
+                and t1.contract_operate_type = #{criteria.contractOperateType}
             </if>
             <if test="criteria.operateStatus != null">
-                and operate_status = #{criteria.operateStatus}
+                and t1.operate_status = #{criteria.operateStatus}
             </if>
-            <if test="criteria.operateBeginDate != null and criteria.operateBeginDate.size() > 0">
-                AND operate_begin_date BETWEEN #{criteria.operateBeginDate[0]} AND #{criteria.operateBeginDate[1]}
-            </if>
-        </where>
         order by id desc
     </select>
 </mapper>
