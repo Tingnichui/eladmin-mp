@@ -28,7 +28,7 @@ import me.zhengjie.utils.PageResult;
 /**
 * @description 服务接口
 * @author genghui
-* @date 2024-06-30
+* @date 2024-07-02
 **/
 public interface JljsClassRecordService extends IService<JljsClassRecord> {
 

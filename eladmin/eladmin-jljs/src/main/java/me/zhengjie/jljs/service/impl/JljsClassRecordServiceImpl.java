@@ -15,6 +15,7 @@
 */
 package me.zhengjie.jljs.service.impl;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import me.zhengjie.jljs.domain.JljsClassRecord;
 import me.zhengjie.utils.FileUtil;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +38,7 @@ import me.zhengjie.utils.PageResult;
 /**
 * @description 服务实现
 * @author genghui
-* @date 2024-06-30
+* @date 2024-07-02
 **/
 @Service
 @RequiredArgsConstructor

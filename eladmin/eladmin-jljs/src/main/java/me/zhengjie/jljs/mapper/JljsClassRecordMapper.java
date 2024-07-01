@@ -26,7 +26,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 /**
 * @author genghui
-* @date 2024-06-30
+* @date 2024-07-02
 **/
 @Mapper
 public interface JljsClassRecordMapper extends BaseMapper<JljsClassRecord> {

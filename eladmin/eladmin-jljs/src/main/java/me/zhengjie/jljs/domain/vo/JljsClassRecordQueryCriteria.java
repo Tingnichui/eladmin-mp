@@ -19,9 +19,12 @@ import lombok.Data;
 
 /**
 * @author genghui
-* @date 2024-06-30
+* @date 2024-07-02
 **/
 @Data
 public class JljsClassRecordQueryCriteria{
     private String coachId;
+    private String memberId;
+    private String contractInfoId;
+    private String classRemark;
 }

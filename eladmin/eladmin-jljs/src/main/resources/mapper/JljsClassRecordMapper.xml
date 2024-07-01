@@ -24,11 +24,19 @@
         select
         <include refid="Base_Column_List"/>
         from jljs_class_record
-        <where>
+        where del_flag = '1'
             <if test="criteria.coachId != null">
                 and coach_id = #{criteria.coachId}
             </if>
-        </where>
+            <if test="criteria.memberId != null">
+                and member_id = #{criteria.memberId}
+            </if>
+            <if test="criteria.contractInfoId != null">
+                and contract_info_id = #{criteria.contractInfoId}
+            </if>
+            <if test="criteria.classRemark != null">
+                and class_remark like concat('%',#{criteria.classRemark},'%')
+            </if>
         order by id desc
     </select>
 </mapper>

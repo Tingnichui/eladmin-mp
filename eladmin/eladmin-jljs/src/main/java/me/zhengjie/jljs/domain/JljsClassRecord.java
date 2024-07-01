@@ -15,6 +15,7 @@
 */
 package me.zhengjie.jljs.domain;
 
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import lombok.Data;
 import cn.hutool.core.bean.BeanUtil;
 import io.swagger.annotations.ApiModelProperty;
@@ -23,50 +24,45 @@ import java.sql.Timestamp;
 import java.io.Serializable;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import me.zhengjie.base.BaseEntity;
 
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 
 /**
 * @description /
 * @author genghui
-* @date 2024-06-30
+* @date 2024-07-02
 **/
 @Data
 @TableName("jljs_class_record")
-public class JljsClassRecord implements Serializable {
+public class JljsClassRecord extends BaseEntity implements Serializable {
 
     @TableId(value = "id")
+    @NotNull(groups = BaseEntity.Update.class)
     @ApiModelProperty(value = "主键")
     private String id;
 
-    @ApiModelProperty(value = "创建人id")
-    private String createBy;
-
-    @ApiModelProperty(value = "创建时间")
-    private Timestamp createTime;
-
-    @ApiModelProperty(value = "更新人id")
-    private String updateBy;
-
-    @ApiModelProperty(value = "更新时间")
-    private Timestamp updateTime;
-
+    @TableLogic(value = "0", delval = "1")
     @ApiModelProperty(value = "是否删除;0未删除；秒级时间戳 已删除")
     private String delFlag;
 
+    @NotBlank(message = "教练id不能为空")
     @ApiModelProperty(value = "教练id")
     private String coachId;
 
-    @NotBlank
+    @NotBlank(message = "会员id不能为空")
     @ApiModelProperty(value = "会员id")
     private String memberId;
 
     @ApiModelProperty(value = "关联合同id")
     private String contractInfoId;
 
+    @NotNull(message = "课程开始时间不能为空")
     @ApiModelProperty(value = "课程开始时间")
     private Timestamp classBeginTime;
 
+    @NotNull(message = "课程结束时间不能为空")
     @ApiModelProperty(value = "课程结束时间")
     private Timestamp classEndTime;
 
