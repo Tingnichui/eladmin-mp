@@ -113,8 +113,8 @@ import rrOperation from '@crud/RR.operation'
 import crudOperation from '@crud/CRUD.operation'
 import udOperation from '@crud/UD.operation'
 import pagination from '@crud/Pagination'
-import { listAllMember } from '@/api/jljsMemberInfo'
-import { listAllCoach } from '@/api/jljsCoachInfo'
+import { listAllMember } from '@/api/jljs/jljsMemberInfo'
+import { listAllCoach } from '@/api/jljs/jljsCoachInfo'
 
 const defaultForm = { id: null, createBy: null, createTime: null, updateBy: null, updateTime: null, delFlag: null, coachId: null, memberId: null, contractInfoId: null, classBeginTime: null, classEndTime: null, classRemark: null }
 export default {

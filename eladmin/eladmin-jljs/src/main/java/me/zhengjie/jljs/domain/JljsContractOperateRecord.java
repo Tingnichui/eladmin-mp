@@ -15,6 +15,7 @@
 */
 package me.zhengjie.jljs.domain;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import lombok.Data;
 import cn.hutool.core.bean.BeanUtil;
@@ -74,9 +75,11 @@ public class JljsContractOperateRecord extends BaseEntity implements Serializabl
     private String operateStatus;
 
     @ApiModelProperty(value = "会员姓名")
+    @TableField(exist = false)
     private String memberName;
 
     @ApiModelProperty(value = "课程")
+    @TableField(exist = false)
     private String courseName;
 
     public void copy(JljsContractOperateRecord source){
