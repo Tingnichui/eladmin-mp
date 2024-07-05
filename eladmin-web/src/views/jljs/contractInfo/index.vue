@@ -84,31 +84,82 @@
       <el-dialog :close-on-click-modal="false" :before-close="crud.cancelCU" :visible.sync="crud.status.cu > 0" :title="crud.status.title" width="500px">
         <el-form ref="form" :model="form" :rules="rules" size="small" label-width="80px">
           <el-form-item label="会员" prop="memberId">
-            未设置字典，请手动设置 Select
+            <el-select
+              v-model="form.memberId"
+              clearable
+              filterable
+              size="small"
+              placeholder="会员"
+              class="filter-item"
+              style="width: 185px"
+            >
+              <el-option
+                v-for="item in memberList"
+                :key="item.id"
+                :label="item.memberName"
+                :value="item.id"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item label="开单教练" prop="belongCoachId">
-            未设置字典，请手动设置 Select
-          </el-form-item>
-          <el-form-item label="合同金额" prop="contractAmount">
-            <el-input v-model="form.contractAmount" style="width: 370px;" />
-          </el-form-item>
-          <el-form-item label="备注">
-            <el-input v-model="form.contractRemark" style="width: 370px;" />
-          </el-form-item>
-          <el-form-item label="实际收取金额" prop="actualChargeAmount">
-            <el-input v-model="form.actualChargeAmount" style="width: 370px;" />
+            <el-select
+              v-model="form.belongCoachId"
+              clearable
+              filterable
+              size="small"
+              placeholder="教练"
+              class="filter-item"
+              style="width: 185px"
+            >
+              <el-option
+                v-for="item in coachList"
+                :key="item.id"
+                :label="item.coachName"
+                :value="item.id"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item label="课程" prop="courseInfoId">
-            <el-input v-model="form.courseInfoId" style="width: 370px;" />
+            <el-select
+              v-model="form.courseInfoId"
+              clearable
+              filterable
+              size="small"
+              placeholder="课程"
+              class="filter-item"
+              style="width: 185px"
+              @change="changeCourse"
+            >
+              <el-option
+                v-for="item in courseList"
+                :key="item.id"
+                :label="item.courseName"
+                :value="item.id"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="合同金额" prop="contractAmount">
+            <el-input v-model="form.contractAmount" type="number" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="实收金额" prop="actualChargeAmount">
+            <el-input v-model="form.actualChargeAmount" type="number" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="使用期限" prop="courseUsePeriodDays">
+            <el-input v-model="form.courseUsePeriodDays" type="number" placeholder="有效天数，例如：30天" style="width: 370px;" />
           </el-form-item>
           <el-form-item label="课程类型" prop="courseType">
             <el-radio v-for="item in dict.jljs_course_type" :key="item.id" v-model="form.courseType" :label="item.value">{{ item.label }}</el-radio>
           </el-form-item>
-          <el-form-item label="使用期限" prop="courseUsePeriodDays">
-            <el-input v-model="form.courseUsePeriodDays" style="width: 370px;" />
+          <el-form-item label="可使用数" prop="courseAvailableQuantity">
+            <el-input v-model="form.courseAvailableQuantity" type="number" placeholder="根据课程类型，例如：15次，30天" style="width: 370px;" />
           </el-form-item>
-          <el-form-item label="可使用数量" prop="courseAvailableQuantity">
-            <el-input v-model="form.courseAvailableQuantity" style="width: 370px;" />
+          <el-form-item label="备注">
+            <el-input v-model="form.contractRemark" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="">
+            <span>{{ `合同金额：${form.contractAmount || '0'}元，实收：${form.actualChargeAmount || '0'} 元，使用期限 ${form.courseUsePeriodDays || '0'} 天。
+                        自开卡 ${form.courseUsePeriodDays || '0'} 天内，
+                        可使用 ${form.courseAvailableQuantity || '0'} ${form.courseType && dict.label.jljs_course_type[form.courseType] ? dict.label.jljs_course_type[form.courseType].charAt(1): ''}` }}</span>
           </el-form-item>
         </el-form>
         <div slot="footer" class="dialog-footer">
@@ -291,6 +342,13 @@ export default {
     // 钩子：在获取表格数据之前执行，false 则代表不获取数据
     [CRUD.HOOK.beforeRefresh]() {
       return true
+    },
+    changeCourse(value) {
+      const courseInfo = this.courseList.find(v => v.id === value)
+      this.form.contractAmount = courseInfo.coursePrice
+      this.form.courseUsePeriodDays = courseInfo.courseUsePeriodDays
+      this.form.courseAvailableQuantity = courseInfo.courseAvailableQuantity
+      this.form.courseType = courseInfo.courseType
     },
     refreshMemberList() {
       listAllMember().then(data => {

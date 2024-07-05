@@ -15,6 +15,7 @@
 */
 package me.zhengjie.jljs.service;
 
+import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.jljs.domain.JljsContractInfo;
 import me.zhengjie.jljs.domain.vo.JljsContractInfoQueryCriteria;
 import java.util.Map;
@@ -72,4 +73,7 @@ public interface JljsContractInfoService extends IService<JljsContractInfo> {
     * @throws IOException /
     */
     void download(List<JljsContractInfo> all, HttpServletResponse response) throws IOException;
+
+    JljsContractInfo getInUseContractInfoByMemberId(String memberId) throws BadRequestException;
+
 }

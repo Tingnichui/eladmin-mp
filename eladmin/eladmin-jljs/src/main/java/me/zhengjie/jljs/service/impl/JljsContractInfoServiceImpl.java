@@ -15,7 +15,12 @@
 */
 package me.zhengjie.jljs.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import me.zhengjie.exception.BadRequestException;
+import me.zhengjie.jljs.constants.JljsContractStatusEnum;
 import me.zhengjie.jljs.domain.JljsContractInfo;
+import me.zhengjie.jljs.task.SyncContractInfoTask;
 import me.zhengjie.utils.FileUtil;
 import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -29,6 +34,7 @@ import me.zhengjie.utils.PageUtil;
 import java.util.List;
 import java.util.Map;
 import java.io.IOException;
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -45,6 +51,9 @@ public class JljsContractInfoServiceImpl extends ServiceImpl<JljsContractInfoMap
 
     private final JljsContractInfoMapper jljsContractInfoMapper;
 
+    @Resource
+    private SyncContractInfoTask syncContractInfoTask;
+
     @Override
     public PageResult<JljsContractInfo> queryAll(JljsContractInfoQueryCriteria criteria, Page<Object> page){
         return PageUtil.toPage(jljsContractInfoMapper.findAll(criteria, page));
@@ -58,21 +67,39 @@ public class JljsContractInfoServiceImpl extends ServiceImpl<JljsContractInfoMap
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void create(JljsContractInfo resources) {
+        resources.setContractStatus(JljsContractStatusEnum.daikaika.getCode());
         save(resources);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(JljsContractInfo resources) {
-        JljsContractInfo jljsContractInfo = getById(resources.getId());
+        String id = resources.getId();
+        JljsContractInfo jljsContractInfo = getById(id);
         jljsContractInfo.copy(resources);
         saveOrUpdate(jljsContractInfo);
+        syncContractInfoTask.sync(id);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteAll(List<String> ids) {
         removeBatchByIds(ids);
+    }
+
+    @Override
+    public JljsContractInfo getInUseContractInfoByMemberId(String memberId) throws BadRequestException {
+        LambdaQueryWrapper<JljsContractInfo> wrapper = Wrappers.lambdaQuery(JljsContractInfo.class);
+        wrapper.eq(JljsContractInfo::getMemberId, memberId);
+        wrapper.eq(JljsContractInfo::getContractStatus, JljsContractStatusEnum.shiyong.getCode());
+        List<JljsContractInfo> list = baseMapper.selectList(wrapper);
+        if (list.isEmpty()) {
+            return null;
+        }
+        if (list.size() > 1) {
+            throw new BadRequestException("该会员存在" + list.size() + "个使用中的合同");
+        }
+        return list.get(0);
     }
 
     @Override
