@@ -48,7 +48,7 @@
 </template>
 
 <script>
-import crudJljsCoachInfo from '@/api/jljsCoachInfo'
+import crudJljsCoachInfo from '@/api/jljs/jljsCoachInfo'
 import CRUD, { presenter, header, form, crud } from '@crud/crud'
 import rrOperation from '@crud/RR.operation'
 import crudOperation from '@crud/CRUD.operation'

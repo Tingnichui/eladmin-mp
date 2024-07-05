@@ -219,14 +219,14 @@
 </template>
 
 <script>
-import crudJljsContractInfo from '@/api/jljsContractInfo'
+import crudJljsContractInfo from '@/api/jljs/jljsContractInfo'
 import CRUD, { presenter, header, form, crud } from '@crud/crud'
 import rrOperation from '@crud/RR.operation'
 import crudOperation from '@crud/CRUD.operation'
 import pagination from '@crud/Pagination'
-import { listAllMember } from '@/api/jljsMemberInfo'
-import { listAllCoach } from '@/api/jljsCoachInfo'
-import { listAllCourse } from '../../../api/jljsCourseInfo'
+import { listAllMember } from '@/api/jljs/jljsMemberInfo'
+import { listAllCoach } from '@/api/jljs/jljsCoachInfo'
+import { listAllCourse } from '@/api/jljs/jljsCourseInfo'
 
 const defaultForm = { id: null, createBy: null, createTime: null, updateBy: null, updateTime: null, delFlag: null, memberId: null, belongCoachId: null, contractAmount: null, contractStatus: null, useBeginDate: null, useEndDate: null, buyTime: null, contractRemark: null, actualChargeAmount: null, courseInfoId: null, courseType: null, courseUsePeriodDays: null, courseAvailableQuantity: null, courseRemainQuantity: null, courseUseQuantity: null, courseTotalStopDays: null }
 export default {

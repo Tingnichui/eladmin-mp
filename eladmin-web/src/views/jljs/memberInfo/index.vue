@@ -89,7 +89,7 @@
 </template>
 
 <script>
-import crudJljsMemberInfo from '@/api/jljsMemberInfo'
+import crudJljsMemberInfo from '@/api/jljs/jljsMemberInfo'
 import CRUD, { presenter, header, form, crud } from '@crud/crud'
 import rrOperation from '@crud/RR.operation'
 import crudOperation from '@crud/CRUD.operation'
