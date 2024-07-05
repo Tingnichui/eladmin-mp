@@ -52,7 +52,7 @@
           <el-form-item label="手机号">
             <el-input v-model="form.memberPhoneNum" style="width: 370px;" />
           </el-form-item>
-          <el-form-item label="生日">
+          <el-form-item label="生日" prop="birthDay">
             <el-input v-model="form.birthDay" style="width: 370px;" />
           </el-form-item>
         </el-form>
@@ -115,6 +115,22 @@ export default {
       rules: {
         memberName: [
           { required: true, message: '姓名不能为空', trigger: 'blur' }
+        ],
+        birthDay: [
+          { validator: (rule, value, callback) => {
+            // 如果 birthday 为空，直接返回
+            if (!value) {
+              callback()
+            }
+            // 定义一个正则表达式来匹配 mm/dd 格式
+            const regex = /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])$/
+            // 验证 birthday 是否符合 mm/dd 格式
+            if (regex.test(value)) {
+              callback()
+            } else {
+              callback(new Error('生日格式不正确，请使用 mm/dd 格式，例如：05/20'))
+            }
+          }, trigger: 'blur' }
         ]
       },
       queryTypeOptions: [
