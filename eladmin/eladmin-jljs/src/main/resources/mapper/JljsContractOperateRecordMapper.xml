@@ -56,6 +56,6 @@
             <if test="criteria.operateStatus != null">
                 and t1.operate_status = #{criteria.operateStatus}
             </if>
-        order by id desc
+        order by t1.create_time desc
     </select>
 </mapper>
