@@ -1,6 +1,8 @@
 package me.zhengjie.jljs.task;
 
 
+import cn.hutool.core.date.DatePattern;
+import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -78,7 +80,8 @@ public class SyncContractInfoTask {
         int totalStopDays = zantingList.stream().mapToInt(JljsContractOperateRecord::getIntervalDays).sum();
         contractInfo.setCourseTotalStopDays(totalStopDays);
         // 设置结束时间为开始时间之后的 总有效期+暂停天数
-        contractInfo.setUseEndDate(DateUtil.offsetDay(contractInfo.getUseBeginDate(), totalStopDays + contractInfo.getCourseUsePeriodDays()).toTimestamp());
+        DateTime dateTime = DateUtil.parseDateTime(DateUtil.format(DateUtil.offsetDay(contractInfo.getUseBeginDate(), totalStopDays + contractInfo.getCourseUsePeriodDays() - 1), "yyyy-MM-dd 23:59:59"));
+        contractInfo.setUseEndDate(dateTime.toTimestamp());
         // 暂停操作记录不为空，遍历判断是否在暂停中
         if (!zantingList.isEmpty()) {
             // 默认设置为使用中
@@ -107,7 +110,7 @@ public class SyncContractInfoTask {
         // 更新 按天计时 已使用量、剩余数量
         if (JljsCourseTypeEnum.tian.getCode().equals(courseType)) {
             // 已使用量 = 使用开始时间到今天的天数 - 总计的暂停天数
-            int courseUsePeriodDays = (int) DateUtil.betweenDay(contractInfo.getUseBeginDate(), today, true) - totalStopDays - 1;
+            int courseUsePeriodDays = (int) DateUtil.betweenDay(contractInfo.getUseBeginDate(), today, true) - totalStopDays;
             contractInfo.setCourseUseQuantity(Math.min(contractInfo.getCourseAvailableQuantity(), courseUsePeriodDays));
             contractInfo.setCourseRemainQuantity(Math.max(contractInfo.getCourseAvailableQuantity() - courseUsePeriodDays, 0));
         }

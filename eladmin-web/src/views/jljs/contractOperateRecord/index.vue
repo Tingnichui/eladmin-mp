@@ -119,11 +119,11 @@
             {{ dict.label.jljs_operate_status[scope.row.operateStatus] }}
           </template>
         </el-table-column>
-        <el-table-column v-if="checkPer(['admin','jljsContractOperateRecord:edit','jljsContractOperateRecord:del'])" label="操作" width="150px" align="center">
+        <el-table-column v-if="checkPer(['admin','jljsContractOperateRecord:edit','jljsContractOperateRecord:del','jljsContractOperateRecord:revoke'])" label="操作" width="150px" align="center">
           <template slot-scope="scope">
             <el-popover
               :ref="scope.row.id"
-              v-permission="['admin','jljsContractInfo:revoke']"
+              v-permission="['admin','jljsContractOperateRecord:revoke']"
               placement="top"
               width="200"
             >
@@ -203,7 +203,6 @@ export default {
       const contractInfoId = this.$route.params.contractInfoId
       if (contractInfoId && contractInfoId !== ':contractInfoId') {
         this.query.contractInfoId = contractInfoId
-        console.log(contractInfoId)
       }
       return true
     },
@@ -214,6 +213,12 @@ export default {
         this.form.contractOperateType = this.contractOperateType
       }
       return true
+    },
+    [CRUD.HOOK.afterSubmit]() {
+      // 删除当前路由页面
+      this.$store.state.tagsView.visitedViews.splice(this.$store.state.tagsView.visitedViews.findIndex(item => item.path === this.$route.path), 1)
+      // 跳转页面
+      this.$router.push(this.$route.path.replace(/\/[^\/]*$/, `/:operateType`))
     },
     revokeMethod(id) {
       this.revokeLoading = true

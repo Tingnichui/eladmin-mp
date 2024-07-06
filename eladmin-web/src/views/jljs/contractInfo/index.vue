@@ -236,7 +236,7 @@
         <el-table-column v-if="checkPer(['admin','jljsContractInfo:edit','jljsContractInfo:del'])" label="操作" width="150px" align="center">
           <template slot-scope="scope">
             <el-button v-permission="['admin','jljsContractInfo:edit']" size="mini" style="margin-right: 3px;" type="text" @click="crud.toEdit(scope.row)">编辑</el-button>
-            <el-dropdown v-permission="['admin','jljsContractInfo:del']" style="margin-left: -2px">
+            <el-dropdown v-permission="['admin','jljsContractOperateRecord:add']" style="margin-left: -2px">
               <span style="cursor: pointer;color: #1890ff;font-size: 12px;">
                 操作
               </span>

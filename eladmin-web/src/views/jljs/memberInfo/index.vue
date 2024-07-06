@@ -73,6 +73,7 @@
         <el-table-column prop="memberAge" label="年龄" />
         <el-table-column prop="memberPhoneNum" label="手机号" />
         <el-table-column prop="birthDay" label="生日" />
+        <el-table-column prop="createTime" label="创建时间" />
         <el-table-column v-if="checkPer(['admin','jljsMemberInfo:edit','jljsMemberInfo:del'])" label="操作" width="150px" align="center">
           <template slot-scope="scope">
             <udOperation
