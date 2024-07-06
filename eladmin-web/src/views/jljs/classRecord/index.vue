@@ -49,17 +49,47 @@
       <!--表单组件-->
       <el-dialog :close-on-click-modal="false" :before-close="crud.cancelCU" :visible.sync="crud.status.cu > 0" :title="crud.status.title" width="500px">
         <el-form ref="form" :model="form" :rules="rules" size="small" label-width="80px">
-          <el-form-item label="教练id" prop="coachId">
-            未设置字典，请手动设置 Select
+          <el-form-item label="会员" prop="memberId">
+            <el-select
+              v-model="form.memberId"
+              clearable
+              filterable
+              size="small"
+              placeholder="会员"
+              class="filter-item"
+              style="width: 185px"
+            >
+              <el-option
+                v-for="item in memberList"
+                :key="item.id"
+                :label="item.memberName"
+                :value="item.id"
+              />
+            </el-select>
           </el-form-item>
-          <el-form-item label="会员id" prop="memberId">
-            未设置字典，请手动设置 Select
+          <el-form-item label="教练" prop="coachId">
+            <el-select
+              v-model="form.coachId"
+              clearable
+              filterable
+              size="small"
+              placeholder="教练"
+              class="filter-item"
+              style="width: 185px"
+            >
+              <el-option
+                v-for="item in coachList"
+                :key="item.id"
+                :label="item.coachName"
+                :value="item.id"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item label="课程开始时间" prop="classBeginTime">
-            <el-date-picker v-model="form.classBeginTime" type="datetime" style="width: 370px;" />
+            <el-date-picker v-model="form.classBeginTime" type="datetime" style="width: 370px;" @change="changeClassBeginTime" />
           </el-form-item>
           <el-form-item label="课程结束时间" prop="classEndTime">
-            <el-date-picker v-model="form.classEndTime" type="datetime" style="width: 370px;" />
+            <el-date-picker v-model="form.classEndTime" type="datetime" style="width: 370px;" @change="changeClassEndTime" />
           </el-form-item>
           <el-form-item label="课程备注">
             <el-input v-model="form.classRemark" style="width: 370px;" />
@@ -73,13 +103,6 @@
       <!--表格渲染-->
       <el-table ref="table" v-loading="crud.loading" :data="crud.data" size="small" style="width: 100%;" @selection-change="crud.selectionChangeHandler">
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="coachId" label="教练">
-          <template slot-scope="scope">
-            <div v-for="item in coachList" :key="item.id">
-              <span v-if="item.id === scope.row.coachId"> {{ item.coachName }} </span>
-            </div>
-          </template>
-        </el-table-column>
         <el-table-column prop="memberId" label="会员">
           <template slot-scope="scope">
             <div v-for="item in memberList" :key="item.id">
@@ -87,7 +110,13 @@
             </div>
           </template>
         </el-table-column>
-        <!-- <el-table-column prop="contractInfoId" label="关联合同id" /> -->
+        <el-table-column prop="coachId" label="教练">
+          <template slot-scope="scope">
+            <div v-for="item in coachList" :key="item.id">
+              <span v-if="item.id === scope.row.coachId"> {{ item.coachName }} </span>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="classBeginTime" label="开始时间" />
         <el-table-column prop="classEndTime" label="结束时间" />
         <el-table-column prop="classRemark" label="备注" />
@@ -163,6 +192,20 @@ export default {
     // 钩子：在获取表格数据之前执行，false 则代表不获取数据
     [CRUD.HOOK.beforeRefresh]() {
       return true
+    },
+    changeClassBeginTime(value) {
+      if (value) {
+        if (!this.form.classEndTime) {
+          this.form.classEndTime = new Date(value.getTime() + 60 * 60 * 1000)
+        }
+      }
+    },
+    changeClassEndTime(value) {
+      if (value) {
+        if (!this.form.classBeginTime) {
+          this.form.classBeginTime = new Date(value.getTime() - 60 * 60 * 1000)
+        }
+      }
     },
     refreshMemberList() {
       listAllMember().then(data => {
