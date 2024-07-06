@@ -4,6 +4,8 @@
     <div class="head-container">
       <div v-if="crud.props.searchToggle">
         <!-- 搜索 -->
+        <label class="el-form-item-label">合同编号</label>
+        <el-input v-model="query.contractInfoId" clearable placeholder="合同编号" style="width: 200px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
         <label class="el-form-item-label">教练</label>
         <el-select
           v-model="query.coachId"
@@ -120,6 +122,7 @@
         <el-table-column prop="classBeginTime" label="开始时间" />
         <el-table-column prop="classEndTime" label="结束时间" />
         <el-table-column prop="classRemark" label="备注" />
+        <el-table-column prop="contractInfoId" label="关联合同" />
         <el-table-column v-if="checkPer(['admin','jljsClassRecord:edit','jljsClassRecord:del'])" label="操作" width="150px" align="center">
           <template slot-scope="scope">
             <udOperation

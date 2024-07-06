@@ -76,6 +76,8 @@
         </el-select>
         <label class="el-form-item-label">备注</label>
         <el-input v-model="query.contractRemark" clearable placeholder="备注" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+        <label class="el-form-item-label">合同编号</label>
+        <el-input v-model="query.id" clearable placeholder="合同编号" style="width: 200px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
         <rrOperation :crud="crud" />
       </div>
       <!--如果想在工具栏加入更多按钮，可以使用插槽方式， slot = 'left' or 'right'-->
@@ -222,7 +224,9 @@
           </template>
         </el-table-column>
         <!-- <el-table-column prop="buyTime" label="购买日期" /> -->
+        <el-table-column prop="courseTotalStopDays" label="总暂停天数" />
         <el-table-column prop="contractRemark" label="备注" />
+        <el-table-column prop="id" label="编号" />
         <!-- <el-table-column prop="courseType" label="课程类型">
           <template slot-scope="scope">
             {{ dict.label.jljs_course_type[scope.row.courseType] }}
@@ -232,7 +236,6 @@
         <!-- <el-table-column prop="courseAvailableQuantity" label="可使用数量" /> -->
         <!-- <el-table-column prop="courseRemainQuantity" label="剩余数量" /> -->
         <!-- <el-table-column prop="courseUseQuantity" label="已使用数量" /> -->
-        <el-table-column prop="courseTotalStopDays" label="总暂停天数" />
         <el-table-column v-if="checkPer(['admin','jljsContractInfo:edit','jljsContractInfo:del'])" label="操作" width="150px" align="center">
           <template slot-scope="scope">
             <el-button v-permission="['admin','jljsContractInfo:edit']" size="mini" style="margin-right: 3px;" type="text" @click="crud.toEdit(scope.row)">编辑</el-button>
