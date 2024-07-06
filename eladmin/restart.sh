@@ -58,8 +58,6 @@ start() {
     status
     if [ -n "$pid" ]; then
         echo "$JAR_NAME start successfully."
-        # 检查服务是否健康
-        health
     else
         echo -e "\033[1;31m $JAR_NAME is not running! \033[0m"
     fi
