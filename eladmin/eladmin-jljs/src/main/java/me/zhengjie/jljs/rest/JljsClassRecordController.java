@@ -28,6 +28,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.annotations.*;
 import java.io.IOException;
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import me.zhengjie.utils.PageResult;
@@ -42,7 +43,8 @@ import me.zhengjie.utils.PageResult;
 @RequestMapping("/api/jljsClassRecord")
 public class JljsClassRecordController {
 
-    private final JljsClassRecordService jljsClassRecordService;
+    @Resource
+    private JljsClassRecordService jljsClassRecordService;
 
     @Log("导出数据")
     @ApiOperation("导出数据")

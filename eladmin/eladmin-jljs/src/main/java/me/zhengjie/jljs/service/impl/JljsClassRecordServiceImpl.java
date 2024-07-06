@@ -50,10 +50,12 @@ import me.zhengjie.utils.PageResult;
 @RequiredArgsConstructor
 public class JljsClassRecordServiceImpl extends ServiceImpl<JljsClassRecordMapper, JljsClassRecord> implements JljsClassRecordService {
 
-    private final JljsClassRecordMapper jljsClassRecordMapper;
-
-    private final JljsContractInfoService jljsContractInfoService;
-    private final SyncContractInfoTask syncContractInfoTask;
+    @Resource
+    private JljsClassRecordMapper jljsClassRecordMapper;
+    @Resource
+    private JljsContractInfoService jljsContractInfoService;
+    @Resource
+    private SyncContractInfoTask syncContractInfoTask;
 
     @Override
     public PageResult<JljsClassRecord> queryAll(JljsClassRecordQueryCriteria criteria, Page<Object> page){

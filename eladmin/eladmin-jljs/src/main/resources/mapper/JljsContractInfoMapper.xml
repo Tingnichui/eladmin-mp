@@ -80,6 +80,9 @@
             <if test="criteria.courseInfoId != null">
                 and t1.course_info_id = #{criteria.courseInfoId}
             </if>
+            <if test="criteria.id != null">
+                and t1.id = #{criteria.id}
+            </if>
         order by t1.id desc
     </select>
 </mapper>

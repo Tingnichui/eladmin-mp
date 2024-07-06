@@ -19,7 +19,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.jljs.constants.JljsContractStatusEnum;
+import me.zhengjie.jljs.domain.JljsClassRecord;
 import me.zhengjie.jljs.domain.JljsContractInfo;
+import me.zhengjie.jljs.domain.JljsMemberInfo;
+import me.zhengjie.jljs.service.JljsClassRecordService;
+import me.zhengjie.jljs.service.JljsMemberInfoService;
 import me.zhengjie.jljs.task.SyncContractInfoTask;
 import me.zhengjie.utils.FileUtil;
 import lombok.RequiredArgsConstructor;
@@ -46,11 +50,14 @@ import me.zhengjie.utils.PageResult;
 * @date 2024-06-30
 **/
 @Service
-@RequiredArgsConstructor
 public class JljsContractInfoServiceImpl extends ServiceImpl<JljsContractInfoMapper, JljsContractInfo> implements JljsContractInfoService {
 
-    private final JljsContractInfoMapper jljsContractInfoMapper;
-
+    @Resource
+    private JljsContractInfoMapper jljsContractInfoMapper;
+    @Resource
+    private JljsMemberInfoService jljsMemberInfoService;
+    @Resource
+    private JljsClassRecordService jljsClassRecordService;
     @Resource
     private SyncContractInfoTask syncContractInfoTask;
 
@@ -84,6 +91,24 @@ public class JljsContractInfoServiceImpl extends ServiceImpl<JljsContractInfoMap
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteAll(List<String> ids) {
+        for (String id : ids) {
+            JljsContractInfo contractInfo = getById(id);
+            if (null == contractInfo) {
+                throw new BadRequestException("合同不存在");
+            }
+            JljsMemberInfo memberInfo = jljsMemberInfoService.getById(contractInfo.getMemberId());
+            String memberName = memberInfo.getMemberName();
+            if (!JljsContractStatusEnum.daikaika.getCode().equals(contractInfo.getContractStatus())) {
+                throw new BadRequestException(memberName + "合同状态不是待开卡，无法删除");
+            }
+            Long count = jljsClassRecordService.getBaseMapper().selectCount(
+                    Wrappers.lambdaQuery(JljsClassRecord.class)
+                            .eq(JljsClassRecord::getContractInfoId, id)
+            );
+            if (count > 0) {
+                throw new BadRequestException(memberName + "合同编号[" + contractInfo.getId() + "]下存在" + count + "个上课记录，无法删除");
+            }
+        }
         removeBatchByIds(ids);
     }
 

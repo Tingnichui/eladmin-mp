@@ -16,6 +16,8 @@ spring:
     check-template-location: false
   profiles:
     active: dev
+  main:
+    allow-circular-references: true
   data:
     redis:
       repositories:
