@@ -86,4 +86,13 @@ public class JljsContractOperateRecordController {
         jljsContractOperateRecordService.deleteAll(ids);
         return new ResponseEntity<>(HttpStatus.OK);
     }
+
+    @PutMapping("/revoke")
+    @Log("撤销合同操作记录")
+    @ApiOperation("撤销合同操作记录")
+    @PreAuthorize("@el.check('jljsContractOperateRecord:revoke')")
+    public ResponseEntity<Object> deleteJljsContractOperateRecord(@RequestBody String id) {
+        jljsContractOperateRecordService.revoke(id);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
 }

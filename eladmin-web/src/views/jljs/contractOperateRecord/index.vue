@@ -4,8 +4,8 @@
     <div class="head-container">
       <div v-if="crud.props.searchToggle">
         <!-- 搜索 -->
-        <!-- <label class="el-form-item-label">合同id</label> -->
-        <!-- <el-input v-model="query.contractInfoId" clearable placeholder="合同id" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" /> -->
+        <label class="el-form-item-label">合同编号</label>
+        <el-input v-model="query.contractInfoId" clearable placeholder="合同编号" style="width: 200px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
         <label class="el-form-item-label">操作类型</label>
         <el-select
           v-model="query.contractOperateType"
@@ -47,11 +47,11 @@
       <!--表单组件-->
       <el-dialog :close-on-click-modal="false" :before-close="crud.cancelCU" :visible.sync="crud.status.cu > 0" :title="crud.status.title" width="500px">
         <el-form ref="form" :model="form" :rules="rules" size="small" label-width="80px">
-          <el-form-item label="合同id" prop="contractInfoId">
-            <el-input v-model="form.contractInfoId" style="width: 370px;" />
+          <el-form-item label="合同" prop="contractInfoId">
+            <el-input v-model="form.contractInfoId" disabled style="width: 370px;" />
           </el-form-item>
           <el-form-item label="操作类型" prop="contractOperateType">
-            <el-select v-model="form.contractOperateType" filterable placeholder="请选择">
+            <el-select v-model="form.contractOperateType" disabled placeholder="请选择">
               <el-option
                 v-for="item in dict.jljs_contract_operate_type"
                 :key="item.id"
@@ -60,23 +60,37 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="间隔天数">
-            <el-input v-model="form.intervalDays" style="width: 370px;" />
-          </el-form-item>
-          <el-form-item label="开始时间">
-            <el-date-picker v-model="form.operateBeginDate" type="datetime" style="width: 370px;" />
-          </el-form-item>
-          <el-form-item label="结束时间">
-            <el-date-picker v-model="form.operateEndDate" type="datetime" style="width: 370px;" />
-          </el-form-item>
+          <div>
+            <!-- 开卡 -->
+            <div v-if="form.contractOperateType === '1'">
+              <el-form-item label="开卡时间">
+                <el-date-picker v-model="form.operateBeginDate" type="datetime" style="width: 370px;" />
+              </el-form-item>
+            </div>
+            <!-- 停课 -->
+            <div v-if="form.contractOperateType === '2'">
+              <el-form-item label="开始时间">
+                <el-date-picker v-model="form.operateBeginDate" type="datetime" style="width: 370px;" />
+              </el-form-item>
+              <el-form-item label="结束时间">
+                <el-date-picker v-model="form.operateEndDate" type="datetime" style="width: 370px;" />
+              </el-form-item>
+            </div>
+            <!-- 退课 -->
+            <div v-if="form.contractOperateType === '3'">
+              <el-form-item label="操作金额">
+                <el-input v-model="form.operateAmount" style="width: 370px;" />
+              </el-form-item>
+            </div>
+            <!-- 补缴 -->
+            <div v-if="form.contractOperateType === '4'">
+              <el-form-item label="操作金额">
+                <el-input v-model="form.operateAmount" style="width: 370px;" />
+              </el-form-item>
+            </div>
+          </div>
           <el-form-item label="操作原因">
             <el-input v-model="form.operateReason" style="width: 370px;" />
-          </el-form-item>
-          <el-form-item label="操作金额">
-            <el-input v-model="form.operateAmount" style="width: 370px;" />
-          </el-form-item>
-          <el-form-item label="状态">
-            <el-input v-model="form.operateStatus" style="width: 370px;" />
           </el-form-item>
         </el-form>
         <div slot="footer" class="dialog-footer">
@@ -107,10 +121,19 @@
         </el-table-column>
         <el-table-column v-if="checkPer(['admin','jljsContractOperateRecord:edit','jljsContractOperateRecord:del'])" label="操作" width="150px" align="center">
           <template slot-scope="scope">
-            <udOperation
-              :data="scope.row"
-              :permission="permission"
-            />
+            <el-popover
+              :ref="scope.row.id"
+              v-permission="['admin','jljsContractInfo:revoke']"
+              placement="top"
+              width="200"
+            >
+              <p>确定撤销该操作吗？</p>
+              <div style="text-align: right; margin: 0">
+                <el-button size="mini" type="text" @click="$refs[scope.row.id].doClose()">取消</el-button>
+                <el-button :loading="revokeLoading" type="primary" size="mini" @click="revokeMethod(scope.row.id)">确定</el-button>
+              </div>
+              <el-button v-if="scope.row.operateStatus === '1'" slot="reference" type="text" size="mini">撤销</el-button>
+            </el-popover>
           </template>
         </el-table-column>
       </el-table>
@@ -125,13 +148,12 @@ import crudJljsContractOperateRecord from '@/api/jljs/jljsContractOperateRecord'
 import CRUD, { presenter, header, form, crud } from '@crud/crud'
 import rrOperation from '@crud/RR.operation'
 import crudOperation from '@crud/CRUD.operation'
-import udOperation from '@crud/UD.operation'
 import pagination from '@crud/Pagination'
 
 const defaultForm = { id: null, createBy: null, createTime: null, updateBy: null, updateTime: null, delFlag: null, contractInfoId: null, contractOperateType: null, intervalDays: null, operateBeginDate: null, operateEndDate: null, operateReason: null, operateAmount: null, operateStatus: null }
 export default {
   name: 'JljsContractOperateRecord',
-  components: { pagination, crudOperation, rrOperation, udOperation },
+  components: { pagination, crudOperation, rrOperation },
   mixins: [presenter(), header(), form(defaultForm), crud()],
   dicts: ['jljs_contract_operate_type', 'jljs_operate_status'],
   cruds() {
@@ -156,13 +178,55 @@ export default {
         { key: 'contractInfoId', display_name: '合同id' },
         { key: 'contractOperateType', display_name: '合同操作类型' },
         { key: 'operateStatus', display_name: '状态' }
-      ]
+      ],
+      revokeLoading: false,
+      contractInfoId: '',
+      contractOperateType: ''
+    }
+  },
+  created() {
+    const contractInfoId = this.$route.params.contractInfoId
+    const contractOperateType = this.$route.params.operateType
+    if (contractInfoId && contractInfoId !== ':contractInfoId') {
+      this.contractInfoId = contractInfoId
+    }
+    if (contractOperateType && contractOperateType !== ':operateType') {
+      this.contractOperateType = contractOperateType
+    }
+    if (this.contractInfoId && this.contractOperateType) {
+      this.crud.toAdd()
     }
   },
   methods: {
     // 钩子：在获取表格数据之前执行，false 则代表不获取数据
     [CRUD.HOOK.beforeRefresh]() {
+      const contractInfoId = this.$route.params.contractInfoId
+      if (contractInfoId && contractInfoId !== ':contractInfoId') {
+        this.query.contractInfoId = contractInfoId
+        console.log(contractInfoId)
+      }
       return true
+    },
+    // 钩子：新建之后，填充合同id、操作类型
+    [CRUD.HOOK.afterToAdd]() {
+      if (this.contractInfoId && this.contractOperateType) {
+        this.form.contractInfoId = this.contractInfoId
+        this.form.contractOperateType = this.contractOperateType
+      }
+      return true
+    },
+    revokeMethod(id) {
+      this.revokeLoading = true
+      crudJljsContractOperateRecord.revoke(id).then(() => {
+        this.revokeLoading = false
+        this.$refs[id].doClose()
+        this.crud.dleChangePage(1)
+        this.crud.notify('撤销成功', CRUD.NOTIFICATION_TYPE.SUCCESS)
+        this.crud.toQuery()
+      }).catch(() => {
+        this.revokeLoading = false
+        this.$refs[id].doClose()
+      })
     }
   }
 }

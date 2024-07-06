@@ -72,4 +72,7 @@ public interface JljsContractOperateRecordService extends IService<JljsContractO
     * @throws IOException /
     */
     void download(List<JljsContractOperateRecord> all, HttpServletResponse response) throws IOException;
+
+    void revoke(String id);
+
 }

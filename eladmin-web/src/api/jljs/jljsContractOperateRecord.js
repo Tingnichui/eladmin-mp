@@ -24,4 +24,12 @@ export function edit(data) {
   })
 }
 
-export default { add, edit, del }
+export function revoke(id) {
+  return request({
+    url: 'api/jljsContractOperateRecord/revoke',
+    method: 'put',
+    data: id
+  })
+}
+
+export default { add, edit, del, revoke }

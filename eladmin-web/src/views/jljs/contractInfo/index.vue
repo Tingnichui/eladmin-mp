@@ -241,9 +241,26 @@
                 操作
               </span>
               <el-dropdown-menu slot="dropdown">
-                <el-dropdown-item v-if="scope.row.contractStatus === '1'">开卡</el-dropdown-item>
-                <el-dropdown-item v-if="scope.row.contractStatus === '2' || scope.row.contractStatus === '4'">暂停</el-dropdown-item>
-                <el-dropdown-item v-if="scope.row.contractStatus !== '5'">退课</el-dropdown-item>
+                <el-dropdown-item v-if="scope.row.contractStatus === '1'">
+                  <router-link :to="`/jljs/contractOperateRecord/${scope.row.id}/1`">
+                    开卡
+                  </router-link>
+                </el-dropdown-item>
+                <el-dropdown-item v-if="scope.row.contractStatus === '2' || scope.row.contractStatus === '4'">
+                  <router-link :to="`/jljs/contractOperateRecord/${scope.row.id}/2`">
+                    暂停
+                  </router-link>
+                </el-dropdown-item>
+                <!--                <el-dropdown-item v-if="scope.row.contractStatus !== '5'">-->
+                <!--                  <router-link :to="`/jljs/contractOperateRecord/${scope.row.id}/3`">-->
+                <!--                    退课-->
+                <!--                  </router-link>-->
+                <!--                </el-dropdown-item>-->
+                <el-dropdown-item>
+                  <router-link :to="`/jljs/contractOperateRecord/${scope.row.id}/:operateType`">
+                    记录
+                  </router-link>
+                </el-dropdown-item>
                 <!-- <el-dropdown-item>补缴</el-dropdown-item> -->
               </el-dropdown-menu>
             </el-dropdown>
