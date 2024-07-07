@@ -42,6 +42,8 @@
             :value="item.id"
           />
         </el-select>
+        <label class="el-form-item-label">上课时间</label>
+        <date-range-picker v-model="query.classBeginTime" class="date-item" @change="crud.toQuery" />
         <label class="el-form-item-label">课程备注</label>
         <el-input v-model="query.classRemark" clearable placeholder="课程备注" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
         <rrOperation :crud="crud" />
@@ -147,11 +149,12 @@ import udOperation from '@crud/UD.operation'
 import pagination from '@crud/Pagination'
 import { listAllMember } from '@/api/jljs/jljsMemberInfo'
 import { listAllCoach } from '@/api/jljs/jljsCoachInfo'
+import DateRangePicker from '@/components/DateRangePicker/index.vue'
 
 const defaultForm = { id: null, createBy: null, createTime: null, updateBy: null, updateTime: null, delFlag: null, coachId: null, memberId: null, contractInfoId: null, classBeginTime: null, classEndTime: null, classRemark: null }
 export default {
   name: 'JljsClassRecord',
-  components: { pagination, crudOperation, rrOperation, udOperation },
+  components: { DateRangePicker, pagination, crudOperation, rrOperation, udOperation },
   mixins: [presenter(), header(), form(defaultForm), crud()],
   cruds() {
     return CRUD({ title: '上课记录', url: 'api/jljsClassRecord', idField: 'id', sort: 'id,desc', crudMethod: { ...crudJljsClassRecord }})

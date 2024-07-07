@@ -17,6 +17,9 @@ package me.zhengjie.jljs.domain.vo;
 
 import lombok.Data;
 
+import java.sql.Timestamp;
+import java.util.List;
+
 /**
 * @author genghui
 * @date 2024-07-02
@@ -27,4 +30,5 @@ public class JljsClassRecordQueryCriteria{
     private String memberId;
     private String contractInfoId;
     private String classRemark;
+    private List<Timestamp> classBeginTime;
 }

@@ -37,6 +37,9 @@
             <if test="criteria.classRemark != null">
                 and class_remark like concat('%',#{criteria.classRemark},'%')
             </if>
+            <if test="criteria.classBeginTime != null and criteria.classBeginTime.size() > 0">
+                AND class_begin_time BETWEEN #{criteria.classBeginTime[0]} AND #{criteria.classBeginTime[1]}
+            </if>
         order by class_begin_time desc
     </select>
 </mapper>
