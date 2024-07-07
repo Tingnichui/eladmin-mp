@@ -42,4 +42,14 @@
             </if>
         order by class_begin_time desc
     </select>
+
+    <select id="getClassStatsByDay" resultType="java.util.Map">
+        SELECT COUNT(1)                                AS `count`,
+               DATE_FORMAT(class_begin_time, '%Y%m%d') AS `day`
+        FROM jljs_class_record
+        where del_flag = '0'
+        GROUP BY DATE_FORMAT(class_begin_time, '%Y%m%d')
+        ORDER BY DATE_FORMAT(class_begin_time, '%Y%m%d') ASC
+    </select>
+
 </mapper>

@@ -34,4 +34,6 @@ public interface JljsClassRecordMapper extends BaseMapper<JljsClassRecord> {
     IPage<JljsClassRecord> findAll(@Param("criteria") JljsClassRecordQueryCriteria criteria, Page<Object> page);
 
     List<JljsClassRecord> findAll(@Param("criteria") JljsClassRecordQueryCriteria criteria);
+
+    Object getClassStatsByDay();
 }

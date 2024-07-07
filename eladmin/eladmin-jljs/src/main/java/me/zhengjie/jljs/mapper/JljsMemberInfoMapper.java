@@ -34,4 +34,6 @@ public interface JljsMemberInfoMapper extends BaseMapper<JljsMemberInfo> {
     IPage<JljsMemberInfo> findAll(@Param("criteria") JljsMemberInfoQueryCriteria criteria, Page<Object> page);
 
     List<JljsMemberInfo> findAll(@Param("criteria") JljsMemberInfoQueryCriteria criteria);
+
+    Object getMemberBirthStats();
 }

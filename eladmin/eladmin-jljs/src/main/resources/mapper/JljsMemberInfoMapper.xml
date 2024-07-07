@@ -41,4 +41,17 @@
             </if>
         order by id desc
     </select>
+
+    <select id="getMemberBirthStats" resultType="java.util.Map">
+        SELECT GROUP_CONCAT(member_name)                                                             AS memberName,
+               birth_day                                                                             AS birthDay,
+               DATE_FORMAT(STR_TO_DATE(CONCAT(YEAR(CURDATE()), '/', birth_day), '%Y/%m/%d'), '%m%d') AS sort
+        FROM jljs_member_info t1
+        WHERE t1.del_flag = '0'
+          AND birth_day IS NOT NULL
+        GROUP BY birth_day
+        ORDER BY CAST(sort AS UNSIGNED)
+    </select>
+
+
 </mapper>
