@@ -305,8 +305,7 @@ public class RedisUtils {
      */
     public boolean setIfAbsent(String key, Object value) {
         try {
-            redisTemplate.opsForValue().setIfAbsent(key, value);
-            return true;
+            return redisTemplate.opsForValue().setIfAbsent(key, value);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             return false;
@@ -325,11 +324,10 @@ public class RedisUtils {
     public boolean setIfAbsent(String key, Object value, long time, TimeUnit timeUnit) {
         try {
             if (time > 0) {
-                redisTemplate.opsForValue().setIfAbsent(key, value, time, timeUnit);
+                return redisTemplate.opsForValue().setIfAbsent(key, value, time, timeUnit);
             } else {
-                setIfAbsent(key, value);
+                return setIfAbsent(key, value);
             }
-            return true;
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             return false;
