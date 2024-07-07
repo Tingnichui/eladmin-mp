@@ -7,16 +7,14 @@ import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
-import me.zhengjie.jljs.constants.JljsContractOperateTypeEnum;
-import me.zhengjie.jljs.constants.JljsContractStatusEnum;
-import me.zhengjie.jljs.constants.JljsCourseTypeEnum;
-import me.zhengjie.jljs.constants.JljsOperateStatusEnum;
+import me.zhengjie.jljs.constants.*;
 import me.zhengjie.jljs.domain.JljsClassRecord;
 import me.zhengjie.jljs.domain.JljsContractInfo;
 import me.zhengjie.jljs.domain.JljsContractOperateRecord;
 import me.zhengjie.jljs.mapper.JljsClassRecordMapper;
 import me.zhengjie.jljs.mapper.JljsContractInfoMapper;
 import me.zhengjie.jljs.mapper.JljsContractOperateRecordMapper;
+import me.zhengjie.utils.RedisUtils;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
@@ -25,6 +23,7 @@ import javax.annotation.Resource;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service("syncContractInfoTask")
@@ -36,10 +35,23 @@ public class SyncContractInfoTask {
     private JljsContractOperateRecordMapper jljsContractOperateRecordMapper;
     @Resource
     private JljsClassRecordMapper jljsClassRecordMapper;
+    @Resource
+    private RedisUtils redisUtils;
 
     public void syncAll() {
-        for (JljsContractInfo contractInfo : jljsContractInfoMapper.selectList(Wrappers.lambdaQuery(JljsContractInfo.class).select(JljsContractInfo::getId))) {
-            this.sync(contractInfo.getId());
+        try {
+            RedisKeyEnum keyEnum = RedisKeyEnum.SYNC_ALL_CONTRACT_INFO_TASK;
+            boolean lock = redisUtils.setIfAbsent(keyEnum.getKey(), keyEnum.getKey(), 30, TimeUnit.MINUTES);
+            log.info("定时任务：{}，获取锁：{}", keyEnum.getDesc(), lock);
+            if (!lock) return;
+
+            List<JljsContractInfo> jljsContractInfoList = jljsContractInfoMapper.selectList(Wrappers.lambdaQuery(JljsContractInfo.class).select(JljsContractInfo::getId));
+            for (JljsContractInfo contractInfo : jljsContractInfoList) {
+                this.sync(contractInfo.getId());
+            }
+        } catch (Exception e) {
+            log.error("批量同步合同信息出现异常", e);
+            throw e;
         }
     }
 

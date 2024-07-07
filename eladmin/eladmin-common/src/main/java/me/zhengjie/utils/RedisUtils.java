@@ -296,6 +296,46 @@ public class RedisUtils {
         }
     }
 
+    /**
+     * 普通缓存不存在则放入
+     *
+     * @param key   键
+     * @param value 值
+     * @return true成功 false失败
+     */
+    public boolean setIfAbsent(String key, Object value) {
+        try {
+            redisTemplate.opsForValue().setIfAbsent(key, value);
+            return true;
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * 普通缓存不存在则放入并设置时间
+     *
+     * @param key      键
+     * @param value    值
+     * @param time     时间，注意:这里不会替换原有的时间
+     * @param timeUnit 类型
+     * @return true成功 false 失败
+     */
+    public boolean setIfAbsent(String key, Object value, long time, TimeUnit timeUnit) {
+        try {
+            if (time > 0) {
+                redisTemplate.opsForValue().setIfAbsent(key, value, time, timeUnit);
+            } else {
+                setIfAbsent(key, value);
+            }
+            return true;
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            return false;
+        }
+    }
+
     // ================================Map=================================
 
     /**
