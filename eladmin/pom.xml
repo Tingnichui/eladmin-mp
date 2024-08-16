@@ -37,6 +37,7 @@
         <swagger.version>2.9.2</swagger.version>
         <fastjson.version>1.2.83</fastjson.version>
         <druid.version>1.2.8</druid.version>
+        <dynamic-datasource.version>4.3.1</dynamic-datasource.version>
         <commons-pool2.version>2.11.1</commons-pool2.version>
     </properties>
 
@@ -194,6 +195,13 @@
             <groupId>com.github.ulisesbocchio</groupId>
             <artifactId>jasypt-spring-boot-starter</artifactId>
             <version>3.0.5</version>
+        </dependency>
+
+        <!-- 多数据源 -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>dynamic-datasource-spring-boot-starter</artifactId>
+            <version>${dynamic-datasource.version}</version>
         </dependency>
 
     </dependencies>
