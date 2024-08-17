@@ -23,6 +23,12 @@ spring:
          password: ${DB_PWD:ENC(HR5Uk+mC7JLrlImx6VDVM60SpeRIkt1VDtz2KLQTDvwOpT+JP0U+l4JCqHu8ZfRl38Mgk7Ff8fp6WPS37k+UdA==)}
          driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
          type: com.alibaba.druid.pool.DruidDataSource
+       media_crawler:
+         url: ENC(wdjTXNKHX33hL6fSHK+zuop7fIQNB1SFmwAoKybhkqcmCUFAaXbv1DiYhm/oyyA4+ZG4IFM8VNSTvi+icr1OKc7K2xhxiCup3SryImlItmmW9esmLYDJX11yhMa3kT4BsHQwMFMmFf8gK9tbfR4Mkdw0uv0YRHmR+pw+ICysYkk4IWvWiyuxATpMu2PhONf0ZfifXSfb+X+TsZh3pvBW1A==)
+         username: ENC(J3Gu0/R6hQ3c47mNGIr/bNgG76aPS2KxqNF7tUaYOYhyEcJL3SCTkRvi/JKbA53h)
+         password: ENC(WWTGtyIjenbPYmBy3pels7cu5ShVEpYOyL6+0k/28iKGO0O3bme7d4Nl733NEtit)
+         driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
+         type: com.alibaba.druid.pool.DruidDataSource
     # 德鲁伊全局配置
      druid:
       # 初始连接数
