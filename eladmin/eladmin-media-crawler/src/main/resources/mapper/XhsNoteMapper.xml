@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="me.zhengjie.mediacrawler.mapper.XhsNoteMapper">
+    <resultMap id="BaseResultMap" type="me.zhengjie.mediacrawler.domain.XhsNote">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="nickname" property="nickname"/>
+        <result column="avatar" property="avatar"/>
+        <result column="ip_location" property="ipLocation"/>
+        <result column="add_ts" property="addTs"/>
+        <result column="last_modify_ts" property="lastModifyTs"/>
+        <result column="note_id" property="noteId"/>
+        <result column="type" property="type"/>
+        <result column="title" property="title"/>
+        <result column="desc" property="desc"/>
+        <result column="video_url" property="videoUrl"/>
+        <result column="time" property="time"/>
+        <result column="last_update_time" property="lastUpdateTime"/>
+        <result column="liked_count" property="likedCount"/>
+        <result column="collected_count" property="collectedCount"/>
+        <result column="comment_count" property="commentCount"/>
+        <result column="share_count" property="shareCount"/>
+        <result column="image_list" property="imageList"/>
+        <result column="tag_list" property="tagList"/>
+        <result column="note_url" property="noteUrl"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, user_id, nickname, avatar, ip_location, add_ts, last_modify_ts, note_id, type, title, desc, video_url, time, last_update_time, liked_count, collected_count, comment_count, share_count, image_list, tag_list, note_url
+    </sql>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List"/>
+        from xhs_note
+        <where>
+            <if test="criteria.nickname != null">
+                and nickname like concat('%',#{criteria.nickname},'%')
+            </if>
+            <if test="criteria.type != null">
+                and type = #{criteria.type}
+            </if>
+            <if test="criteria.title != null">
+                and title like concat('%',#{criteria.title},'%')
+            </if>
+            <if test="criteria.desc != null">
+                and desc like concat('%',#{criteria.desc},'%')
+            </if>
+        </where>
+        order by id desc
+    </select>
+</mapper>

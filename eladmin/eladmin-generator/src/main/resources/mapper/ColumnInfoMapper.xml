@@ -24,7 +24,7 @@
     <select id="getTables" resultType="me.zhengjie.domain.vo.TableInfo">
         select table_name, create_time, engine, table_collation as coding, table_comment as remark
         from information_schema.tables
-        where table_schema = (select database())
+        where table_schema in ('eladmin','media_crawler')
         and table_name like concat('%',#{tableName},'%')
         order by create_time desc
     </select>
@@ -43,7 +43,7 @@
                column_key key_type, extra
         from information_schema.columns
         where table_name = #{tableName}
-        and table_schema = (select database())
+        and table_schema in ('eladmin','media_crawler')
         order by ordinal_position
     </select>
 </mapper>

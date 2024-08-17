@@ -86,6 +86,8 @@
             <artifactId>oshi-core</artifactId>
             <version>6.1.4</version>
         </dependency>
+
+        <!-- 加励健身 -->
         <dependency>
             <groupId>me.zhengjie</groupId>
             <artifactId>eladmin-jljs</artifactId>
@@ -97,6 +99,20 @@
                 </exclusion>
             </exclusions>
         </dependency>
+
+        <!-- 媒体爬虫 -->
+        <dependency>
+            <groupId>me.zhengjie</groupId>
+            <artifactId>eladmin-media-crawler</artifactId>
+            <version>1.1</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>me.zhengjie</groupId>
+                    <artifactId>eladmin-tools</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
     </dependencies>
 
     <!-- 打包 -->
