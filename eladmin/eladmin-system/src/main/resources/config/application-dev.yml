@@ -138,3 +138,8 @@ file:
   # 文件大小 /M
   maxSize: 100
   avatarMaxSize: 5
+
+# 其他业务功能
+other:
+  yxt:
+    url: ENC(xm5nHjMTUIoI19nV9Tf0r235D4ByksIT/Iea4pOzyiFc0DxWKlLVy4XcuzjDwHZGFH+lrX+i0aoOxwdgEmickA==)

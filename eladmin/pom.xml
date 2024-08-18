@@ -17,6 +17,7 @@
         <module>eladmin-generator</module>
         <module>eladmin-jljs</module>
         <module>eladmin-media-crawler</module>
+        <module>eladmin-other</module>
     </modules>
 
     <name>ELADMIN 后台管理</name>

@@ -113,6 +113,19 @@
             </exclusions>
         </dependency>
 
+        <!-- 其他业务 -->
+        <dependency>
+            <groupId>me.zhengjie</groupId>
+            <artifactId>eladmin-other</artifactId>
+            <version>1.1</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>me.zhengjie</groupId>
+                    <artifactId>eladmin-tools</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
     </dependencies>
 
     <!-- 打包 -->
