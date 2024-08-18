@@ -17,7 +17,7 @@ import me.zhengjie.utils.enums.RedisKeyEnum;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
@@ -26,9 +26,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-@Component
 @Slf4j
-public class YxtInfoTask {
+@Service("yxtKunInfoTask")
+public class YxtKunInfoTask {
 
     @Resource
     private YxtKunCommentMapper yxtKunCommentMapper;
