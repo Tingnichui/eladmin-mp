@@ -1,7 +1,6 @@
 package me.zhengjie.jljs.task;
 
 
-import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -15,8 +14,8 @@ import me.zhengjie.jljs.mapper.JljsClassRecordMapper;
 import me.zhengjie.jljs.mapper.JljsContractInfoMapper;
 import me.zhengjie.jljs.mapper.JljsContractOperateRecordMapper;
 import me.zhengjie.utils.RedisUtils;
+import me.zhengjie.utils.enums.RedisKeyEnum;
 import org.apache.commons.collections4.CollectionUtils;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;

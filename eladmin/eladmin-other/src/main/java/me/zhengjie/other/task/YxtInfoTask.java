@@ -11,14 +11,18 @@ import me.zhengjie.other.domain.YxtKunComment;
 import me.zhengjie.other.domain.YxtKunDetail;
 import me.zhengjie.other.mapper.YxtKunCommentMapper;
 import me.zhengjie.other.mapper.YxtKunDetailMapper;
+import me.zhengjie.utils.RedisUtils;
 import me.zhengjie.utils.RegexPattern;
+import me.zhengjie.utils.enums.RedisKeyEnum;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -30,18 +34,32 @@ public class YxtInfoTask {
     private YxtKunCommentMapper yxtKunCommentMapper;
     @Resource
     private YxtKunDetailMapper yxtKunDetailMapper;
-
+    @Autowired
+    private RedisUtils redisUtils;
     @Value("${other.yxt.url}")
     private String YXT_URL;
 
     private String COOKIE;
 
-    public void sync(String cookie) {
-        if (StringUtils.isBlank(cookie)) {
-            throw new RuntimeException("cookie不能为空");
+    public void syncAll(String cookie) {
+        RedisKeyEnum keyEnum = RedisKeyEnum.SYNC_ALL_CONTRACT_INFO_TASK;
+        try {
+            if (StringUtils.isBlank(cookie)) {
+                throw new RuntimeException("cookie不能为空");
+            }
+
+            boolean lock = redisUtils.setIfAbsent(keyEnum.getKey(), keyEnum.getKey(), 8, TimeUnit.HOURS);
+            log.info("定时任务：{}，获取锁：{}", keyEnum.getDesc(), lock);
+            if (!lock) return;
+
+            this.COOKIE = cookie;
+            this.findKun(YXT_URL + "/forum-76-1.html");
+        } catch (RuntimeException e) {
+            log.error("定时任务：{}，发生异常：{}", keyEnum.getDesc(), e.getMessage(), e);
+            throw new RuntimeException(e);
+        } finally {
+            redisUtils.del(keyEnum.getKey());
         }
-        this.COOKIE = cookie;
-        this.findKun(YXT_URL + "/forum-76-1.html");
     }
 
     private void findKun(String url) {

@@ -14,7 +14,7 @@ public class OtherTests {
 
     @Test
     void name() throws InterruptedException {
-        yxtInfoTask.sync("");
+        yxtInfoTask.syncAll("");
     }
 }
 
