@@ -8,6 +8,14 @@ spring:
   autoconfigure:
     # 使用了dynamic多数据源，排除原生Druid的快速配置类
     exclude: com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceAutoConfigure
+  redis:
+    #数据库索引
+    database: ${REDIS_DB:1}
+    host: ${REDIS_HOST:ENC(nm/nJml3b+GoPMJdG/V4S3rW1971+Zc3cTq7quEtKrSrJpUHJT2SnyAaw/97/VG3)}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PWD:ENC(oVlrCNwppZWsOY+L2TwFmQ2KbSsDrUKd3wz2/SZRTxEHLgnqGantKWARJGTpck2d)}
+    #连接超时时间
+    timeout: 5000
   datasource:
     # 多数据源配置
     dynamic:
@@ -115,15 +123,6 @@ jwt:
   detect: 1800000
   # 续期时间范围，默认1小时，单位毫秒
   renew: 3600000
-
-  redis:
-    #数据库索引
-    database: ${REDIS_DB:1}
-    host: ${REDIS_HOST:ENC(nm/nJml3b+GoPMJdG/V4S3rW1971+Zc3cTq7quEtKrSrJpUHJT2SnyAaw/97/VG3)}
-    port: ${REDIS_PORT:6379}
-    password: ${REDIS_PWD:ENC(oVlrCNwppZWsOY+L2TwFmQ2KbSsDrUKd3wz2/SZRTxEHLgnqGantKWARJGTpck2d)}
-    #连接超时时间
-    timeout: 5000
 
 #是否允许生成代码，生产环境设置为false
 generator:
