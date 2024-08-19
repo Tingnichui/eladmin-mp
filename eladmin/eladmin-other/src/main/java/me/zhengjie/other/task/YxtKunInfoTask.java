@@ -41,6 +41,8 @@ public class YxtKunInfoTask {
 
     private String COOKIE;
 
+    private static final String source = "1";
+
     public void syncAll(String cookie) {
         RedisKeyEnum keyEnum = RedisKeyEnum.SYNC_ALL_CONTRACT_INFO_TASK;
         try {
@@ -77,22 +79,26 @@ public class YxtKunInfoTask {
                         .map(this::getUrl)
                         .collect(Collectors.toList());
                 // 入库
-                for (String kun : kunList) {
+                for (String infoUrl : kunList) {
                     // 获取编号
-                    String id = ReUtil.getGroup1("tid=(\\d+)", kun);
+                    String id = ReUtil.getGroup1("tid=(\\d+)", infoUrl);
 
                     // 保存详情
-                    String kunDetail = doRequest(kun);
+                    String kunDetail = doRequest(infoUrl);
                     YxtKunDetail yxtKunDetail = new YxtKunDetail();
                     yxtKunDetail.setKunId(id);
                     yxtKunDetail.setDetail(kunDetail);
+                    yxtKunDetail.setInfoUrl(infoUrl);
+                    yxtKunDetail.setSource(source);
                     yxtKunDetailMapper.insert(yxtKunDetail);
+                    Integer yxtKunDetailId = yxtKunDetail.getId();
 
                     // 保存评论
                     List<String> allComment = new ArrayList<>();
-                    this.findComment(kun, allComment);
+                    this.findComment(infoUrl, allComment);
                     for (String comment : allComment) {
                         YxtKunComment yxtKunComment = new YxtKunComment();
+                        yxtKunComment.setKunDetailId(yxtKunDetailId);
                         yxtKunComment.setKunId(id);
                         yxtKunComment.setComment(comment);
                         yxtKunCommentMapper.insert(yxtKunComment);

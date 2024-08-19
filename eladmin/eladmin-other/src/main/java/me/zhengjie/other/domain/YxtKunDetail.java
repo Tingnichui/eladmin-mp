@@ -47,6 +47,12 @@ public class YxtKunDetail extends BaseEntity implements Serializable {
     @ApiModelProperty(value = "detail")
     private String detail;
 
+    @ApiModelProperty(value = "infoUrl")
+    private String infoUrl;
+
+    @ApiModelProperty(value = "source")
+    private String source;
+
     public void copy(YxtKunDetail source) {
         BeanUtil.copyProperties(source, this, CopyOptions.create().setIgnoreNullValue(true));
     }

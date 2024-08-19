@@ -40,6 +40,9 @@ public class YxtKunComment extends BaseEntity implements Serializable {
     @ApiModelProperty(value = "id")
     private Integer id;
 
+    @ApiModelProperty(value = "kunDetailId")
+    private Integer kunDetailId;
+
     @NotNull
     @ApiModelProperty(value = "kunId")
     private String kunId;
