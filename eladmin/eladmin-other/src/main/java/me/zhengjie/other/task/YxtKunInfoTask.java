@@ -44,13 +44,13 @@ public class YxtKunInfoTask {
     private static final String source = "1";
 
     public void syncAll(String cookie) {
-        RedisKeyEnum keyEnum = RedisKeyEnum.SYNC_ALL_CONTRACT_INFO_TASK;
+        RedisKeyEnum keyEnum = RedisKeyEnum.SYNC_ALL_YXT_KUN_INFO_TASK;
         try {
             if (StringUtils.isBlank(cookie)) {
                 throw new RuntimeException("cookie不能为空");
             }
 
-            boolean lock = redisUtils.setIfAbsent(keyEnum.getKey(), keyEnum.getKey(), 8, TimeUnit.HOURS);
+            boolean lock = redisUtils.setIfAbsent(keyEnum.getKey(), keyEnum.getDesc(), 8, TimeUnit.HOURS);
             log.info("定时任务：{}，获取锁：{}", keyEnum.getDesc(), lock);
             if (!lock) return;
 
