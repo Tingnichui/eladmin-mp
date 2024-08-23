@@ -8,6 +8,7 @@ import cn.hutool.core.util.URLUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import me.zhengjie.other.domain.YxtKunComment;
 import me.zhengjie.other.domain.YxtKunDetail;
@@ -69,6 +70,41 @@ public class YxtKunInfoTask {
         } finally {
             redisUtils.del(keyEnum.getKey());
         }
+    }
+
+    public void updateInfo() {
+        while (true) {
+            List<YxtKunDetail> yxtKunDetailList = yxtKunDetailMapper.selectList(
+                    Wrappers.lambdaQuery(YxtKunDetail.class)
+                            .isNull(YxtKunDetail::getNickName)
+                            .last("limit 1000")
+            );
+            if (CollectionUtils.isEmpty(yxtKunDetailList)) {
+                break;
+            }
+            for (YxtKunDetail yxtKunDetail : yxtKunDetailList) {
+                this.parseAndSaveInfo(yxtKunDetail.getDetail(), yxtKunDetail);
+            }
+        }
+
+        while (true) {
+            List<YxtKunComment> yxtKunCommentList = yxtKunCommentMapper.selectList(
+                    Wrappers.lambdaQuery(YxtKunComment.class)
+                            .isNull(YxtKunComment::getCommentTime)
+                            .last("limit 1000")
+            );
+            if (CollectionUtils.isEmpty(yxtKunCommentList)) {
+                break;
+            }
+            for (YxtKunComment yxtKunComment : yxtKunCommentList) {
+                this.parseAndSaveCommnet(yxtKunComment.getComment(), yxtKunComment);
+                yxtKunCommentMapper.deleteById(yxtKunComment.getId());
+
+            }
+        }
+
+
+
     }
 
     private void findKun(String url) {
@@ -162,7 +198,7 @@ public class YxtKunInfoTask {
         for (Element element : elements) {
             // 评论时间
             String commentTime = extractText(element, "div.nex_vt_replyothers_topintel > i");
-            if (StringUtils.isNotBlank(commentTime)) {
+            if (StringUtils.isNotBlank(commentTime) && commentTime.length() == 19) {
                 yxtKunComment.setCommentTime(DateUtil.parse(commentTime, DatePattern.NORM_DATETIME_PATTERN).toTimestamp());
             }
             // 评论内容
