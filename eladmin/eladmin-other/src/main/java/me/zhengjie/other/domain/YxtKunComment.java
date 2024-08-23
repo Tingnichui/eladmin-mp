@@ -26,6 +26,7 @@ import me.zhengjie.base.BaseEntity;
 
 import javax.validation.constraints.NotNull;
 import java.io.Serializable;
+import java.sql.Timestamp;
 
 /**
  * @author genghui
@@ -49,6 +50,9 @@ public class YxtKunComment extends BaseEntity implements Serializable {
 
     @ApiModelProperty(value = "comment")
     private String comment;
+
+    @ApiModelProperty(value = "commentTime")
+    private Timestamp commentTime;
 
     public void copy(YxtKunComment source) {
         BeanUtil.copyProperties(source, this, CopyOptions.create().setIgnoreNullValue(true));

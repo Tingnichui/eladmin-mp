@@ -1,5 +1,7 @@
 package me.zhengjie.other.task;
 
+import cn.hutool.core.date.DatePattern;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.URLUtil;
@@ -14,7 +16,12 @@ import me.zhengjie.other.mapper.YxtKunDetailMapper;
 import me.zhengjie.utils.RedisUtils;
 import me.zhengjie.utils.RegexPattern;
 import me.zhengjie.utils.enums.RedisKeyEnum;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -74,34 +81,32 @@ public class YxtKunInfoTask {
 
             // 找出所有人
             {
-                List<String> kunList = list.stream()
+                List<String> infoUrlList = list.stream()
                         .filter(v -> v.contains("mod=viewthread"))
                         .map(this::getUrl)
                         .collect(Collectors.toList());
                 // 入库
-                for (String infoUrl : kunList) {
+                for (String infoUrl : infoUrlList) {
                     // 获取编号
                     String id = ReUtil.getGroup1("tid=(\\d+)", infoUrl);
 
                     // 保存详情
-                    String kunDetail = doRequest(infoUrl);
+                    String infoHtmlStr = this.doRequest(infoUrl);
                     YxtKunDetail yxtKunDetail = new YxtKunDetail();
                     yxtKunDetail.setKunId(id);
-                    yxtKunDetail.setDetail(kunDetail);
                     yxtKunDetail.setInfoUrl(infoUrl);
                     yxtKunDetail.setSource(source);
-                    yxtKunDetailMapper.insert(yxtKunDetail);
+                    this.parseAndSaveInfo(infoHtmlStr, yxtKunDetail);
                     Integer yxtKunDetailId = yxtKunDetail.getId();
 
                     // 保存评论
-                    List<String> allComment = new ArrayList<>();
-                    this.findComment(infoUrl, allComment);
-                    for (String comment : allComment) {
+                    List<String> allCommentHtmlStrList = new ArrayList<>();
+                    this.findComment(infoUrl, allCommentHtmlStrList);
+                    for (String commentHtmlStr : allCommentHtmlStrList) {
                         YxtKunComment yxtKunComment = new YxtKunComment();
                         yxtKunComment.setKunDetailId(yxtKunDetailId);
                         yxtKunComment.setKunId(id);
-                        yxtKunComment.setComment(comment);
-                        yxtKunCommentMapper.insert(yxtKunComment);
+                        this.parseAndSaveCommnet(commentHtmlStr, yxtKunComment);
                     }
                 }
             }
@@ -122,6 +127,60 @@ public class YxtKunInfoTask {
             log.error("同步异常", e);
             throw e;
         }
+    }
+
+    private void parseAndSaveInfo(String htmlStr, YxtKunDetail yxtKunDetail) {
+        Document document = Jsoup.parse(htmlStr);
+        // 提取昵称
+        yxtKunDetail.setNickName(extractText(document, "div.nex_model_terms_name"));
+        // 提取服务内容
+        yxtKunDetail.setDetail(extractText(document, "li:has(h2:contains(服务内容)) div.nex_text_desc"));
+        // 提取费用详情
+        yxtKunDetail.setExpenses(extractText(document, "li:has(h2:contains(费用详情)) div.nex_text_desc"));
+        // 提取联系地址
+        yxtKunDetail.setAddress(extractText(document, "li:has(h2:contains(联系地址)) div.nex_text_desc"));
+        // 提取联系方式
+        Element contactInfoEle = document.selectFirst("div.nex_reply_contant");
+        if (null != contactInfoEle) {
+            contactInfoEle.select("div.locked").remove();
+            contactInfoEle.select("script").remove();
+            yxtKunDetail.setContactInfo(contactInfoEle.text());
+        }
+        if (null != yxtKunDetail.getId()) {
+            yxtKunDetailMapper.updateById(yxtKunDetail);
+        } else {
+            yxtKunDetailMapper.insert(yxtKunDetail);
+        }
+    }
+
+    private void parseAndSaveCommnet(String html,YxtKunComment yxtKunComment) {
+        Elements elements = Jsoup.parse(html).select("div.nex_vt_post_box");
+        if (CollectionUtils.isEmpty(elements)) {
+            return;
+        }
+
+        for (Element element : elements) {
+            // 评论时间
+            String commentTime = extractText(element, "div.nex_vt_replyothers_topintel > i)");
+            if (StringUtils.isNotBlank(commentTime)) {
+                yxtKunComment.setCommentTime(DateUtil.parse(commentTime, DatePattern.NORM_DATETIME_PATTERN).toTimestamp());
+            }
+            // 评论内容
+            yxtKunComment.setComment(extractText(element, "span.nex_reply_contant"));
+
+            // 评论不为空就保存到数据库
+            if (StringUtils.isNotBlank(yxtKunComment.getComment())) {
+                yxtKunCommentMapper.insert(yxtKunComment);
+            }
+        }
+    }
+
+    private static String extractText(Element document, String cssQuery) {
+        Element element = document.selectFirst(cssQuery);
+        if (element != null) {
+            return element.text();
+        }
+        return null;
     }
 
     private void findComment(String url, List<String> allComment) {
