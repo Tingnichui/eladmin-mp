@@ -161,7 +161,7 @@ public class YxtKunInfoTask {
 
         for (Element element : elements) {
             // 评论时间
-            String commentTime = extractText(element, "div.nex_vt_replyothers_topintel > i)");
+            String commentTime = extractText(element, "div.nex_vt_replyothers_topintel > i");
             if (StringUtils.isNotBlank(commentTime)) {
                 yxtKunComment.setCommentTime(DateUtil.parse(commentTime, DatePattern.NORM_DATETIME_PATTERN).toTimestamp());
             }
@@ -170,6 +170,7 @@ public class YxtKunInfoTask {
 
             // 评论不为空就保存到数据库
             if (StringUtils.isNotBlank(yxtKunComment.getComment())) {
+                yxtKunComment.setId(null);
                 yxtKunCommentMapper.insert(yxtKunComment);
             }
         }
