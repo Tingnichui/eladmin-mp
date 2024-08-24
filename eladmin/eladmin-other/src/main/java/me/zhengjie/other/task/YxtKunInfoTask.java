@@ -77,7 +77,7 @@ public class YxtKunInfoTask {
             List<YxtKunDetail> yxtKunDetailList = yxtKunDetailMapper.selectList(
                     Wrappers.lambdaQuery(YxtKunDetail.class)
                             .isNull(YxtKunDetail::getNickName)
-                            .last("limit 1000")
+                            .last("AND LENGTH(`detail`) > 500 limit 1000")
             );
             if (CollectionUtils.isEmpty(yxtKunDetailList)) {
                 break;
@@ -91,7 +91,7 @@ public class YxtKunInfoTask {
             List<YxtKunComment> yxtKunCommentList = yxtKunCommentMapper.selectList(
                     Wrappers.lambdaQuery(YxtKunComment.class)
                             .isNull(YxtKunComment::getCommentTime)
-                            .last("limit 1000")
+                            .last("AND LENGTH(`comment`) > 500 limit 1000")
             );
             if (CollectionUtils.isEmpty(yxtKunCommentList)) {
                 break;
@@ -99,7 +99,6 @@ public class YxtKunInfoTask {
             for (YxtKunComment yxtKunComment : yxtKunCommentList) {
                 this.parseAndSaveCommnet(yxtKunComment.getComment(), yxtKunComment);
                 yxtKunCommentMapper.deleteById(yxtKunComment.getId());
-
             }
         }
 
