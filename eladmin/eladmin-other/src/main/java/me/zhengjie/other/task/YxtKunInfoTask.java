@@ -76,7 +76,7 @@ public class YxtKunInfoTask {
         while (true) {
             List<YxtKunDetail> yxtKunDetailList = yxtKunDetailMapper.selectList(
                     Wrappers.lambdaQuery(YxtKunDetail.class)
-                            .last("where LENGTH(`detail`) > 500 limit 1000")
+                            .last("where LENGTH(`detail`) > 1000 limit 1000")
             );
             if (CollectionUtils.isEmpty(yxtKunDetailList)) {
                 break;
@@ -89,7 +89,7 @@ public class YxtKunInfoTask {
         while (true) {
             List<YxtKunComment> yxtKunCommentList = yxtKunCommentMapper.selectList(
                     Wrappers.lambdaQuery(YxtKunComment.class)
-                            .last("where LENGTH(`comment`) > 500 limit 1000")
+                            .last("where LENGTH(`comment`) > 1000 limit 1000")
             );
             if (CollectionUtils.isEmpty(yxtKunCommentList)) {
                 break;
