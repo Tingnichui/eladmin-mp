@@ -181,6 +181,13 @@ public class YxtKunInfoTask {
             contactInfoEle.select("script").remove();
             yxtKunDetail.setContactInfo(contactInfoEle.text());
         }
+        if (StringUtils.isAllBlank(yxtKunDetail.getNickName(),
+                yxtKunDetail.getDetail(),
+                yxtKunDetail.getExpenses(),
+                yxtKunDetail.getAddress(),
+                yxtKunDetail.getContactInfo())) {
+            yxtKunDetail.setDetail(htmlStr);
+        }
         if (null != yxtKunDetail.getId()) {
             yxtKunDetailMapper.updateById(yxtKunDetail);
         } else {
