@@ -76,8 +76,7 @@ public class YxtKunInfoTask {
         while (true) {
             List<YxtKunDetail> yxtKunDetailList = yxtKunDetailMapper.selectList(
                     Wrappers.lambdaQuery(YxtKunDetail.class)
-                            .isNull(YxtKunDetail::getNickName)
-                            .last("AND LENGTH(`detail`) > 500 limit 1000")
+                            .last("where LENGTH(`detail`) > 500 limit 1000")
             );
             if (CollectionUtils.isEmpty(yxtKunDetailList)) {
                 break;
@@ -90,15 +89,15 @@ public class YxtKunInfoTask {
         while (true) {
             List<YxtKunComment> yxtKunCommentList = yxtKunCommentMapper.selectList(
                     Wrappers.lambdaQuery(YxtKunComment.class)
-                            .isNull(YxtKunComment::getCommentTime)
-                            .last("AND LENGTH(`comment`) > 500 limit 1000")
+                            .last("where LENGTH(`comment`) > 500 limit 1000")
             );
             if (CollectionUtils.isEmpty(yxtKunCommentList)) {
                 break;
             }
             for (YxtKunComment yxtKunComment : yxtKunCommentList) {
+                Integer id = yxtKunComment.getId();
                 this.parseAndSaveCommnet(yxtKunComment.getComment(), yxtKunComment);
-                yxtKunCommentMapper.deleteById(yxtKunComment.getId());
+                yxtKunCommentMapper.deleteById(id);
             }
         }
 
