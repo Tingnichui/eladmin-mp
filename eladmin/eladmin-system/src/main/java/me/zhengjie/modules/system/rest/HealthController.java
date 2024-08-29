@@ -1,5 +1,6 @@
 package me.zhengjie.modules.system.rest;
 
+import cn.hutool.core.net.NetUtil;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import me.zhengjie.annotation.rest.AnonymousGetMapping;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.LinkedHashSet;
 
 
 @Slf4j
@@ -43,11 +45,11 @@ public class HealthController {
     public ResponseEntity modifyHealth(@RequestParam(value = "sign") String sign, @RequestParam(value = "healthType") String healthType) {
         // 校验本机请求ip
         HttpServletRequest request = RequestHolder.getHttpServletRequest();
-        String localIp = StringUtils.getLocalIp();
+        LinkedHashSet<String> localIpSet = NetUtil.localIpv4s();
         String ip = StringUtils.getIp(request);
-        log.info("modifyHealth request ip：{},localIp：{}", ip, localIp);
-        if (!localIp.equals(ip)) {
-            log.error("非本机ip调用 request ip={}", ip);
+        log.info("modifyHealth request ip：{}，localIp：{}", ip, StringUtils.join(localIpSet, ","));
+        if (!localIpSet.contains(ip)) {
+            log.error("非本机ip调用 request ip：{}", ip);
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("非法请求，IP不正确");
         }
         if (!healthService.getHealthSign().equals(sign)) {
