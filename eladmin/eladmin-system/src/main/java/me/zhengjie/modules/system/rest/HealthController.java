@@ -29,8 +29,8 @@ public class HealthController {
 
     @ApiOperation(value = "健康检查")
     @AnonymousGetMapping(value = "/healthCheck")
-    public ResponseEntity healthCheck() {
-        ResponseEntity result;
+    public ResponseEntity<String> healthCheck() {
+        ResponseEntity<String> result;
         HealthStatusEnum health = healthService.getHealth();
         if (HealthStatusEnum.DOWN.equals(health)) {
             result = ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(HealthStatusEnum.DOWN.getStatus());
@@ -42,7 +42,7 @@ public class HealthController {
 
     @ApiOperation(value = "健康状态修改")
     @AnonymousGetMapping(value = "/modifyHealth")
-    public ResponseEntity modifyHealth(@RequestParam(value = "sign") String sign, @RequestParam(value = "healthType") String healthType) {
+    public ResponseEntity<String> modifyHealth(@RequestParam(value = "sign") String sign, @RequestParam(value = "healthType") String healthType) {
         // 校验本机请求ip
         HttpServletRequest request = RequestHolder.getHttpServletRequest();
         LinkedHashSet<String> localIpSet = NetUtil.localIpv4s();
