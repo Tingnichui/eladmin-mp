@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="me.zhengjie.mediacrawler.mapper.CrawlerCookiesAccountMapper">
+    <resultMap id="BaseResultMap" type="me.zhengjie.mediacrawler.domain.CrawlerCookiesAccount">
+        <id column="id" property="id"/>
+        <result column="account_name" property="accountName"/>
+        <result column="platform_name" property="platformName"/>
+        <result column="cookies" property="cookies"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="invalid_timestamp" property="invalidTimestamp"/>
+        <result column="status" property="status"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, account_name, platform_name, cookies, create_time, update_time, invalid_timestamp, status
+    </sql>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List"/>
+        from crawler_cookies_account
+        <where>
+            <if test="criteria.accountName != null">
+                and account_name like concat('%',#{criteria.accountName},'%')
+            </if>
+            <if test="criteria.platformName != null">
+                and platform_name = #{criteria.platformName}
+            </if>
+            <if test="criteria.cookies != null">
+                and cookies like concat('%',#{criteria.cookies},'%')
+            </if>
+            <if test="criteria.status != null">
+                and status = #{criteria.status}
+            </if>
+            <if test="criteria.invalidTimestamp != null and criteria.invalidTimestamp.size() > 0">
+                AND invalid_timestamp BETWEEN #{criteria.invalidTimestamp[0]} AND #{criteria.invalidTimestamp[1]}
+            </if>
+        </where>
+        order by id desc
+    </select>
+</mapper>
