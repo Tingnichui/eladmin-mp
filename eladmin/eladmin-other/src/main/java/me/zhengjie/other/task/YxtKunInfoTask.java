@@ -2,6 +2,7 @@ package me.zhengjie.other.task;
 
 import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.URLUtil;
@@ -180,6 +181,9 @@ public class YxtKunInfoTask {
             contactInfoEle.select("script").remove();
             yxtKunDetail.setContactInfo(contactInfoEle.text());
         }
+        // 提取收藏数
+        String favoriteNum = extractText(document,"a[href*=ac=favorite].nex_btm_items.nex_vt_fav");
+        yxtKunDetail.setFavoriteNum(NumberUtil.isNumber(favoriteNum) ? Integer.parseInt(favoriteNum) : -1);
         if (StringUtils.isAllBlank(yxtKunDetail.getNickName(),
                 yxtKunDetail.getDetail(),
                 yxtKunDetail.getExpenses(),

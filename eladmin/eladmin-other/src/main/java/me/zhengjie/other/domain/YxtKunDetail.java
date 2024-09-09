@@ -65,6 +65,9 @@ public class YxtKunDetail extends BaseEntity implements Serializable {
     @ApiModelProperty(value = "contactInfo")
     private String contactInfo;
 
+    @ApiModelProperty(value = "favoriteNum")
+    private Integer favoriteNum;
+
     public void copy(YxtKunDetail source) {
         BeanUtil.copyProperties(source, this, CopyOptions.create().setIgnoreNullValue(true));
     }
