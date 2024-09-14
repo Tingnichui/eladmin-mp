@@ -10,6 +10,7 @@ import org.htmlunit.html.HtmlInput;
 import org.htmlunit.html.HtmlPage;
 import org.htmlunit.html.HtmlSpan;
 import org.htmlunit.util.Cookie;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -19,6 +20,11 @@ import java.util.List;
 @Slf4j
 @Service("v2exTask")
 public class V2exTask {
+
+    @Value("${proxy.host}")
+    private String proxyHost;
+    @Value("${proxy.port}")
+    private String proxyPort;
 
     public static void main(String[] args) throws IOException {
         new V2exTask().dailyCheckIn("[]");
@@ -41,8 +47,8 @@ public class V2exTask {
 
             // 设置代理
             ProxyConfig proxyConfig = webClient.getOptions().getProxyConfig();
-            proxyConfig.setProxyHost("127.0.0.1");
-            proxyConfig.setProxyPort(7890);
+            proxyConfig.setProxyHost(proxyHost);
+            proxyConfig.setProxyPort(proxyPort);
 
             // 请求地址
             WebRequest webRequest = new WebRequest(new URL("https://www.v2ex.com/mission/daily"));

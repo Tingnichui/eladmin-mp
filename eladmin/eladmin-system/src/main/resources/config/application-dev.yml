@@ -151,3 +151,6 @@ file:
 other:
   yxt:
     url: ENC(xm5nHjMTUIoI19nV9Tf0r235D4ByksIT/Iea4pOzyiFc0DxWKlLVy4XcuzjDwHZGFH+lrX+i0aoOxwdgEmickA==)
+proxy:
+  host: 127.0.0.1
+  port: 7890
