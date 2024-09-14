@@ -4,10 +4,7 @@ import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.htmlunit.BrowserVersion;
-import org.htmlunit.NicelyResynchronizingAjaxController;
-import org.htmlunit.WebClient;
-import org.htmlunit.WebRequest;
+import org.htmlunit.*;
 import org.htmlunit.html.HtmlDivision;
 import org.htmlunit.html.HtmlInput;
 import org.htmlunit.html.HtmlPage;
@@ -41,6 +38,11 @@ public class V2exTask {
             webClient.getCookieManager().setCookiesEnabled(true);//允许cookie
             webClient.setAjaxController(new NicelyResynchronizingAjaxController());//设置支持AJAX
             webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);//关闭404报错
+
+            // 设置代理
+            ProxyConfig proxyConfig = webClient.getOptions().getProxyConfig();
+            proxyConfig.setProxyHost("127.0.0.1");
+            proxyConfig.setProxyPort(7890);
 
             // 请求地址
             WebRequest webRequest = new WebRequest(new URL("https://www.v2ex.com/mission/daily"));
