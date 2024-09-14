@@ -24,7 +24,7 @@ public class V2exTask {
     @Value("${proxy.host}")
     private String proxyHost;
     @Value("${proxy.port}")
-    private String proxyPort;
+    private Integer proxyPort;
 
     public static void main(String[] args) throws IOException {
         new V2exTask().dailyCheckIn("[]");
