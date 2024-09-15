@@ -1,6 +1,5 @@
 package me.zhengjie.other.task;
 
-import cn.hutool.core.net.NetUtil;
 import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 import me.zhengjie.utils.RedisUtils;
@@ -13,16 +12,12 @@ import org.htmlunit.html.HtmlInput;
 import org.htmlunit.html.HtmlPage;
 import org.htmlunit.html.HtmlSpan;
 import org.htmlunit.util.Cookie;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.io.IOException;
 import java.net.URL;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -104,6 +99,7 @@ public class V2exTask {
             }
             // 点击签到
             HtmlPage clickResultPage = signInDocument.click();
+            log.info("签到成功后跳转页面：{}", clickResultPage.asXml());
             // 再次请求一下签到页面之后找一下是否签到成功，如果没找说明签到失败了
             HtmlSpan checkInMsg = clickResultPage.getFirstByXPath("//span[@class='gray' and contains(text(),'每日登录奖励已领取')]");
             if (null != checkInMsg) {
