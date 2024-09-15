@@ -2,6 +2,8 @@ package me.zhengjie.other.task;
 
 import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
+import me.zhengjie.utils.RedisUtils;
+import me.zhengjie.utils.enums.RedisKeyEnum;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.htmlunit.*;
@@ -10,12 +12,15 @@ import org.htmlunit.html.HtmlInput;
 import org.htmlunit.html.HtmlPage;
 import org.htmlunit.html.HtmlSpan;
 import org.htmlunit.util.Cookie;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
 import java.io.IOException;
 import java.net.URL;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service("v2exTask")
@@ -25,6 +30,8 @@ public class V2exTask {
     private String proxyHost;
     @Value("${proxy.port}")
     private Integer proxyPort;
+    @Resource
+    private RedisUtils redisUtils;
 
     public static void main(String[] args) throws IOException {
         new V2exTask().dailyCheckIn("[]");
@@ -34,6 +41,11 @@ public class V2exTask {
         if (StringUtils.isBlank(cookieStr)) {
             throw new RuntimeException("cookie不能为空");
         }
+
+        RedisKeyEnum keyEnum = RedisKeyEnum.V2EX_DAILY_CHECK_IN_TASK;
+        boolean lock = redisUtils.setIfAbsent(keyEnum.getKey(), keyEnum.getDesc(), 10, TimeUnit.MINUTES);
+        log.info("定时任务：{}，获取锁：{}", keyEnum.getDesc(), lock);
+        if (!lock) return;
 
         try (WebClient webClient = new WebClient(BrowserVersion.FIREFOX)) {
             webClient.getOptions().setCssEnabled(false);//关闭css
@@ -87,6 +99,8 @@ public class V2exTask {
             if (null != checkInMsg) {
                 throw new RuntimeException("签到失败，请即时处理");
             }
+        } finally {
+            redisUtils.del(keyEnum.getKey());
         }
 
     }
