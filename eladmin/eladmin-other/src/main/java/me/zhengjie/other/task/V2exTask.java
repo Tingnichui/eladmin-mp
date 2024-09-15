@@ -47,10 +47,10 @@ public class V2exTask {
         }
 
         // 生产环境不支持
-        LinkedHashSet<String> localIpSet = NetUtil.localIpv4s();
-        if (localIpSet.contains("172.20.213.52")) {
-            return;
-        }
+//        LinkedHashSet<String> localIpSet = NetUtil.localIpv4s();
+//        if (localIpSet.contains("172.20.213.52")) {
+//            return;
+//        }
 
         RedisKeyEnum keyEnum = RedisKeyEnum.V2EX_DAILY_CHECK_IN_TASK;
         boolean lock = redisUtils.setIfAbsent(keyEnum.getKey(), keyEnum.getDesc(), 10, TimeUnit.MINUTES);
