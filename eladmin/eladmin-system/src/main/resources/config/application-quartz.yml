@@ -24,6 +24,6 @@ spring:
             # 可选，是否使用属性存储，可以根据需要调整
             useProperties: false
             # 必需，指定表的前缀
-            tablePrefix: qrtz_
+            tablePrefix: QRTZ_
             # 可选，指定误触发阈值，可以根据需要调整
             misfireThreshold: 60000
