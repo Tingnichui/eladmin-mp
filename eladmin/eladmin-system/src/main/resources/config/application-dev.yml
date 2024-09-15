@@ -32,9 +32,9 @@ spring:
          driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
          type: com.alibaba.druid.pool.DruidDataSource
        media_crawler:
-         url: ENC(wdjTXNKHX33hL6fSHK+zuop7fIQNB1SFmwAoKybhkqcmCUFAaXbv1DiYhm/oyyA4+ZG4IFM8VNSTvi+icr1OKc7K2xhxiCup3SryImlItmmW9esmLYDJX11yhMa3kT4BsHQwMFMmFf8gK9tbfR4Mkdw0uv0YRHmR+pw+ICysYkk4IWvWiyuxATpMu2PhONf0ZfifXSfb+X+TsZh3pvBW1A==)
+         url: ENC(xtDuOyBZ1lxf21v45O1hFcM33FwVylHC6wrG0MGPJvrizz+kVs5JuDzPZB/QoLCNdF4YEGdnKLArjuagKR7dtXLwlsnI2VacDgoiVuI9a/1k8liMgY6t0DnxLKY8w1nx63m/X3iufKHyS/1i9aVJW3afTaicUHymO3Fpc5tqBVTMXx6d484I/KP/f65i+pxv8i2NYsTG3tHKxMHMrGb5VVmchtYdVupRNu++F8/IZ5hbG40VYaL9AG/p0FwhDB90)
          username: ENC(J3Gu0/R6hQ3c47mNGIr/bNgG76aPS2KxqNF7tUaYOYhyEcJL3SCTkRvi/JKbA53h)
-         password: ENC(WWTGtyIjenbPYmBy3pels7cu5ShVEpYOyL6+0k/28iKGO0O3bme7d4Nl733NEtit)
+         password: ENC(M6u8sPks9aPxc67SVt3tcBnneypIOqQeN3aiV7BUH9SvbYH6oZeM3JwVZMomf86dTGc+EH2bJkuJ2r2nprp8bQ==)
          driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
          type: com.alibaba.druid.pool.DruidDataSource
     # 德鲁伊全局配置
