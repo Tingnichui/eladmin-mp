@@ -1,5 +1,6 @@
 package me.zhengjie.other.task;
 
+import cn.hutool.core.net.NetUtil;
 import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 import me.zhengjie.utils.RedisUtils;
@@ -14,11 +15,14 @@ import org.htmlunit.html.HtmlSpan;
 import org.htmlunit.util.Cookie;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.io.IOException;
 import java.net.URL;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -40,6 +44,12 @@ public class V2exTask {
     public void dailyCheckIn(String cookieStr) throws IOException {
         if (StringUtils.isBlank(cookieStr)) {
             throw new RuntimeException("cookie不能为空");
+        }
+
+        // 生产环境不支持
+        LinkedHashSet<String> localIpSet = NetUtil.localIpv4s();
+        if (localIpSet.contains("172.20.213.52")) {
+            return;
         }
 
         RedisKeyEnum keyEnum = RedisKeyEnum.V2EX_DAILY_CHECK_IN_TASK;
