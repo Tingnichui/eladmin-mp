@@ -99,10 +99,10 @@ public class V2exTask {
             }
             // 点击签到
             HtmlPage clickResultPage = signInDocument.click();
-            log.info("签到成功后跳转页面：{}", clickResultPage.asXml());
             // 再次请求一下签到页面之后找一下是否签到成功，如果没找说明签到失败了
             HtmlSpan checkInMsg = clickResultPage.getFirstByXPath("//span[@class='gray' and contains(text(),'每日登录奖励已领取')]");
-            if (null != checkInMsg) {
+            if (null == checkInMsg) {
+                log.info("签到成功后跳转页面：{}", clickResultPage.asXml());
                 throw new RuntimeException("签到失败，请即时处理");
             }
         } finally {
