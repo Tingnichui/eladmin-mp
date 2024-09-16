@@ -258,7 +258,7 @@ public class YxtKunInfoTask {
 
             // 开始请求
             HttpRequest request = HttpUtil.createGet(url, false);
-            request.header("Host", "www.yxt51.com");
+            request.header("Host", YXT_URL.replaceAll("https://", ""));
             request.header("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1");
             request.cookie(COOKIE);
             HttpResponse httpResponse = request.execute();
