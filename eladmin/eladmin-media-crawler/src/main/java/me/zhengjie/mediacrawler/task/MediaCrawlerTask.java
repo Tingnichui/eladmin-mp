@@ -5,13 +5,16 @@ import com.jcraft.jsch.Session;
 import lombok.extern.slf4j.Slf4j;
 import me.zhengjie.mediacrawler.domain.vo.CrawlerTagStats;
 import me.zhengjie.mediacrawler.mapper.CrawlerStatsMapper;
+import me.zhengjie.utils.RedisUtils;
 import me.zhengjie.utils.StringUtils;
+import me.zhengjie.utils.enums.RedisKeyEnum;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service("mediaCrawlerTask")
@@ -26,6 +29,8 @@ public class MediaCrawlerTask {
 
     @Resource
     private CrawlerStatsMapper crawlerStaticMapper;
+    @Resource
+    private RedisUtils redisUtils;
 
     public static final String CMD = "sh /home/script/docker_mediacrawlerpro_python.sh " +
             "crawler " +
@@ -36,19 +41,31 @@ public class MediaCrawlerTask {
 
 
     public void crawl(String keyword) {
-        // 判断一下这个关键词是否已经爬取过
-        boolean crawlFlag = crawlerStaticMapper.hasCrawled(keyword);
+        // 加锁
+        RedisKeyEnum keyEnum = RedisKeyEnum.MEDIA_CRAWLER_TASK;
+        boolean lock = redisUtils.setIfAbsent(keyEnum.getKey(), keyEnum.getDesc(), 10, TimeUnit.MINUTES);
+        log.info("定时任务：{}，获取锁：{}", keyEnum.getDesc(), lock);
+        if (!lock) return;
 
-        // 如果已经爬取过，获取出现频次最高的tag作为搜索关键词
-        if (crawlFlag) {
-            List<CrawlerTagStats> nextKeyWord = crawlerStaticMapper.getNextKeyWord(keyword, 10);
-            if (CollectionUtils.isNotEmpty(nextKeyWord)) {
-                keyword = nextKeyWord.get(0).getTag();
+        try {
+            // 判断一下这个关键词是否已经爬取过
+            boolean crawlFlag = crawlerStaticMapper.hasCrawled(keyword);
+
+            // 如果已经爬取过，获取出现频次最高的tag作为搜索关键词
+            if (crawlFlag) {
+                List<CrawlerTagStats> nextKeyWord = crawlerStaticMapper.getNextKeyWord(keyword, 10);
+                if (CollectionUtils.isNotEmpty(nextKeyWord)) {
+                    keyword = nextKeyWord.get(0).getTag();
+                }
             }
+
+            // 目前只测试 小红书
+            this.doCrawl("xhs", "search", keyword);
+
+        } finally {
+            redisUtils.del(keyEnum.getKey());
         }
 
-        // 目前只测试 小红书
-        doCrawl("xhs", "search", keyword);
     }
 
 
