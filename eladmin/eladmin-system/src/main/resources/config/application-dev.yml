@@ -138,8 +138,8 @@ file:
     path: ~/file/
     avatar: ~/avatar/
   linux:
-    path: /home/eladmin/file/
-    avatar: /home/eladmin/avatar/
+    path: /home/application/eladmin/file/
+    avatar: /home/application/eladmin/avatar/
   windows:
     path: C:\eladmin\file\
     avatar: C:\eladmin\avatar\
