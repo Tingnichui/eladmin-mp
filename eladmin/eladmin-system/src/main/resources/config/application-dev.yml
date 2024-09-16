@@ -154,3 +154,9 @@ other:
 proxy:
   host: 127.0.0.1
   port: 7890
+
+# 爬虫服务器配置
+media:
+  crawler:
+    host: ENC(uwfQ+qyT69NrmY5wMqk8+p584mfvTr7Aaui2J0Efg4YRAGi7TJI4R+QWKxYyy2cC)
+    password: ENC(8I0xBke0vkYTuJ57VmtPKSFaX0ykHKnwalmrO2/ZhGCffpc5E7dNDbqTYyFjRNM7)

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="me.zhengjie.mediacrawler.mapper.CrawlerStatsMapper">
+
+    <select id="getNextKeyWord" resultType="me.zhengjie.mediacrawler.domain.vo.CrawlerTagStats">
+        <!-- 拆分 tag_list 为单个标签，创建一个临时表 -->
+        WITH tempt AS (
+            SELECT
+                t1.id,
+                t1.note_id,
+                t1.tag_list,
+                TRIM(JSON_UNQUOTE(JSON_EXTRACT(tag.value, '$'))) AS tag
+            FROM
+                xhs_note AS t1,
+                JSON_TABLE(CONCAT('["', REPLACE(t1.tag_list, ',', '","'), '"]'),
+                           '$[*]' COLUMNS (value JSON PATH '$')) AS tag
+            WHERE t1.tag_list IS NOT NULL
+              AND t1.tag_list != ''
+              AND t1.source_keyword = #{keyword}
+        )
+
+        <!-- 统计标签出现次数并排序 -->
+        SELECT
+            tag,
+            COUNT(DISTINCT note_id) AS occurrenceCount
+        FROM
+            tempt
+        WHERE 1 = 1
+          <!-- tag不能出现已经已经搜索过 -->
+          AND tag NOT IN (SELECT source_keyword FROM xhs_note st1 WHERE st1.source_keyword IS NOT NULL AND st1.source_keyword != '')
+        GROUP BY tag
+        ORDER BY occurrenceCount DESC
+        LIMIT #{limit};
+    </select>
+
+    <select id="hasCrawled" resultType="java.lang.Boolean">
+        SELECT count(1) > 0
+        FROM xhs_note t1
+        WHERE t1.source_keyword = #{keyword}
+    </select>
+</mapper>

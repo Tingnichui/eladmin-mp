@@ -42,6 +42,7 @@
         <dynamic-datasource.version>4.3.1</dynamic-datasource.version>
         <commons-pool2.version>2.11.1</commons-pool2.version>
         <htmlunit.version>4.4.0</htmlunit.version>
+        <jsch.version>0.2.19</jsch.version>
     </properties>
 
     <dependencies>
@@ -214,6 +215,12 @@
             <version>${htmlunit.version}</version>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/com.github.mwiede/jsch -->
+        <dependency>
+            <groupId>com.github.mwiede</groupId>
+            <artifactId>jsch</artifactId>
+            <version>${jsch.version}</version>
+        </dependency>
 
     </dependencies>
 
