@@ -14,7 +14,8 @@ public class MediaCrawlerTests {
 
     @Test
     void crawl() {
-        mediaCrawlerTask.crawl("比基尼");
+//        mediaCrawlerTask.crawl("比基尼");
+        mediaCrawlerTask.checkAccountValidStatus();
     }
 }
 

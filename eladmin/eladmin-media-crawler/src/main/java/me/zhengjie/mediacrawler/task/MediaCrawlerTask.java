@@ -1,10 +1,14 @@
 package me.zhengjie.mediacrawler.task;
 
 import cn.hutool.extra.ssh.JschUtil;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.jcraft.jsch.Session;
 import lombok.extern.slf4j.Slf4j;
+import me.zhengjie.mediacrawler.constants.CrawlerCookiesAccountStatusEnum;
+import me.zhengjie.mediacrawler.domain.CrawlerCookiesAccount;
 import me.zhengjie.mediacrawler.domain.vo.CrawlerTagStats;
 import me.zhengjie.mediacrawler.mapper.CrawlerStatsMapper;
+import me.zhengjie.mediacrawler.service.CrawlerCookiesAccountService;
 import me.zhengjie.utils.RedisUtils;
 import me.zhengjie.utils.StringUtils;
 import me.zhengjie.utils.enums.RedisKeyEnum;
@@ -31,6 +35,8 @@ public class MediaCrawlerTask {
     private CrawlerStatsMapper crawlerStaticMapper;
     @Resource
     private RedisUtils redisUtils;
+    @Resource
+    private CrawlerCookiesAccountService crawlerCookiesAccountService;
 
     public static final String CMD = "sh /home/script/docker_mediacrawlerpro_python.sh " +
             "crawler " +
@@ -53,7 +59,7 @@ public class MediaCrawlerTask {
 
             // 如果已经爬取过，获取出现频次最高的tag作为搜索关键词
             if (crawlFlag) {
-                List<CrawlerTagStats> nextKeyWord = crawlerStaticMapper.getTagListByKeyWord(keyword, 5,10);
+                List<CrawlerTagStats> nextKeyWord = crawlerStaticMapper.getTagListByKeyWord(keyword, 5, 10);
                 if (CollectionUtils.isNotEmpty(nextKeyWord)) {
                     keyword = nextKeyWord.get(0).getTag();
                 }
@@ -96,6 +102,18 @@ public class MediaCrawlerTask {
         } finally {
             if (null != session) {
                 JschUtil.close(session);
+            }
+        }
+    }
+
+    public void checkAccountValidStatus() {
+        long count = crawlerCookiesAccountService.count(
+                Wrappers.lambdaQuery(CrawlerCookiesAccount.class)
+                        .eq(CrawlerCookiesAccount::getStatus, CrawlerCookiesAccountStatusEnum.INVALID.getCode())
+        );
+        if (count > 0) {
+            {
+                throw new RuntimeException("存在无效的账号，请及时处理");
             }
         }
     }
