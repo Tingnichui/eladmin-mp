@@ -71,6 +71,9 @@
           <el-form-item label="cookies" prop="cookies">
             <el-input v-model="form.cookies" :rows="3" type="textarea" style="width: 370px;" />
           </el-form-item>
+          <el-form-item label="状态" prop="courseType">
+            <el-radio v-for="item in dict.media_crawler_account_status" :key="item.id" v-model="form.status" :label="Number(item.value)">{{ item.label }}</el-radio>
+          </el-form-item>
         </el-form>
         <div slot="footer" class="dialog-footer">
           <el-button type="text" @click="crud.cancelCU">取消</el-button>
