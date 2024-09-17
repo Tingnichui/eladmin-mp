@@ -53,7 +53,7 @@ public class MediaCrawlerTask {
 
             // 如果已经爬取过，获取出现频次最高的tag作为搜索关键词
             if (crawlFlag) {
-                List<CrawlerTagStats> nextKeyWord = crawlerStaticMapper.getNextKeyWord(keyword, 10);
+                List<CrawlerTagStats> nextKeyWord = crawlerStaticMapper.getTagListByKeyWord(keyword, 5,10);
                 if (CollectionUtils.isNotEmpty(nextKeyWord)) {
                     keyword = nextKeyWord.get(0).getTag();
                 }

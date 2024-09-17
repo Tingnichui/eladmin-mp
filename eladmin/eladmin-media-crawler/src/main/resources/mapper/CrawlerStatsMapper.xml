@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="me.zhengjie.mediacrawler.mapper.CrawlerStatsMapper">
 
-    <select id="getNextKeyWord" resultType="me.zhengjie.mediacrawler.domain.vo.CrawlerTagStats">
+    <select id="getTagListByKeyWord" resultType="me.zhengjie.mediacrawler.domain.vo.CrawlerTagStats">
         <!-- 拆分 tag_list 为单个标签，创建一个临时表 -->
         WITH tempt AS (
             SELECT
@@ -29,6 +29,7 @@
           <!-- tag不能出现已经已经搜索过 -->
           AND tag NOT IN (SELECT source_keyword FROM xhs_note st1 WHERE st1.source_keyword IS NOT NULL AND st1.source_keyword != '')
         GROUP BY tag
+        HAVING occurrenceCount >= #{minOccurrenceCount}
         ORDER BY occurrenceCount DESC
         LIMIT #{limit};
     </select>
