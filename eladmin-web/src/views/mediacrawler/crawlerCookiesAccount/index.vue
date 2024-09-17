@@ -92,7 +92,11 @@
         <!--        <el-table-column prop="cookies" label="cookies" />-->
         <el-table-column prop="createTime" label="创建时间" />
         <el-table-column prop="updateTime" label="更新时间" />
-        <el-table-column prop="invalidTimestamp" label="失效时间" />
+        <el-table-column prop="invalidTimestamp" label="失效时间">
+          <template slot-scope="scope">
+            {{ scope.row.invalidTimestamp !== 0 ? new Date(scope.row.invalidTimestamp).toLocaleString() : 0 }}
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态">
           <template slot-scope="scope">
             {{ dict.label.media_crawler_account_status[scope.row.status] }}
