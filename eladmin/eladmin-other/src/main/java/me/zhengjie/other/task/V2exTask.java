@@ -1,5 +1,6 @@
 package me.zhengjie.other.task;
 
+import cn.hutool.core.util.RandomUtil;
 import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 import me.zhengjie.utils.RedisUtils;
@@ -32,11 +33,11 @@ public class V2exTask {
     @Resource
     private RedisUtils redisUtils;
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws Exception {
         new V2exTask().dailyCheckIn("[]");
     }
 
-    public void dailyCheckIn(String cookieStr) throws IOException {
+    public void dailyCheckIn(String cookieStr) throws Exception {
         if (StringUtils.isBlank(cookieStr)) {
             throw new RuntimeException("cookie不能为空");
         }
@@ -51,6 +52,9 @@ public class V2exTask {
         boolean lock = redisUtils.setIfAbsent(keyEnum.getKey(), keyEnum.getDesc(), 10, TimeUnit.MINUTES);
         log.info("定时任务：{}，获取锁：{}", keyEnum.getDesc(), lock);
         if (!lock) return;
+
+        // 随机暂停一会
+        Thread.sleep(RandomUtil.randomInt(10, 100) * 1000L);
 
         try (WebClient webClient = new WebClient(BrowserVersion.FIREFOX)) {
             webClient.getOptions().setCssEnabled(false);//关闭css
