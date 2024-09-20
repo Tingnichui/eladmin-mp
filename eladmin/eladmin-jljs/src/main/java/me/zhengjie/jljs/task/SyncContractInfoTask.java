@@ -106,23 +106,24 @@ public class SyncContractInfoTask {
             }
         }
 
+        // 获取该会员该合同的使用记录
+        int realUseCount = Math.toIntExact(jljsClassRecordMapper.selectCount(
+                Wrappers.lambdaQuery(JljsClassRecord.class)
+                        .eq(JljsClassRecord::getMemberId, contractInfo.getMemberId())
+                        .eq(JljsClassRecord::getContractInfoId, contractId)
+        ));
+        contractInfo.setCourseUseQuantity(realUseCount);
+
         // 更新 次卡已使用量、剩余数量
         String courseType = contractInfo.getCourseType();
         if (JljsCourseTypeEnum.ci.getCode().equals(courseType)) {
-            // 获取该会员该合同的使用记录
-            int count = Math.toIntExact(jljsClassRecordMapper.selectCount(
-                    Wrappers.lambdaQuery(JljsClassRecord.class)
-                            .eq(JljsClassRecord::getMemberId, contractInfo.getMemberId())
-                            .eq(JljsClassRecord::getContractInfoId, contractId)
-            ));
-            contractInfo.setCourseUseQuantity(count);
-            contractInfo.setCourseRemainQuantity(contractInfo.getCourseAvailableQuantity() - count);
+            contractInfo.setCourseRemainQuantity(contractInfo.getCourseAvailableQuantity() - realUseCount);
         }
         // 更新 按天计时 已使用量、剩余数量
         if (JljsCourseTypeEnum.tian.getCode().equals(courseType)) {
             // 已使用量 = 使用开始时间到今天的天数 - 总计的暂停天数
             int courseUsePeriodDays = (int) DateUtil.betweenDay(contractInfo.getUseBeginDate(), today, true) - totalStopDays;
-            contractInfo.setCourseUseQuantity(Math.min(contractInfo.getCourseAvailableQuantity(), courseUsePeriodDays));
+//            contractInfo.setCourseUseQuantity(Math.min(contractInfo.getCourseAvailableQuantity(), courseUsePeriodDays));
             contractInfo.setCourseRemainQuantity(Math.max(contractInfo.getCourseAvailableQuantity() - courseUsePeriodDays, 0));
         }
 
