@@ -223,21 +223,31 @@
             </div>
           </template>
         </el-table-column>
+        <!-- <el-table-column prop="buyTime" label="购买日期" /> -->
+        <el-table-column prop="courseTotalStopDays" label="总暂停天数" />
         <el-table-column
           label="实际上课"
           prop="courseUseQuantity"
+          :width="150"
         >
           <template #default="scope">
             <div v-if="scope.row.courseUseQuantity || scope.row.courseUseQuantity === 0">
-              {{ `${scope.row.courseUseQuantity}${scope.row.courseType === '1' ? '次' : '天'}` }}
+              <el-tooltip
+                effect="dark"
+                :content="`${scope.row.courseUseQuantity} / ${scope.row.courseAvailableQuantity} ${scope.row.courseType === '1' ? '次' : '天'}`"
+                placement="top"
+              >
+                <progress
+                  :value="scope.row.courseUseQuantity"
+                  :max="scope.row.courseAvailableQuantity"
+                />
+              </el-tooltip>
             </div>
             <div v-else>
               -
             </div>
           </template>
         </el-table-column>
-        <!-- <el-table-column prop="buyTime" label="购买日期" /> -->
-        <el-table-column prop="courseTotalStopDays" label="总暂停天数" />
         <el-table-column prop="contractRemark" label="备注" />
         <el-table-column prop="id" label="编号" />
         <!-- <el-table-column prop="courseType" label="课程类型">
