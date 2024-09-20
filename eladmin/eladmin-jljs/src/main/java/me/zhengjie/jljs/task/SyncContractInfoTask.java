@@ -40,7 +40,7 @@ public class SyncContractInfoTask {
     public void syncAll() {
         try {
             RedisKeyEnum keyEnum = RedisKeyEnum.SYNC_ALL_CONTRACT_INFO_TASK;
-            boolean lock = redisUtils.setIfAbsent(keyEnum.getKey(), keyEnum.getKey(), 30, TimeUnit.MINUTES);
+            boolean lock = redisUtils.setIfAbsent(keyEnum.getKey(), keyEnum.getDesc(), 30, TimeUnit.MINUTES);
             log.info("定时任务：{}，获取锁：{}", keyEnum.getDesc(), lock);
             if (!lock) return;
 

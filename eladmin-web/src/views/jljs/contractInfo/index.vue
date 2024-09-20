@@ -223,6 +223,19 @@
             </div>
           </template>
         </el-table-column>
+        <el-table-column
+          label="实际上课"
+          prop="courseUseQuantity"
+        >
+          <template #default="scope">
+            <div v-if="scope.row.courseUseQuantity || scope.row.courseUseQuantity === 0">
+              {{ `${scope.row.courseUseQuantity}${scope.row.courseType === '1' ? '次' : '天'}` }}
+            </div>
+            <div v-else>
+              -
+            </div>
+          </template>
+        </el-table-column>
         <!-- <el-table-column prop="buyTime" label="购买日期" /> -->
         <el-table-column prop="courseTotalStopDays" label="总暂停天数" />
         <el-table-column prop="contractRemark" label="备注" />
