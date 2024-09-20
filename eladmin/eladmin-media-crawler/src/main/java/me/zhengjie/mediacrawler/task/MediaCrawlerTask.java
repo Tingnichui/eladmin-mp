@@ -43,7 +43,10 @@ public class MediaCrawlerTask {
             "mediacrawlerpro_python " +
             "${PLATFORM} " +
             "${TYPE} " +
-            "${KEYWORDS} ";
+            "${KEYWORDS} " +
+            "${RECORD_ID} " +
+            "${START_PAGE} "
+            ;
 
 
     public void crawl(String keyword) {
@@ -66,7 +69,7 @@ public class MediaCrawlerTask {
             }
 
             // 目前只测试 小红书
-            this.doCrawl("xhs", "search", keyword);
+            this.doCrawl("xhs", "search", keyword, null, null);
 
         } finally {
             redisUtils.del(keyEnum.getKey());
@@ -75,8 +78,8 @@ public class MediaCrawlerTask {
     }
 
 
-    private void doCrawl(String platform, String type, String keywords) {
-        if (StringUtils.isAnyBlank(platform, type, keywords)) {
+    private void doCrawl(String platform, String type, String keywords, Integer recordId, Integer startPage) {
+        if (StringUtils.isAnyBlank(platform, type, keywords) || null == recordId || null == startPage) {
             throw new RuntimeException("参数不能为空");
         }
         Session session = null;
@@ -85,7 +88,9 @@ public class MediaCrawlerTask {
             String execCmd = CMD
                     .replace("${PLATFORM}", platform)
                     .replace("${TYPE}", type)
-                    .replace("${KEYWORDS}", keywords);
+                    .replace("${KEYWORDS}", keywords)
+                    .replace("${RECORD_ID}", recordId.toString())
+                    .replace("${START_PAGE}", startPage.toString());
             String execResult = JschUtil.exec(session, execCmd, null);
             log.info("执行结果：{}", execResult);
 

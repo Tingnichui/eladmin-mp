@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="me.zhengjie.mediacrawler.mapper.CrawlerRecordMapper">
+    <resultMap id="BaseResultMap" type="me.zhengjie.mediacrawler.domain.CrawlerRecord">
+        <id column="id" property="id"/>
+        <result column="platform" property="platform"/>
+        <result column="crawler_type" property="crawlerType"/>
+        <result column="keywords" property="keywords"/>
+        <result column="start_page" property="startPage"/>
+        <result column="end_page" property="endPage"/>
+        <result column="crawler_status" property="crawlerStatus"/>
+        <result column="error_msg" property="errorMsg"/>
+        <result column="log_path" property="logPath"/>
+        <result column="start_time" property="startTime"/>
+        <result column="end_time" property="endTime"/>
+        <result column="create_by" property="createBy"/>
+        <result column="update_by" property="updateBy"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, platform, crawler_type, keywords, start_page, end_page, crawler_status, error_msg, log_path, start_time, end_time, create_by, update_by, create_time, update_time
+    </sql>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List"/>
+        from crawler_record
+        <where>
+            <if test="criteria.platform != null">
+                and platform = #{criteria.platform}
+            </if>
+            <if test="criteria.crawlerType != null">
+                and crawler_type = #{criteria.crawlerType}
+            </if>
+            <if test="criteria.keywords != null">
+                and keywords like concat('%',#{criteria.keywords},'%')
+            </if>
+            <if test="criteria.crawlerStatus != null">
+                and crawler_status = #{criteria.crawlerStatus}
+            </if>
+        </where>
+        order by id desc
+    </select>
+</mapper>
