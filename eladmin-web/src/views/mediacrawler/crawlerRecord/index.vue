@@ -127,7 +127,7 @@
             {{ dict.label.media_crawler_crawler_status[scope.row.crawlerStatus] }}
           </template>
         </el-table-column>
-        <!--        <el-table-column prop="errorMsg" label="异常信息" />-->
+        <el-table-column prop="errorMsg" label="异常信息" show-overflow-tooltip />
         <el-table-column prop="logPath" label="日志路径" />
         <el-table-column prop="startTime" label="开始时间" />
         <el-table-column prop="endTime" label="结束时间" />

@@ -5,10 +5,13 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.jcraft.jsch.Session;
 import lombok.extern.slf4j.Slf4j;
 import me.zhengjie.mediacrawler.constants.CrawlerCookiesAccountStatusEnum;
+import me.zhengjie.mediacrawler.constants.CrawlerRecordStatusEnum;
 import me.zhengjie.mediacrawler.domain.CrawlerCookiesAccount;
+import me.zhengjie.mediacrawler.domain.CrawlerRecord;
 import me.zhengjie.mediacrawler.domain.vo.CrawlerTagStats;
 import me.zhengjie.mediacrawler.mapper.CrawlerStatsMapper;
 import me.zhengjie.mediacrawler.service.CrawlerCookiesAccountService;
+import me.zhengjie.mediacrawler.service.CrawlerRecordService;
 import me.zhengjie.utils.RedisUtils;
 import me.zhengjie.utils.StringUtils;
 import me.zhengjie.utils.enums.RedisKeyEnum;
@@ -37,6 +40,8 @@ public class MediaCrawlerTask {
     private RedisUtils redisUtils;
     @Resource
     private CrawlerCookiesAccountService crawlerCookiesAccountService;
+    @Resource
+    private CrawlerRecordService crawlerRecordService;
 
     public static final String CMD = "sh /home/script/docker_mediacrawlerpro_python.sh " +
             "crawler " +
@@ -69,7 +74,16 @@ public class MediaCrawlerTask {
             }
 
             // 目前只测试 小红书
-            this.doCrawl("xhs", "search", keyword, null, null);
+            CrawlerRecord crawlerRecord = new CrawlerRecord();
+            crawlerRecord.setPlatform("xhs");
+            crawlerRecord.setCrawlerType("search");
+            crawlerRecord.setKeywords(keyword);
+            crawlerRecord.setStartPage(1);
+            crawlerRecord.setCrawlerStatus(CrawlerRecordStatusEnum.INITIAL.getCode());
+            crawlerRecordService.save(crawlerRecord);
+
+            // 执行爬虫
+            this.doCrawl(crawlerRecord.getId());
 
         } finally {
             redisUtils.del(keyEnum.getKey());
@@ -78,19 +92,43 @@ public class MediaCrawlerTask {
     }
 
 
-    private void doCrawl(String platform, String type, String keywords, Integer recordId, Integer startPage) {
-        if (StringUtils.isAnyBlank(platform, type, keywords) || null == recordId || null == startPage) {
+    /**
+     * 执行爬虫
+     * @param crawlerRecordId 爬虫记录主键id
+     */
+    public void doCrawl(Integer crawlerRecordId) {
+        if (null == crawlerRecordId) {
+            return;
+        }
+        CrawlerRecord crawlerRecord = crawlerRecordService.getById(crawlerRecordId);
+        if (null == crawlerRecord) {
+            return;
+        }
+
+        // 校验状态
+        if (!CrawlerRecordStatusEnum.needCrawlStatusList.contains(crawlerRecord.getCrawlerStatus())) {
+            return;
+        }
+
+        // 校验参数
+        final String platform = crawlerRecord.getPlatform();
+        final String crawlerType = crawlerRecord.getCrawlerType();
+        final String keywords = crawlerRecord.getKeywords();
+        final Integer startPage = crawlerRecord.getStartPage();
+        if (StringUtils.isAnyBlank(platform, crawlerType, keywords)) {
             throw new RuntimeException("参数不能为空");
         }
+
+        // 连接服务器进行操作
         Session session = null;
         try {
             session = JschUtil.getSession(host, 12022, "root", password);
             String execCmd = CMD
                     .replace("${PLATFORM}", platform)
-                    .replace("${TYPE}", type)
+                    .replace("${TYPE}", crawlerType)
                     .replace("${KEYWORDS}", keywords)
-                    .replace("${RECORD_ID}", recordId.toString())
-                    .replace("${START_PAGE}", startPage.toString());
+                    .replace("${RECORD_ID}", crawlerRecordId.toString())
+                    .replace("${START_PAGE}", null != startPage ? startPage.toString() : "1");
             String execResult = JschUtil.exec(session, execCmd, null);
             log.info("执行结果：{}", execResult);
 
@@ -101,9 +139,22 @@ public class MediaCrawlerTask {
                 // 存在正在执行的任务，取消掉这次执行
                 return;
             }
+            // 更新爬虫状态
+            crawlerRecordService.update(
+                    Wrappers.lambdaUpdate(CrawlerRecord.class)
+                            .eq(CrawlerRecord::getId,crawlerRecordId)
+                            .set(CrawlerRecord::getCrawlerStatus, CrawlerRecordStatusEnum.CRAWLING.getCode())
+            );
+
         } catch (Exception e) {
             log.error("执行失败", e);
-            throw e;
+            // 更新爬虫状态与错误信息
+            crawlerRecordService.update(
+                    Wrappers.lambdaUpdate(CrawlerRecord.class)
+                            .eq(CrawlerRecord::getId,crawlerRecordId)
+                            .set(CrawlerRecord::getCrawlerStatus, CrawlerRecordStatusEnum.ERROR.getCode())
+                            .set(CrawlerRecord::getErrorMsg, e.getMessage())
+            );
         } finally {
             if (null != session) {
                 JschUtil.close(session);
@@ -111,6 +162,9 @@ public class MediaCrawlerTask {
         }
     }
 
+    /**
+     * 检查失效账号
+     */
     public void checkAccountValidStatus() {
         long count = crawlerCookiesAccountService.count(
                 Wrappers.lambdaQuery(CrawlerCookiesAccount.class)
