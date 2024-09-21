@@ -6,6 +6,7 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.CharsetUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.extra.ssh.JschUtil;
+import com.baomidou.dynamic.datasource.annotation.DS;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.jcraft.jsch.Session;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,7 @@ import me.zhengjie.utils.enums.RedisKeyEnum;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.io.ByteArrayOutputStream;
@@ -53,6 +55,8 @@ public class MediaCrawlerTask {
     private CrawlerCookiesAccountService crawlerCookiesAccountService;
     @Resource
     private CrawlerRecordService crawlerRecordService;
+    @Resource
+    private MediaCrawlerTask mediaCrawlerTask;
 
     public static final String CMD = "sh /home/script/docker_mediacrawlerpro_python.sh " +
             "crawler " +
@@ -219,12 +223,14 @@ public class MediaCrawlerTask {
         Date date = DateUtil.offsetDay(new Date(), -(days - 1));
 
         for (int i = 0; i < days; i++) {
-            this.syncCrawlRecord(DateUtil.offsetDay(date, +i));
+            mediaCrawlerTask.syncCrawlRecord(DateUtil.offsetDay(date, +i));
         }
 
     }
 
 
+    @DS("media_crawler")
+    @Transactional(rollbackFor = Exception.class)
     public void syncCrawlRecord(Date date) throws Exception {
         Session session = null;
         try (ByteArrayOutputStream errStream = new ByteArrayOutputStream()) {
@@ -264,8 +270,8 @@ public class MediaCrawlerTask {
                     throw new RuntimeException("爬虫记录不存在，及时处理");
                 }
 
-                // 进行中的记录处理
-                if (!CrawlerRecordStatusEnum.CRAWLING.getCode().equals(crawlerRecord.getCrawlerStatus())) {
+                // 已完成的记录不可以再次更新状态，但是只要未完成，就有可能再次进行爬虫，需要更新状态信息等
+                if (CrawlerRecordStatusEnum.FINISH.getCode().equals(crawlerRecord.getCrawlerStatus())) {
                     continue;
                 }
 
@@ -316,19 +322,21 @@ public class MediaCrawlerTask {
                     }
                 }
 
+                // 先更新数据库再去给日志文件标记未已解析，防止文件打完标记，更新数据库出现异常了
+                crawlerRecordService.updateById(crawlerRecord);
+
                 // 如果更新了状态，则需要将该日志文件标记为已识别
                 if (changeStatus) {
                     String changgFileNameCmd = String.format("mv %s %s", logCompletePath, logCompletePath.replace(".log", "_done.log"));
                     JschUtil.exec(session, changgFileNameCmd, null, errStream);
                     // 有错误输出 说明修改文件名称出现异常，取消掉这次修改
                     if (errStream.size() > 0) {
-                        System.out.println("mv log file error: " + errStream);
-                        // TODO 2024/9/22 1:34 genghui:需要发送消息
-                        continue;
+                        // 直接抛异常，回滚事务，后面的日志文件也不做处理了，解决之后在处理
+                        log.error("mv log file error: " + errStream);
+                        throw new RuntimeException(errStream.toString());
                     }
                 }
 
-                crawlerRecordService.updateById(crawlerRecord);
 
             }
 
