@@ -90,6 +90,21 @@ public class MediaCrawlerTask {
                 return;
             }
 
+            // 处理一下之前还未完成的爬虫
+            {
+                CrawlerRecord waitCrawlerRecord = crawlerRecordService.getOne(
+                        Wrappers.lambdaQuery(CrawlerRecord.class)
+                                .in(CrawlerRecord::getCrawlerStatus, CrawlerRecordStatusEnum.needCrawlStatusList)
+                                .orderByAsc(BaseEntity::getCreateTime)
+                                .last("limit 1")
+                );
+                if (null != waitCrawlerRecord) {
+                    // 执行爬虫
+                    this.doCrawl(waitCrawlerRecord.getId());
+                    return;
+                }
+            }
+
             // 判断一下这个关键词是否已经爬取过
             boolean crawlFlag = crawlerStaticMapper.hasCrawled(keyword);
 
