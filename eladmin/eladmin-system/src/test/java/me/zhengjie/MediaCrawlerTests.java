@@ -1,5 +1,7 @@
 package me.zhengjie;
 
+import cn.hutool.core.date.DatePattern;
+import cn.hutool.core.date.DateUtil;
 import me.zhengjie.mediacrawler.task.MediaCrawlerTask;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -14,14 +16,18 @@ public class MediaCrawlerTests {
 
     @Test
     void crawl() {
-//        mediaCrawlerTask.crawl("比基尼");
-        mediaCrawlerTask.checkAccountValidStatus();
+        mediaCrawlerTask.crawl("手办");
+//        mediaCrawlerTask.checkAccountValidStatus();
     }
 
     @Test
-    void name() {
-        mediaCrawlerTask.syncRecentCrawlRecord();
-//        mediaCrawlerTask.syncCrawlRecord(DateUtil.parse("2024-09-18", DatePattern.NORM_DATE_PATTERN));
+    void syncCrawlRecord() throws Exception {
+        mediaCrawlerTask.syncCrawlRecord(DateUtil.parse("2024-09-21", DatePattern.NORM_DATE_PATTERN));
+    }
+
+    @Test
+    void name() throws Exception {
+        mediaCrawlerTask.syncRecentCrawlRecord(3);
     }
 }
 

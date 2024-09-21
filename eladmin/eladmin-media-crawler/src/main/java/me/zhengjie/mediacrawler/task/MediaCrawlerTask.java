@@ -3,6 +3,7 @@ package me.zhengjie.mediacrawler.task;
 import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.util.CharsetUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.extra.ssh.JschUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -25,6 +26,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -208,28 +212,30 @@ public class MediaCrawlerTask {
         }
     }
 
-    public void syncRecentCrawlRecord() {
-        Date date = new Date();
+    /**
+     * @param days 天数，例如：3，就是同步最近三天的爬虫记录，包含当天
+     */
+    public void syncRecentCrawlRecord(Integer days) throws Exception {
+        Date date = DateUtil.offsetDay(new Date(), -(days - 1));
 
-        // 默认同步三天的数据
-        for (int i = 0; i < 3; i++) {
-            this.syncCrawlRecord(DateUtil.offsetDay(date, -i));
+        for (int i = 0; i < days; i++) {
+            this.syncCrawlRecord(DateUtil.offsetDay(date, +i));
         }
 
     }
 
 
-    public void syncCrawlRecord(Date date) {
+    public void syncCrawlRecord(Date date) throws Exception {
         Session session = null;
-        try {
+        try (ByteArrayOutputStream errStream = new ByteArrayOutputStream()) {
             final String logHomeDir = "/home/application/media-crawler-pro/media-crawler-python/logs";
             final String completeLogPath = logHomeDir + "/" + DateUtil.format(date, DatePattern.PURE_DATE_PATTERN);
 
             // 连接到服务器
             session = JschUtil.getSession(host, 12022, "root", password);
 
-            // 获取当天所有目录文件
-            String execCmd = String.format("ls %s", completeLogPath) ;
+            // 获取当天所有目录文件 按照修改时间顺序，最新执行的在前面
+            String execCmd = String.format("ls -tr %s", completeLogPath) ;
             String logList = JschUtil.exec(session, execCmd, null);
             if (StringUtils.isBlank(logList)) {
                 return;
@@ -237,6 +243,11 @@ public class MediaCrawlerTask {
             // 遍历每个文件
             String[] fileList = logList.split("\n");
             for (String fileName : fileList) {
+                // 包含已经解析完成标识的忽略掉，不再解析
+                if (fileName.contains("done")) {
+                    continue;
+                }
+
                 // 解析出所有信息
                 String[] split = fileName.split("_");
                 final String dateStr = split[0];
@@ -270,9 +281,12 @@ public class MediaCrawlerTask {
                 // 获取该次爬取最大页数
                 {
                     String pageNumCmd = String.format("cat %s | grep 'INFO' | grep 'search' | grep 'keyword' | grep 'page'", logCompletePath);
-                    String lastPageStr = JschUtil.exec(session, pageNumCmd, null);
+                    String lastPageStr = JschUtil.exec(session, pageNumCmd, null, errStream);
                     if (StringUtils.isBlank(lastPageStr)) {
                         throw new RuntimeException("获取爬取页数出现异常");
+                    }
+                    if (errStream.size() > 0) {
+                        throw new RuntimeException(errStream.toString());
                     }
 
                     String[] pageLogsArray = lastPageStr.split("\n");
@@ -280,23 +294,43 @@ public class MediaCrawlerTask {
                     crawlerRecord.setEndPage(endPage);
                 }
 
-                // 判断一下是否顺利完成
+                // 判断一下是否修改爬虫状态
+                boolean changeStatus = false;
                 {
                     String tailCmd = String.format("tail -n 20 %s", logCompletePath) ;
-                    String tailContentStr = JschUtil.exec(session, tailCmd, null);
-                    if (tailContentStr.contains("记录当前爬取的关键词和页码")) {
+                    String tailContentStr = JschUtil.exec(session, tailCmd, null, errStream);
+                    if (errStream.size() > 0) {
+                        // 标记为异常，下次还要继续处理
+                        crawlerRecord.setCrawlerStatus(CrawlerRecordStatusEnum.ERROR.getCode());
+                        crawlerRecord.setErrorMsg(errStream.toString());
+                        errStream.reset();
+                        changeStatus = true;
+                    } else if (tailContentStr.contains("记录当前爬取的关键词和页码")) {
                         // 标记为异常，下次还要继续处理
                         crawlerRecord.setCrawlerStatus(CrawlerRecordStatusEnum.ERROR.getCode());
                         crawlerRecord.setErrorMsg(tailContentStr);
+                        changeStatus = true;
                     } else if (tailContentStr.contains("Crawler finished")) {
                         crawlerRecord.setCrawlerStatus(CrawlerRecordStatusEnum.FINISH.getCode());
+                        changeStatus = true;
+                    }
+                }
+
+                // 如果更新了状态，则需要将该日志文件标记为已识别
+                if (changeStatus) {
+                    String changgFileNameCmd = String.format("mv %s %s", logCompletePath, logCompletePath.replace(".log", "_done.log"));
+                    JschUtil.exec(session, changgFileNameCmd, null, errStream);
+                    // 有错误输出 说明修改文件名称出现异常，取消掉这次修改
+                    if (errStream.size() > 0) {
+                        System.out.println("mv log file error: " + errStream);
+                        // TODO 2024/9/22 1:34 genghui:需要发送消息
+                        continue;
                     }
                 }
 
                 crawlerRecordService.updateById(crawlerRecord);
 
             }
-
 
         } catch (Exception e) {
             log.error("同步爬虫记录信息出现异常", e);
