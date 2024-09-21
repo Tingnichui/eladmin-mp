@@ -22,7 +22,8 @@ public class MediaCrawlerTests {
 
     @Test
     void name() {
-        mediaCrawlerTask.syncCrawlRecord(DateUtil.parse("2024-09-18", DatePattern.NORM_DATE_PATTERN));
+        mediaCrawlerTask.syncRecentCrawlRecord(null);
+//        mediaCrawlerTask.syncCrawlRecord(DateUtil.parse("2024-09-18", DatePattern.NORM_DATE_PATTERN));
     }
 }
 

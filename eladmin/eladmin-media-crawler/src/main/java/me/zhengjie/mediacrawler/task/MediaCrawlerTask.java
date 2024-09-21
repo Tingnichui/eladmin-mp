@@ -183,6 +183,19 @@ public class MediaCrawlerTask {
         }
     }
 
+    public void syncRecentCrawlRecord(String dateStr) {
+        Date date = new Date();
+        if (StringUtils.isNotBlank(dateStr)) {
+            date = DateUtil.parse(dateStr, DatePattern.NORM_DATE_PATTERN);
+        }
+
+        // 默认同步三天的数据
+        for (int i = 0; i < 3; i++) {
+            this.syncCrawlRecord(DateUtil.offsetDay(date, -i));
+        }
+
+    }
+
 
     public void syncCrawlRecord(Date date) {
         Session session = null;
@@ -218,12 +231,19 @@ public class MediaCrawlerTask {
                     throw new RuntimeException("爬虫记录不存在，及时处理");
                 }
 
+                // 进行中的记录处理
+                if (!CrawlerRecordStatusEnum.CRAWLING.getCode().equals(crawlerRecord.getCrawlerStatus())) {
+                    continue;
+                }
+
                 // 需要考虑到爬虫失败重试
                 if (null == crawlerRecord.getStartTime()) {
                     crawlerRecord.setStartTime(startTime.toTimestamp());
                 }
                 // 可能存在多条日志
-                crawlerRecord.setLogPath(crawlerRecord.getLogPath() + "," + logCompletePath);
+                if (!crawlerRecord.getLogPath().contains(logCompletePath)){
+                    crawlerRecord.setLogPath(crawlerRecord.getLogPath() + "," + logCompletePath);
+                }
 
                 // 获取该次爬取最大页数
                 {
@@ -258,6 +278,7 @@ public class MediaCrawlerTask {
 
         } catch (Exception e) {
             log.error("同步爬虫记录信息出现异常", e);
+            throw e;
         } finally {
             // 关闭连接
             if (null != session) {
@@ -276,7 +297,7 @@ public class MediaCrawlerTask {
         if (!allGroups.get(1).equals(keywords)) {
             throw new RuntimeException("搜索关键词不匹配");
         }
-        return Integer.getInteger(allGroups.get(2));
+        return Integer.parseInt(allGroups.get(2));
     }
 
 
