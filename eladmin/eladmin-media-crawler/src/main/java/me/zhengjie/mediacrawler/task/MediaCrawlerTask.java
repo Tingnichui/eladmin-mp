@@ -256,7 +256,7 @@ public class MediaCrawlerTask {
             session = JschUtil.getSession(host, 12022, "root", password);
 
             // 获取当天所有目录文件 按照修改时间顺序，最新执行的在前面
-            String execCmd = String.format("ls -tr %s", completeLogPath) ;
+            String execCmd = String.format("ls -tr %s | grep -v 'done'", completeLogPath) ;
             String logList = JschUtil.exec(session, execCmd, null);
             if (StringUtils.isBlank(logList)) {
                 return;
