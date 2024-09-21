@@ -8,6 +8,7 @@ import cn.hutool.extra.ssh.JschUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.jcraft.jsch.Session;
 import lombok.extern.slf4j.Slf4j;
+import me.zhengjie.base.BaseEntity;
 import me.zhengjie.mediacrawler.constants.CrawlerCookiesAccountStatusEnum;
 import me.zhengjie.mediacrawler.constants.CrawlerRecordStatusEnum;
 import me.zhengjie.mediacrawler.domain.CrawlerCookiesAccount;
@@ -67,7 +68,20 @@ public class MediaCrawlerTask {
         log.info("定时任务：{}，获取锁：{}", keyEnum.getDesc(), lock);
         if (!lock) return;
 
+        final String platform = "xhs";
+        final String search = "search";
+
         try {
+            // 平台账号是否有效 没有有效商户直接return
+            long validAccountCount = crawlerCookiesAccountService.count(
+                    Wrappers.lambdaQuery(CrawlerCookiesAccount.class)
+                            .eq(CrawlerCookiesAccount::getStatus, CrawlerCookiesAccountStatusEnum.VALID.getCode())
+                            .eq(CrawlerCookiesAccount::getPlatformName, platform)
+            );
+            if (validAccountCount < 1) {
+                return;
+            }
+
             // 判断一下这个关键词是否已经爬取过
             boolean crawlFlag = crawlerStaticMapper.hasCrawled(keyword);
 
@@ -79,14 +93,23 @@ public class MediaCrawlerTask {
                 }
             }
 
-            // 目前只测试 小红书
-            CrawlerRecord crawlerRecord = new CrawlerRecord();
-            crawlerRecord.setPlatform("xhs");
-            crawlerRecord.setCrawlerType("search");
-            crawlerRecord.setKeywords(keyword);
-            crawlerRecord.setStartPage(1);
-            crawlerRecord.setCrawlerStatus(CrawlerRecordStatusEnum.INITIAL.getCode());
-            crawlerRecordService.save(crawlerRecord);
+            // 查询一下，定时任务 是否已经存在相同的爬虫记录，没有就新建一个
+            CrawlerRecord crawlerRecord = crawlerRecordService.getOne(
+                    Wrappers.lambdaQuery(CrawlerRecord.class)
+                            .eq(CrawlerRecord::getPlatform, platform)
+                            .eq(CrawlerRecord::getCrawlerType, search)
+                            .eq(CrawlerRecord::getKeywords, keyword)
+                            .eq(BaseEntity::getCreateBy, "System")
+            );
+            if (null == crawlerRecord) {
+                crawlerRecord = new CrawlerRecord();
+                crawlerRecord.setPlatform(platform);
+                crawlerRecord.setCrawlerType(search);
+                crawlerRecord.setKeywords(keyword);
+                crawlerRecord.setStartPage(1);
+                crawlerRecord.setCrawlerStatus(CrawlerRecordStatusEnum.INITIAL.getCode());
+                crawlerRecordService.save(crawlerRecord);
+            }
 
             // 执行爬虫
             this.doCrawl(crawlerRecord.getId());
@@ -121,6 +144,7 @@ public class MediaCrawlerTask {
         final String crawlerType = crawlerRecord.getCrawlerType();
         final String keywords = crawlerRecord.getKeywords();
         final Integer startPage = crawlerRecord.getStartPage();
+        final Integer endPage = crawlerRecord.getEndPage();
         if (StringUtils.isAnyBlank(platform, crawlerType, keywords)) {
             throw new RuntimeException("参数不能为空");
         }
@@ -134,7 +158,8 @@ public class MediaCrawlerTask {
                     .replace("${TYPE}", crawlerType)
                     .replace("${KEYWORDS}", keywords)
                     .replace("${RECORD_ID}", crawlerRecordId.toString())
-                    .replace("${START_PAGE}", null != startPage ? startPage.toString() : "1");
+                    // 如果endPage不为空，说明要继续上一次爬，否则使用startPage作为起始页
+                    .replace("${START_PAGE}", null != endPage ? endPage.toString() : startPage.toString());
             String execResult = JschUtil.exec(session, execCmd, null);
             log.info("执行结果：{}", execResult);
 
