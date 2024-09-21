@@ -208,11 +208,8 @@ public class MediaCrawlerTask {
         }
     }
 
-    public void syncRecentCrawlRecord(String dateStr) {
+    public void syncRecentCrawlRecord() {
         Date date = new Date();
-        if (StringUtils.isNotBlank(dateStr)) {
-            date = DateUtil.parse(dateStr, DatePattern.NORM_DATE_PATTERN);
-        }
 
         // 默认同步三天的数据
         for (int i = 0; i < 3; i++) {
