@@ -27,7 +27,7 @@ public class MediaCrawlerTests {
 
     @Test
     void name() throws Exception {
-        mediaCrawlerTask.syncRecentCrawlRecord(3);
+        mediaCrawlerTask.syncRecentCrawlRecord("3");
     }
 }
 

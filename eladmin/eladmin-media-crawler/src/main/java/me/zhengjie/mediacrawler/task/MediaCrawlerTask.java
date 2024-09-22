@@ -232,9 +232,10 @@ public class MediaCrawlerTask {
     }
 
     /**
-     * @param days 天数，例如：3，就是同步最近三天的爬虫记录，包含当天
+     * @param daysStr 天数，例如：3，就是同步最近三天的爬虫记录，包含当天
      */
-    public void syncRecentCrawlRecord(Integer days) throws Exception {
+    public void syncRecentCrawlRecord(String daysStr) throws Exception {
+        int days = Integer.parseInt(daysStr);
         Date date = DateUtil.offsetDay(new Date(), -(days - 1));
 
         for (int i = 0; i < days; i++) {
