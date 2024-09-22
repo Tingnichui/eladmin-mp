@@ -296,6 +296,9 @@ public class MediaCrawlerTask {
                     crawlerRecord.setStartTime(startTime.toTimestamp());
                 }
                 // 可能存在多条日志
+                if (null == crawlerRecord.getLogPath()) {
+                    crawlerRecord.setLogPath("");
+                }
                 if (!crawlerRecord.getLogPath().contains(logCompletePath)){
                     crawlerRecord.setLogPath(crawlerRecord.getLogPath() + "," + logCompletePath);
                 }

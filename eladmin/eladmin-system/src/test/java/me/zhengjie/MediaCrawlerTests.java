@@ -22,7 +22,7 @@ public class MediaCrawlerTests {
 
     @Test
     void syncCrawlRecord() throws Exception {
-        mediaCrawlerTask.syncCrawlRecord(DateUtil.parse("2024-09-21", DatePattern.NORM_DATE_PATTERN));
+        mediaCrawlerTask.syncCrawlRecord(DateUtil.parse("2024-09-22", DatePattern.NORM_DATE_PATTERN));
     }
 
     @Test
