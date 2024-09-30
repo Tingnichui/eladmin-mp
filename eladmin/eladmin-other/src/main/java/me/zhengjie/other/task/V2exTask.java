@@ -54,7 +54,7 @@ public class V2exTask {
         if (!lock) return;
 
         // 随机暂停一会
-        Thread.sleep(RandomUtil.randomInt(10, 100) * 1000L);
+        TimeUnit.MINUTES.sleep(RandomUtil.randomInt(1, 8));
 
         try (WebClient webClient = new WebClient(BrowserVersion.FIREFOX)) {
             webClient.getOptions().setCssEnabled(false);//关闭css
