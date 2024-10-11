@@ -15,15 +15,19 @@
  */
 package me.zhengjie.modules.quartz.config;
 
+import cn.hutool.extra.spring.SpringUtil;
 import lombok.RequiredArgsConstructor;
 import me.zhengjie.modules.quartz.domain.QuartzJob;
 import me.zhengjie.modules.quartz.mapper.QuartzJobMapper;
 import me.zhengjie.modules.quartz.utils.QuartzManage;
+import me.zhengjie.utils.enums.ActivityProfileEnum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
+
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -44,6 +48,10 @@ public class JobRunner implements ApplicationRunner {
      */
     @Override
     public void run(ApplicationArguments applicationArguments) {
+        // 开发环境不加载定时任务
+        if (Arrays.asList(SpringUtil.getActiveProfiles()).contains(ActivityProfileEnum.DEV.getProfile())) {
+            return;
+        }
         List<QuartzJob> quartzJobs = quartzJobMapper.findByIsPauseIsFalse();
         quartzJobs.forEach(quartzManage::addJob);
         log.info("Timing task injection complete");
