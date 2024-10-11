@@ -1,57 +1,88 @@
+# Sql日志
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
 #配置数据源
 spring:
-  datasource:
-    druid:
-      db-type: com.alibaba.druid.pool.DruidDataSource
-      driverClassName: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
-      url: jdbc:log4jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:eladmin}?serverTimezone=Asia/Shanghai&characterEncoding=utf8&useSSL=false
-      username: ${DB_USER:ENC(9w7cKcQLIn7fidkAddmFoKc1qxO2o52z6NXVL+xm2+hZHTSgNF4Z+i0MvBxM0aMR)}
-      password: ${DB_PWD:ENC(HR5Uk+mC7JLrlImx6VDVM60SpeRIkt1VDtz2KLQTDvwOpT+JP0U+l4JCqHu8ZfRl38Mgk7Ff8fp6WPS37k+UdA==)}
-      # 初始连接数
-      initial-size: 5
-      # 最小连接数
-      min-idle: 15
-      # 最大连接数
-      max-active: 30
-      # 获取连接超时时间
-      max-wait: 5000
-      # 连接有效性检测时间
-      time-between-eviction-runs-millis: 60000
-      # 连接在池中最小生存的时间
-      min-evictable-idle-time-millis: 300000
-      # 连接在池中最大生存的时间
-      max-evictable-idle-time-millis: 900000
-      # 指明连接是否被空闲连接回收器(如果有)进行检验.如果检测失败,则连接将被从池中去除
-      test-while-idle: true
-      # 指明是否在从池中取出连接前进行检验,如果检验失败, 则从池中去除连接并尝试取出另一个
-      test-on-borrow: true
-      # 是否在归还到池中前进行检验
-      test-on-return: false
-      # 检测连接是否有效
-      validation-query: select 1
-      # 配置监控统计
-      webStatFilter:
-        enabled: true
-      stat-view-servlet:
-        allow:
-        enabled: true
-        # 控制台管理用户名和密码
-        url-pattern: /druid/*
-        reset-enable: false
-        login-username: admin
-        login-password: 123456
-      filter:
-        stat:
-          enabled: true
-          # 记录慢SQL
-          log-slow-sql: true
-          slow-sql-millis: 1000
-          merge-sql: true
-        wall:
-          config:
-            multi-statement-allow: true
+  autoconfigure:
+    # 使用了dynamic多数据源，排除原生Druid的快速配置类
+    exclude: com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceAutoConfigure
   redis:
-    host: ${REDIS_HOST:localhost}
+    #数据库索引
+    database: ${REDIS_DB:1}
+    host: ${REDIS_HOST:ENC(nm/nJml3b+GoPMJdG/V4S3rW1971+Zc3cTq7quEtKrSrJpUHJT2SnyAaw/97/VG3)}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PWD:ENC(oVlrCNwppZWsOY+L2TwFmQ2KbSsDrUKd3wz2/SZRTxEHLgnqGantKWARJGTpck2d)}
+    #连接超时时间
+    timeout: 5000
+  datasource:
+    # 多数据源配置
+    dynamic:
+      # 设置默认的数据源或者数据源组,默认值即为master
+      primary: master
+      # 严格匹配数据源,默认false. true未匹配到指定数据源时抛异常,false使用默认数据源
+      strict: false
+      datasource:
+        master:
+          #      url: jdbc:log4jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:eladmin}?serverTimezone=Asia/Shanghai&characterEncoding=utf8&useSSL=false
+          url: ENC(wHbZ7KR1dlonF61rKLoPYD/mJRUyr+t8N6iWRNg3floCdF2VNZE2Q+8IpC91M1VyS1ForiIzDfu5p5ntyI5BRJT+6X+szpLGp/GV9gO63OU5nzAVcpYJ0ISG8oAyTQawTPl/Tz42K1LHmeh2QRuNd0W57gQpCtaVKYBLeLooz86ooqOeGG3r5EIDx7gcOdrJJ4Ewd8oCMJCe87WCvIgERB2MrIqyd09DZBayBevOC4M=)
+          username: ${DB_USER:ENC(9w7cKcQLIn7fidkAddmFoKc1qxO2o52z6NXVL+xm2+hZHTSgNF4Z+i0MvBxM0aMR)}
+          password: ${DB_PWD:ENC(HR5Uk+mC7JLrlImx6VDVM60SpeRIkt1VDtz2KLQTDvwOpT+JP0U+l4JCqHu8ZfRl38Mgk7Ff8fp6WPS37k+UdA==)}
+          driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
+          type: com.alibaba.druid.pool.DruidDataSource
+        media_crawler:
+          url: ENC(xtDuOyBZ1lxf21v45O1hFcM33FwVylHC6wrG0MGPJvrizz+kVs5JuDzPZB/QoLCNdF4YEGdnKLArjuagKR7dtXLwlsnI2VacDgoiVuI9a/1k8liMgY6t0DnxLKY8w1nx63m/X3iufKHyS/1i9aVJW3afTaicUHymO3Fpc5tqBVTMXx6d484I/KP/f65i+pxv8i2NYsTG3tHKxMHMrGb5VVmchtYdVupRNu++F8/IZ5hbG40VYaL9AG/p0FwhDB90)
+          username: ENC(J3Gu0/R6hQ3c47mNGIr/bNgG76aPS2KxqNF7tUaYOYhyEcJL3SCTkRvi/JKbA53h)
+          password: ENC(M6u8sPks9aPxc67SVt3tcBnneypIOqQeN3aiV7BUH9SvbYH6oZeM3JwVZMomf86dTGc+EH2bJkuJ2r2nprp8bQ==)
+          driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
+          type: com.alibaba.druid.pool.DruidDataSource
+      # 德鲁伊全局配置
+      druid:
+        # 初始连接数
+        initial-size: 5
+        # 最小连接数
+        min-idle: 15
+        # 最大连接数
+        max-active: 30
+        # 超时时间(以秒数为单位)
+        remove-abandoned-timeout: 180
+        # 获取连接超时时间
+        max-wait: 3000
+        # 连接有效性检测时间
+        time-between-eviction-runs-millis: 60000
+        # 连接在池中最小生存的时间
+        min-evictable-idle-time-millis: 300000
+        # 连接在池中最大生存的时间
+        max-evictable-idle-time-millis: 900000
+        # 指明连接是否被空闲连接回收器(如果有)进行检验.如果检测失败,则连接将被从池中去除
+        test-while-idle: true
+        # 指明是否在从池中取出连接前进行检验,如果检验失败, 则从池中去除连接并尝试取出另一个
+        test-on-borrow: true
+        # 是否在归还到池中前进行检验
+        test-on-return: false
+        # 检测连接是否有效
+        validation-query: select 1
+        # 配置监控统计
+        webStatFilter:
+          enabled: true
+        stat-view-servlet:
+          enabled: false
+          url-pattern: /druid/*
+          reset-enable: false
+          login-username: admin
+          login-password: 123456
+        filter:
+          stat:
+            enabled: true
+            # 记录慢SQL
+            log-slow-sql: true
+            slow-sql-millis: 1000
+            merge-sql: true
+          wall:
+            config:
+              multi-statement-allow: true
+
 # 登录相关配置
 login:
   #  是否限制单用户登录
@@ -99,13 +130,6 @@ jwt:
 generator:
   enabled: false
 
-#如果生产环境要开启swagger，需要配置请求地址
-#springfox:
-#  documentation:
-#    swagger:
-#      v2:
-#        host: # 接口域名或外网ip
-
 #是否开启 swagger-ui
 swagger:
   enabled: false
@@ -116,11 +140,25 @@ file:
     path: ~/file/
     avatar: ~/avatar/
   linux:
-    path: /home/eladmin/file/
-    avatar: /home/eladmin/avatar/
+    path: /home/application/eladmin/file/
+    avatar: /home/application/eladmin/avatar/
   windows:
     path: C:\eladmin\file\
     avatar: C:\eladmin\avatar\
   # 文件大小 /M
   maxSize: 100
   avatarMaxSize: 5
+
+# 其他业务功能
+other:
+  yxt:
+    url: ENC(xm5nHjMTUIoI19nV9Tf0r235D4ByksIT/Iea4pOzyiFc0DxWKlLVy4XcuzjDwHZGFH+lrX+i0aoOxwdgEmickA==)
+proxy:
+  host: 127.0.0.1
+  port: 7890
+
+# 爬虫服务器配置
+media:
+  crawler:
+    host: ENC(uwfQ+qyT69NrmY5wMqk8+p584mfvTr7Aaui2J0Efg4YRAGi7TJI4R+QWKxYyy2cC)
+    password: ENC(8I0xBke0vkYTuJ57VmtPKSFaX0ykHKnwalmrO2/ZhGCffpc5E7dNDbqTYyFjRNM7)
