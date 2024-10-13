@@ -24,6 +24,7 @@ import java.sql.Timestamp;
 import java.io.Serializable;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import me.zhengjie.annotation.validation.MobilePhone;
 import me.zhengjie.base.BaseEntity;
 
 import javax.validation.constraints.NotBlank;
@@ -51,6 +52,7 @@ public class JljsCoachInfo extends BaseEntity implements Serializable {
     @ApiModelProperty(value = "教练姓名")
     private String coachName;
 
+    @MobilePhone
     @ApiModelProperty(value = "电话号码")
     private String coachPhoneNum;
 
