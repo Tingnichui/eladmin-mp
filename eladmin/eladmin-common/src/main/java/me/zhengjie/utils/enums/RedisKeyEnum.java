@@ -13,6 +13,7 @@ public enum RedisKeyEnum {
     MEDIA_CRAWLER_TASK("MEDIA_CRAWLER_TASK", "自媒体爬虫"),
     RIGHT_COM_CN_CHECK_IN_TASK("RIGHT_COM_CN_CHECK_IN_TASK", "恩山论坛每日签到"),
     CHECK_IN_52_PO_JIE_TASK("CHECK_IN_52_PO_JIE_TASK", "52破解每日签到"),
+    SYNC_GYM_MEMBER_USER_TASK("SYNC_GYM_MEMBER_USER_TASK", "同步健身房会员账户"),
     ;
 
     private final String key;

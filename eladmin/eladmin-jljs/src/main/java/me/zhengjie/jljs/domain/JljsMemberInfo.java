@@ -63,6 +63,9 @@ public class JljsMemberInfo extends BaseEntity implements Serializable {
     @ApiModelProperty(value = "生日")
     private String birthDay;
 
+    @ApiModelProperty(value = "用户id")
+    private Long userId;
+
     public void copy(JljsMemberInfo source){
         BeanUtil.copyProperties(source,this, CopyOptions.create().setIgnoreNullValue(true));
     }
