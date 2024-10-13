@@ -15,12 +15,18 @@
 */
 package me.zhengjie.jljs.rest;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import me.zhengjie.annotation.Log;
+import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.jljs.domain.JljsContractInfo;
+import me.zhengjie.jljs.domain.JljsMemberInfo;
 import me.zhengjie.jljs.service.JljsContractInfoService;
 import me.zhengjie.jljs.domain.vo.JljsContractInfoQueryCriteria;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
+
+import me.zhengjie.jljs.service.JljsMemberInfoService;
+import me.zhengjie.utils.SecurityUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -44,6 +50,8 @@ public class JljsContractInfoController {
 
     private final JljsContractInfoService jljsContractInfoService;
 
+    private final JljsMemberInfoService jljsMemberInfoService;
+
     @Log("导出数据")
     @ApiOperation("导出数据")
     @GetMapping(value = "/download")
@@ -57,6 +65,23 @@ public class JljsContractInfoController {
     @ApiOperation("查询合同管理")
     @PreAuthorize("@el.check('jljsContractInfo:list')")
     public ResponseEntity<PageResult<JljsContractInfo>> queryJljsContractInfo(JljsContractInfoQueryCriteria criteria, Page<Object> page){
+        return new ResponseEntity<>(jljsContractInfoService.queryAll(criteria,page),HttpStatus.OK);
+    }
+
+    @GetMapping("/gymMember")
+    @Log("会员:查询合同管理")
+    @ApiOperation("会员:查询合同管理")
+    @PreAuthorize("@el.check('gymMember:contractInfo:list')")
+    public ResponseEntity<PageResult<JljsContractInfo>> queryJljsContractInfo4GymMember(JljsContractInfoQueryCriteria criteria, Page<Object> page){
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        JljsMemberInfo memberInfo = jljsMemberInfoService.getBaseMapper().selectOne(
+                Wrappers.lambdaQuery(JljsMemberInfo.class)
+                        .eq(JljsMemberInfo::getUserId, currentUserId)
+        );
+        if (null == memberInfo) {
+            throw new BadRequestException("当前用户不是健身会员");
+        }
+        criteria.setMemberId(memberInfo.getId());
         return new ResponseEntity<>(jljsContractInfoService.queryAll(criteria,page),HttpStatus.OK);
     }
 

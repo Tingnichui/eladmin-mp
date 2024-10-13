@@ -56,6 +56,12 @@
             <if test="criteria.operateStatus != null">
                 and t1.operate_status = #{criteria.operateStatus}
             </if>
+            <if test="criteria.contractInfoIdList != null and criteria.contractInfoIdList.size() > 0">
+                and t1.contract_info_id in
+                <foreach collection="criteria.contractInfoIdList" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+            </if>
         order by t1.create_time desc
     </select>
 </mapper>

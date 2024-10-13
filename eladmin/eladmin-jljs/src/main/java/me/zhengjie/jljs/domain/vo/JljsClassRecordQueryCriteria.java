@@ -31,4 +31,6 @@ public class JljsClassRecordQueryCriteria{
     private String contractInfoId;
     private String classRemark;
     private List<Timestamp> classBeginTime;
+    private List<String> contractInfoIdList;
+
 }

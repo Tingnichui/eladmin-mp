@@ -17,6 +17,8 @@ package me.zhengjie.jljs.domain.vo;
 
 import lombok.Data;
 
+import java.util.List;
+
 /**
 * @author genghui
 * @date 2024-07-02
@@ -24,6 +26,7 @@ import lombok.Data;
 @Data
 public class JljsContractOperateRecordQueryCriteria{
     private String contractInfoId;
+    private List<String> contractInfoIdList;
     private String contractOperateType;
     private String operateStatus;
 }

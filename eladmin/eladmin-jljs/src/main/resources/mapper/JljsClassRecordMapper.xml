@@ -40,6 +40,12 @@
             <if test="criteria.classBeginTime != null and criteria.classBeginTime.size() > 0">
                 AND class_begin_time BETWEEN #{criteria.classBeginTime[0]} AND #{criteria.classBeginTime[1]}
             </if>
+            <if test="criteria.contractInfoIdList != null and criteria.contractInfoIdList.size() > 0">
+                and contract_info_id in
+                <foreach collection="criteria.contractInfoIdList" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+            </if>
         order by class_begin_time desc
     </select>
 

@@ -15,12 +15,21 @@
 */
 package me.zhengjie.jljs.rest;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import me.zhengjie.annotation.Log;
+import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.jljs.domain.JljsClassRecord;
+import me.zhengjie.jljs.domain.JljsContractInfo;
+import me.zhengjie.jljs.domain.JljsMemberInfo;
 import me.zhengjie.jljs.service.JljsClassRecordService;
 import me.zhengjie.jljs.domain.vo.JljsClassRecordQueryCriteria;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
+
+import me.zhengjie.jljs.service.JljsContractInfoService;
+import me.zhengjie.jljs.service.JljsMemberInfoService;
+import me.zhengjie.utils.SecurityUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,6 +37,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.annotations.*;
 import java.io.IOException;
+import java.util.stream.Collectors;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -45,6 +55,8 @@ public class JljsClassRecordController {
 
     @Resource
     private JljsClassRecordService jljsClassRecordService;
+    private final JljsMemberInfoService jljsMemberInfoService;
+    private final JljsContractInfoService jljsContractInfoService;
 
     @Log("导出数据")
     @ApiOperation("导出数据")
@@ -59,6 +71,30 @@ public class JljsClassRecordController {
     @ApiOperation("查询上课记录")
     @PreAuthorize("@el.check('jljsClassRecord:list')")
     public ResponseEntity<PageResult<JljsClassRecord>> queryJljsClassRecord(JljsClassRecordQueryCriteria criteria, Page<Object> page){
+        return new ResponseEntity<>(jljsClassRecordService.queryAll(criteria,page),HttpStatus.OK);
+    }
+
+    @GetMapping("/gymMember")
+    @Log("查询上课记录")
+    @ApiOperation("查询上课记录")
+    @PreAuthorize("@el.check('gymMember:classRecord:list')")
+    public ResponseEntity<PageResult<JljsClassRecord>> queryJljsClassRecord4GymMember(JljsClassRecordQueryCriteria criteria, Page<Object> page){
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        JljsMemberInfo memberInfo = jljsMemberInfoService.getBaseMapper().selectOne(
+                Wrappers.lambdaQuery(JljsMemberInfo.class)
+                        .eq(JljsMemberInfo::getUserId, currentUserId)
+        );
+        if (null == memberInfo) {
+            throw new BadRequestException("当前用户不是健身会员");
+        }
+        List<JljsContractInfo> contractInfoList = jljsContractInfoService.list(
+                Wrappers.lambdaQuery(JljsContractInfo.class)
+                        .eq(JljsContractInfo::getMemberId, memberInfo.getId())
+        );
+        if (CollectionUtils.isEmpty(contractInfoList)) {
+            return new ResponseEntity<>(HttpStatus.OK);
+        }
+        criteria.setContractInfoIdList(contractInfoList.stream().map(JljsContractInfo::getId).collect(Collectors.toList()));
         return new ResponseEntity<>(jljsClassRecordService.queryAll(criteria,page),HttpStatus.OK);
     }
 

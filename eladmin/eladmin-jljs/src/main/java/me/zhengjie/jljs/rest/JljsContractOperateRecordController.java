@@ -15,12 +15,21 @@
 */
 package me.zhengjie.jljs.rest;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import me.zhengjie.annotation.Log;
+import me.zhengjie.exception.BadRequestException;
+import me.zhengjie.jljs.domain.JljsContractInfo;
 import me.zhengjie.jljs.domain.JljsContractOperateRecord;
+import me.zhengjie.jljs.domain.JljsMemberInfo;
+import me.zhengjie.jljs.service.JljsContractInfoService;
 import me.zhengjie.jljs.service.JljsContractOperateRecordService;
 import me.zhengjie.jljs.domain.vo.JljsContractOperateRecordQueryCriteria;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
+
+import me.zhengjie.jljs.service.JljsMemberInfoService;
+import me.zhengjie.utils.SecurityUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,6 +37,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.annotations.*;
 import java.io.IOException;
+import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletResponse;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import me.zhengjie.utils.PageResult;
@@ -43,6 +53,8 @@ import me.zhengjie.utils.PageResult;
 public class JljsContractOperateRecordController {
 
     private final JljsContractOperateRecordService jljsContractOperateRecordService;
+    private final JljsMemberInfoService jljsMemberInfoService;
+    private final JljsContractInfoService jljsContractInfoService;
 
     @Log("导出数据")
     @ApiOperation("导出数据")
@@ -57,6 +69,30 @@ public class JljsContractOperateRecordController {
     @ApiOperation("查询合同操作记录")
     @PreAuthorize("@el.check('jljsContractOperateRecord:list')")
     public ResponseEntity<PageResult<JljsContractOperateRecord>> queryJljsContractOperateRecord(JljsContractOperateRecordQueryCriteria criteria, Page<Object> page){
+        return new ResponseEntity<>(jljsContractOperateRecordService.queryAll(criteria,page),HttpStatus.OK);
+    }
+
+    @GetMapping("/gymMember")
+    @Log("会员:查询合同操作记录")
+    @ApiOperation("会员:查询合同操作记录")
+    @PreAuthorize("@el.check('gymMember:contractOperateRecord:list')")
+    public ResponseEntity<PageResult<JljsContractOperateRecord>> queryJljsContractOperateRecord4GymMember(JljsContractOperateRecordQueryCriteria criteria, Page<Object> page){
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        JljsMemberInfo memberInfo = jljsMemberInfoService.getBaseMapper().selectOne(
+                Wrappers.lambdaQuery(JljsMemberInfo.class)
+                        .eq(JljsMemberInfo::getUserId, currentUserId)
+        );
+        if (null == memberInfo) {
+            throw new BadRequestException("当前用户不是健身会员");
+        }
+        List<JljsContractInfo> contractInfoList = jljsContractInfoService.list(
+                Wrappers.lambdaQuery(JljsContractInfo.class)
+                        .eq(JljsContractInfo::getMemberId, memberInfo.getId())
+        );
+        if (CollectionUtils.isEmpty(contractInfoList)) {
+            return new ResponseEntity<>(HttpStatus.OK);
+        }
+        criteria.setContractInfoIdList(contractInfoList.stream().map(JljsContractInfo::getId).collect(Collectors.toList()));
         return new ResponseEntity<>(jljsContractOperateRecordService.queryAll(criteria,page),HttpStatus.OK);
     }
 
