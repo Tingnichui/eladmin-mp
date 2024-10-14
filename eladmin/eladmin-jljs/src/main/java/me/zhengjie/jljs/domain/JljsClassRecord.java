@@ -15,6 +15,7 @@
 */
 package me.zhengjie.jljs.domain;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import lombok.Data;
 import cn.hutool.core.bean.BeanUtil;
@@ -50,6 +51,10 @@ public class JljsClassRecord extends BaseEntity implements Serializable {
     @NotBlank(message = "教练id不能为空")
     @ApiModelProperty(value = "教练id")
     private String coachId;
+
+    @TableField(exist = false)
+    @ApiModelProperty(value = "教练名称")
+    private String coachName;
 
     @NotBlank(message = "会员id不能为空")
     @ApiModelProperty(value = "会员id")
