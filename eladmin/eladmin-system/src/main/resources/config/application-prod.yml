@@ -1,5 +1,8 @@
-# Sql日志
 mybatis-plus:
+  # 开启sql runner
+  global-config:
+    enable-sql-runner: true
+  # Sql日志
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
