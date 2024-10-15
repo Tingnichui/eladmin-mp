@@ -72,30 +72,6 @@ public class JljsContractOperateRecordController {
         return new ResponseEntity<>(jljsContractOperateRecordService.queryAll(criteria,page),HttpStatus.OK);
     }
 
-    @GetMapping("/gymMember")
-    @Log("会员:查询合同操作记录")
-    @ApiOperation("会员:查询合同操作记录")
-    @PreAuthorize("@el.check('gymMember:contractOperateRecord:list')")
-    public ResponseEntity<PageResult<JljsContractOperateRecord>> queryJljsContractOperateRecord4GymMember(JljsContractOperateRecordQueryCriteria criteria, Page<Object> page){
-        Long currentUserId = SecurityUtils.getCurrentUserId();
-        JljsMemberInfo memberInfo = jljsMemberInfoService.getBaseMapper().selectOne(
-                Wrappers.lambdaQuery(JljsMemberInfo.class)
-                        .eq(JljsMemberInfo::getUserId, currentUserId)
-        );
-        if (null == memberInfo) {
-            throw new BadRequestException("当前用户不是健身会员");
-        }
-        List<JljsContractInfo> contractInfoList = jljsContractInfoService.list(
-                Wrappers.lambdaQuery(JljsContractInfo.class)
-                        .eq(JljsContractInfo::getMemberId, memberInfo.getId())
-        );
-        if (CollectionUtils.isEmpty(contractInfoList)) {
-            return new ResponseEntity<>(HttpStatus.OK);
-        }
-        criteria.setContractInfoIdList(contractInfoList.stream().map(JljsContractInfo::getId).collect(Collectors.toList()));
-        return new ResponseEntity<>(jljsContractOperateRecordService.queryAll(criteria,page),HttpStatus.OK);
-    }
-
     @PostMapping
     @Log("新增合同操作记录")
     @ApiOperation("新增合同操作记录")

@@ -68,23 +68,6 @@ public class JljsContractInfoController {
         return new ResponseEntity<>(jljsContractInfoService.queryAll(criteria,page),HttpStatus.OK);
     }
 
-    @GetMapping("/gymMember")
-    @Log("会员:查询合同管理")
-    @ApiOperation("会员:查询合同管理")
-    @PreAuthorize("@el.check('gymMember:contractInfo:list')")
-    public ResponseEntity<PageResult<JljsContractInfo>> queryJljsContractInfo4GymMember(JljsContractInfoQueryCriteria criteria, Page<Object> page){
-        Long currentUserId = SecurityUtils.getCurrentUserId();
-        JljsMemberInfo memberInfo = jljsMemberInfoService.getBaseMapper().selectOne(
-                Wrappers.lambdaQuery(JljsMemberInfo.class)
-                        .eq(JljsMemberInfo::getUserId, currentUserId)
-        );
-        if (null == memberInfo) {
-            throw new BadRequestException("当前用户不是健身会员");
-        }
-        criteria.setMemberId(memberInfo.getId());
-        return new ResponseEntity<>(jljsContractInfoService.queryAll(criteria,page),HttpStatus.OK);
-    }
-
     @PostMapping
     @Log("新增合同管理")
     @ApiOperation("新增合同管理")

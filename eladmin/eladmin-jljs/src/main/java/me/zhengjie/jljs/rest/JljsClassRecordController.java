@@ -74,30 +74,6 @@ public class JljsClassRecordController {
         return new ResponseEntity<>(jljsClassRecordService.queryAll(criteria,page),HttpStatus.OK);
     }
 
-    @GetMapping("/gymMember")
-    @Log("查询上课记录")
-    @ApiOperation("查询上课记录")
-    @PreAuthorize("@el.check('gymMember:classRecord:list')")
-    public ResponseEntity<PageResult<JljsClassRecord>> queryJljsClassRecord4GymMember(JljsClassRecordQueryCriteria criteria, Page<Object> page){
-        Long currentUserId = SecurityUtils.getCurrentUserId();
-        JljsMemberInfo memberInfo = jljsMemberInfoService.getBaseMapper().selectOne(
-                Wrappers.lambdaQuery(JljsMemberInfo.class)
-                        .eq(JljsMemberInfo::getUserId, currentUserId)
-        );
-        if (null == memberInfo) {
-            throw new BadRequestException("当前用户不是健身会员");
-        }
-        List<JljsContractInfo> contractInfoList = jljsContractInfoService.list(
-                Wrappers.lambdaQuery(JljsContractInfo.class)
-                        .eq(JljsContractInfo::getMemberId, memberInfo.getId())
-        );
-        if (CollectionUtils.isEmpty(contractInfoList)) {
-            return new ResponseEntity<>(HttpStatus.OK);
-        }
-        criteria.setContractInfoIdList(contractInfoList.stream().map(JljsContractInfo::getId).collect(Collectors.toList()));
-        return new ResponseEntity<>(jljsClassRecordService.queryAll(criteria,page),HttpStatus.OK);
-    }
-
     @PostMapping
     @Log("新增上课记录")
     @ApiOperation("新增上课记录")
