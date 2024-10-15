@@ -56,11 +56,11 @@ public class GymMemberUserController {
     @Resource
     private JljsContractOperateRecordService jljsContractOperateRecordService;
 
-    @GetMapping("getUserHomeFuncConfig")
+    @GetMapping("getGymUserHomeFuncConfig")
     @Log("查询首页功能配置")
     @ApiOperation("查询上课记录")
     @PreAuthorize("@el.check('gymMember:homeFuncConf:list')")
-    public ResponseEntity<List<UserHomeFuncConfig>> queryJljsClassRecord() {
+    public ResponseEntity<List<UserHomeFuncConfig>> getGymUserHomeFuncConfig() {
         JljsMemberInfo memberInfo = this.getJljsMemberInfo();
         String memberInfoId = memberInfo.getId();
 
@@ -88,7 +88,7 @@ public class GymMemberUserController {
                 "    color: '4580dd',\n" +
                 "    count: '',\n" +
                 "    jumpUrl: '/gym/contractOperateRecord',\n" +
-                "    countSql: 'SELECT COUNT(1) FROM jljs_contract_operate_record WHERE del_flag = 0 and contract_info_id IN (SELECT id FROM jljs_contract_info WHERE member_id = {member_id})',\n" +
+                "    countSql: 'SELECT COUNT(1) FROM jljs_contract_operate_record WHERE del_flag = 0 and contract_info_id IN (SELECT id FROM jljs_contract_info WHERE del_flag = 0 and member_id = {member_id})',\n" +
                 "  },\n" +
                 "]";
 
