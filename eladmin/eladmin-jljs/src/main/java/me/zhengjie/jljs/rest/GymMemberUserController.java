@@ -72,7 +72,7 @@ public class GymMemberUserController {
                 "    color: '53b7ad',\n" +
                 "    count: '',\n" +
                 "    jumpUrl: '/gym/contract',\n" +
-                "    countSql: 'SELECT COUNT(1) FROM jljs_contract_info WHERE member_id = {member_id}',\n" +
+                "    countSql: 'SELECT COUNT(1) FROM jljs_contract_info WHERE del_flag = 0 and member_id = {member_id}',\n" +
                 "  },\n" +
                 "  {\n" +
                 "    icon: 'gym',\n" +
@@ -80,7 +80,7 @@ public class GymMemberUserController {
                 "    color: '6ecc84',\n" +
                 "    count: '',\n" +
                 "    jumpUrl: '/gym/classRecord',\n" +
-                "    countSql: 'SELECT COUNT(1) FROM jljs_class_record WHERE member_id = {member_id}',\n" +
+                "    countSql: 'SELECT COUNT(1) FROM jljs_class_record WHERE del_flag = 0 and member_id = {member_id}',\n" +
                 "  },\n" +
                 "  {\n" +
                 "    icon: 'rest',\n" +
@@ -88,7 +88,7 @@ public class GymMemberUserController {
                 "    color: '4580dd',\n" +
                 "    count: '',\n" +
                 "    jumpUrl: '/gym/contractOperateRecord',\n" +
-                "    countSql: 'SELECT COUNT(1) FROM jljs_contract_operate_record WHERE contract_info_id IN (SELECT id FROM jljs_contract_info WHERE member_id = {member_id})',\n" +
+                "    countSql: 'SELECT COUNT(1) FROM jljs_contract_operate_record WHERE del_flag = 0 and contract_info_id IN (SELECT id FROM jljs_contract_info WHERE member_id = {member_id})',\n" +
                 "  },\n" +
                 "]";
 
