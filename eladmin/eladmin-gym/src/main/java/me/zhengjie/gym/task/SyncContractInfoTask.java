@@ -7,12 +7,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import me.zhengjie.gym.constants.*;
-import me.zhengjie.gym.domain.JljsClassRecord;
-import me.zhengjie.gym.domain.JljsContractInfo;
-import me.zhengjie.gym.domain.JljsContractOperateRecord;
-import me.zhengjie.gym.mapper.JljsClassRecordMapper;
-import me.zhengjie.gym.mapper.JljsContractInfoMapper;
-import me.zhengjie.gym.mapper.JljsContractOperateRecordMapper;
+import me.zhengjie.gym.domain.GymClassRecord;
+import me.zhengjie.gym.domain.GymContractInfo;
+import me.zhengjie.gym.domain.GymContractOperateRecord;
+import me.zhengjie.gym.mapper.GymClassRecordMapper;
+import me.zhengjie.gym.mapper.GymContractInfoMapper;
+import me.zhengjie.gym.mapper.GymContractOperateRecordMapper;
 import me.zhengjie.utils.RedisUtils;
 import me.zhengjie.utils.enums.RedisKeyEnum;
 import org.apache.commons.collections4.CollectionUtils;
@@ -29,11 +29,11 @@ import java.util.concurrent.TimeUnit;
 public class SyncContractInfoTask {
 
     @Resource
-    private JljsContractInfoMapper jljsContractInfoMapper;
+    private GymContractInfoMapper gymContractInfoMapper;
     @Resource
-    private JljsContractOperateRecordMapper jljsContractOperateRecordMapper;
+    private GymContractOperateRecordMapper gymContractOperateRecordMapper;
     @Resource
-    private JljsClassRecordMapper jljsClassRecordMapper;
+    private GymClassRecordMapper gymClassRecordMapper;
     @Resource
     private RedisUtils redisUtils;
 
@@ -44,8 +44,8 @@ public class SyncContractInfoTask {
             log.info("定时任务：{}，获取锁：{}", keyEnum.getDesc(), lock);
             if (!lock) return;
 
-            List<JljsContractInfo> jljsContractInfoList = jljsContractInfoMapper.selectList(Wrappers.lambdaQuery(JljsContractInfo.class).select(JljsContractInfo::getId));
-            for (JljsContractInfo contractInfo : jljsContractInfoList) {
+            List<GymContractInfo> gymContractInfoList = gymContractInfoMapper.selectList(Wrappers.lambdaQuery(GymContractInfo.class).select(GymContractInfo::getId));
+            for (GymContractInfo contractInfo : gymContractInfoList) {
                 this.sync(contractInfo.getId());
             }
         } catch (Exception e) {
@@ -57,38 +57,38 @@ public class SyncContractInfoTask {
     public void sync(String contractId) {
         Date today = DateUtil.beginOfDay(new Date());
 
-        JljsContractInfo contractInfo = jljsContractInfoMapper.selectById(contractId);
+        GymContractInfo contractInfo = gymContractInfoMapper.selectById(contractId);
         if (null == contractInfo) {
             log.info("合同不存在，合同id：{}", contractId);
             return;
         }
 
         // 获取开卡记录 1.没有开卡记录设置为待开卡，重置开始时间、结束时间、总暂停天数 2.有开卡记录设置使用时间
-        JljsContractOperateRecord kaikaRecord = jljsContractOperateRecordMapper.selectOne(
-                getBaseSelect(contractId).eq(JljsContractOperateRecord::getContractOperateType, JljsContractOperateTypeEnum.kaika.getCode())
+        GymContractOperateRecord kaikaRecord = gymContractOperateRecordMapper.selectOne(
+                getBaseSelect(contractId).eq(GymContractOperateRecord::getContractOperateType, GymContractOperateTypeEnum.kaika.getCode())
         );
         if (null == kaikaRecord) {
             log.info("合同没有开卡记录，合同id：{}", contractId);
-            jljsContractInfoMapper.update(null,
-                    Wrappers.lambdaUpdate(JljsContractInfo.class)
-                            .eq(JljsContractInfo::getId, contractId)
-                            .set(JljsContractInfo::getUseBeginDate, null)
-                            .set(JljsContractInfo::getUseEndDate, null)
-                            .set(JljsContractInfo::getCourseUseQuantity, null)
-                            .set(JljsContractInfo::getCourseRemainQuantity, null)
-                            .set(JljsContractInfo::getCourseTotalStopDays, null)
-                            .set(JljsContractInfo::getContractStatus, JljsContractStatusEnum.daikaika.getCode())
+            gymContractInfoMapper.update(null,
+                    Wrappers.lambdaUpdate(GymContractInfo.class)
+                            .eq(GymContractInfo::getId, contractId)
+                            .set(GymContractInfo::getUseBeginDate, null)
+                            .set(GymContractInfo::getUseEndDate, null)
+                            .set(GymContractInfo::getCourseUseQuantity, null)
+                            .set(GymContractInfo::getCourseRemainQuantity, null)
+                            .set(GymContractInfo::getCourseTotalStopDays, null)
+                            .set(GymContractInfo::getContractStatus, GymContractStatusEnum.daikaika.getCode())
             );
             return;
         }
         contractInfo.setUseBeginDate(kaikaRecord.getOperateBeginDate());
-        contractInfo.setContractStatus(JljsContractStatusEnum.shiyong.getCode());
+        contractInfo.setContractStatus(GymContractStatusEnum.shiyong.getCode());
 
         // 获取请假记录 计算总暂停天数 重新计算有效期使用天厨
-        List<JljsContractOperateRecord> zantingList = jljsContractOperateRecordMapper.selectList(
-                getBaseSelect(contractId).eq(JljsContractOperateRecord::getContractOperateType, JljsContractOperateTypeEnum.zanting.getCode())
+        List<GymContractOperateRecord> zantingList = gymContractOperateRecordMapper.selectList(
+                getBaseSelect(contractId).eq(GymContractOperateRecord::getContractOperateType, GymContractOperateTypeEnum.zanting.getCode())
         );
-        int totalStopDays = zantingList.stream().mapToInt(JljsContractOperateRecord::getIntervalDays).sum();
+        int totalStopDays = zantingList.stream().mapToInt(GymContractOperateRecord::getIntervalDays).sum();
         contractInfo.setCourseTotalStopDays(totalStopDays);
         // 设置结束时间为开始时间之后的 总有效期+暂停天数
         DateTime dateTime = DateUtil.parseDateTime(DateUtil.format(DateUtil.offsetDay(contractInfo.getUseBeginDate(), totalStopDays + contractInfo.getCourseUsePeriodDays() - 1), "yyyy-MM-dd 23:59:59"));
@@ -96,31 +96,31 @@ public class SyncContractInfoTask {
         // 暂停操作记录不为空，遍历判断是否在暂停中
         if (!zantingList.isEmpty()) {
             // 默认设置为使用中
-            contractInfo.setContractStatus(JljsContractStatusEnum.shiyong.getCode());
+            contractInfo.setContractStatus(GymContractStatusEnum.shiyong.getCode());
             // 如果在请假时间内 则设置为暂停
-            for (JljsContractOperateRecord record : zantingList) {
+            for (GymContractOperateRecord record : zantingList) {
                 if (DateUtil.isIn(today, record.getOperateBeginDate(), record.getOperateEndDate())) {
-                    contractInfo.setContractStatus(JljsContractStatusEnum.zanting.getCode());
+                    contractInfo.setContractStatus(GymContractStatusEnum.zanting.getCode());
                     break;
                 }
             }
         }
 
         // 获取该会员该合同的使用记录
-        int realUseCount = Math.toIntExact(jljsClassRecordMapper.selectCount(
-                Wrappers.lambdaQuery(JljsClassRecord.class)
-                        .eq(JljsClassRecord::getMemberId, contractInfo.getMemberId())
-                        .eq(JljsClassRecord::getContractInfoId, contractId)
+        int realUseCount = Math.toIntExact(gymClassRecordMapper.selectCount(
+                Wrappers.lambdaQuery(GymClassRecord.class)
+                        .eq(GymClassRecord::getMemberId, contractInfo.getMemberId())
+                        .eq(GymClassRecord::getContractInfoId, contractId)
         ));
         contractInfo.setCourseUseQuantity(realUseCount);
 
         // 更新 次卡已使用量、剩余数量
         String courseType = contractInfo.getCourseType();
-        if (JljsCourseTypeEnum.ci.getCode().equals(courseType)) {
+        if (GymCourseTypeEnum.ci.getCode().equals(courseType)) {
             contractInfo.setCourseRemainQuantity(contractInfo.getCourseAvailableQuantity() - realUseCount);
         }
         // 更新 按天计时 已使用量、剩余数量
-        if (JljsCourseTypeEnum.tian.getCode().equals(courseType)) {
+        if (GymCourseTypeEnum.tian.getCode().equals(courseType)) {
             // 已使用量 = 使用开始时间到今天的天数 - 总计的暂停天数
             int courseUsePeriodDays = (int) DateUtil.betweenDay(contractInfo.getUseBeginDate(), today, true) - totalStopDays;
 //            contractInfo.setCourseUseQuantity(Math.min(contractInfo.getCourseAvailableQuantity(), courseUsePeriodDays));
@@ -129,8 +129,8 @@ public class SyncContractInfoTask {
 
 
         // 获取补缴记录 计算实际收取金额
-        List<JljsContractOperateRecord> bujiaoList = jljsContractOperateRecordMapper.selectList(
-                getBaseSelect(contractId).eq(JljsContractOperateRecord::getContractOperateType, JljsContractOperateTypeEnum.bujiao.getCode())
+        List<GymContractOperateRecord> bujiaoList = gymContractOperateRecordMapper.selectList(
+                getBaseSelect(contractId).eq(GymContractOperateRecord::getContractOperateType, GymContractOperateTypeEnum.bujiao.getCode())
         );
         if (CollectionUtils.isNotEmpty(bujiaoList)) {
 
@@ -139,37 +139,37 @@ public class SyncContractInfoTask {
         // 使用期限已经过了
         if (contractInfo.getUseEndDate().compareTo(today) < 0) {
             // 如果是使用中 更新为已完成
-            if (JljsContractStatusEnum.shiyong.getCode().equals(contractInfo.getContractStatus())) {
-                contractInfo.setContractStatus(JljsContractStatusEnum.wancheng.getCode());
+            if (GymContractStatusEnum.shiyong.getCode().equals(contractInfo.getContractStatus())) {
+                contractInfo.setContractStatus(GymContractStatusEnum.wancheng.getCode());
             }
         }
         // 如果是次卡 剩余数量为0
-        if (JljsCourseTypeEnum.ci.getCode().equals(courseType) && Objects.equals(contractInfo.getCourseRemainQuantity(), 0)) {
+        if (GymCourseTypeEnum.ci.getCode().equals(courseType) && Objects.equals(contractInfo.getCourseRemainQuantity(), 0)) {
             // 如果是使用中 更新为已完成
-            if (JljsContractStatusEnum.shiyong.getCode().equals(contractInfo.getContractStatus())) {
-                contractInfo.setContractStatus(JljsContractStatusEnum.wancheng.getCode());
+            if (GymContractStatusEnum.shiyong.getCode().equals(contractInfo.getContractStatus())) {
+                contractInfo.setContractStatus(GymContractStatusEnum.wancheng.getCode());
             }
         }
 
 
         // 合同是否终止
-        JljsContractOperateRecord tuikeRecord = jljsContractOperateRecordMapper.selectOne(
-                getBaseSelect(contractId).eq(JljsContractOperateRecord::getContractOperateType, JljsContractOperateTypeEnum.tuike.getCode())
+        GymContractOperateRecord tuikeRecord = gymContractOperateRecordMapper.selectOne(
+                getBaseSelect(contractId).eq(GymContractOperateRecord::getContractOperateType, GymContractOperateTypeEnum.tuike.getCode())
         );
         if (null != tuikeRecord) {
             contractInfo.setUseBeginDate(tuikeRecord.getOperateBeginDate());
-            contractInfo.setContractStatus(JljsContractStatusEnum.zhongzhi.getCode());
+            contractInfo.setContractStatus(GymContractStatusEnum.zhongzhi.getCode());
         }
 
         // 更新合同信息
-        jljsContractInfoMapper.updateById(contractInfo);
+        gymContractInfoMapper.updateById(contractInfo);
 
     }
 
-    private LambdaQueryWrapper<JljsContractOperateRecord> getBaseSelect(String contractId) {
-        LambdaQueryWrapper<JljsContractOperateRecord> queryWrapper = Wrappers.lambdaQuery(JljsContractOperateRecord.class);
-        queryWrapper.eq(JljsContractOperateRecord::getContractInfoId, contractId);
-        queryWrapper.eq(JljsContractOperateRecord::getOperateStatus, JljsOperateStatusEnum.chenggong.getCode());
+    private LambdaQueryWrapper<GymContractOperateRecord> getBaseSelect(String contractId) {
+        LambdaQueryWrapper<GymContractOperateRecord> queryWrapper = Wrappers.lambdaQuery(GymContractOperateRecord.class);
+        queryWrapper.eq(GymContractOperateRecord::getContractInfoId, contractId);
+        queryWrapper.eq(GymContractOperateRecord::getOperateStatus, GymContractOperateStatusEnum.chenggong.getCode());
         return queryWrapper;
     }
 

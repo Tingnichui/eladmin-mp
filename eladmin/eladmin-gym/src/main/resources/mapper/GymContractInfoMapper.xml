@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="me.zhengjie.gym.mapper.GymContractInfoMapper">
+    <resultMap id="BaseResultMap" type="me.zhengjie.gym.domain.GymContractInfo">
+        <id column="id" property="id"/>
+        <result column="create_by" property="createBy"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_by" property="updateBy"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="del_flag" property="delFlag"/>
+        <result column="member_id" property="memberId"/>
+        <result column="belong_coach_id" property="belongCoachId"/>
+        <result column="contract_amount" property="contractAmount"/>
+        <result column="contract_status" property="contractStatus"/>
+        <result column="use_begin_date" property="useBeginDate"/>
+        <result column="use_end_date" property="useEndDate"/>
+        <result column="buy_time" property="buyTime"/>
+        <result column="contract_remark" property="contractRemark"/>
+        <result column="actual_charge_amount" property="actualChargeAmount"/>
+        <result column="course_info_id" property="courseInfoId"/>
+        <result column="course_type" property="courseType"/>
+        <result column="course_use_period_days" property="courseUsePeriodDays"/>
+        <result column="course_available_quantity" property="courseAvailableQuantity"/>
+        <result column="course_remain_quantity" property="courseRemainQuantity"/>
+        <result column="course_use_quantity" property="courseUseQuantity"/>
+        <result column="course_total_stop_days" property="courseTotalStopDays"/>
+        <result column="member_name" property="memberName"/>
+        <result column="belong_coach_name" property="belongCoachName"/>
+        <result column="course_name" property="courseName"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, create_by, create_time, update_by, update_time, del_flag, member_id, belong_coach_id, contract_amount, contract_status, use_begin_date, use_end_date, buy_time, contract_remark, actual_charge_amount, course_info_id, course_type, course_use_period_days, course_available_quantity, course_remain_quantity, course_use_quantity, course_total_stop_days
+    </sql>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        select
+        t1.id,
+        t1.create_by,
+        t1.create_time,
+        t1.update_by,
+        t1.update_time,
+        t1.del_flag,
+        t1.member_id,
+        t1.belong_coach_id,
+        t1.contract_amount,
+        t1.contract_status,
+        t1.use_begin_date,
+        t1.use_end_date,
+        t1.buy_time,
+        t1.contract_remark,
+        t1.actual_charge_amount,
+        t1.course_info_id,
+        t1.course_type,
+        t1.course_use_period_days,
+        t1.course_available_quantity,
+        t1.course_remain_quantity,
+        t1.course_use_quantity,
+        t1.course_total_stop_days,
+        t2.member_name,
+        t3.coach_name as belong_coach_name,
+        t4.course_name
+        from jljs_contract_info t1
+        left join jljs_member_info t2 on t1.member_id = t2.id
+        left join jljs_coach_info t3 on t1.belong_coach_id = t3.id
+        left join jljs_course_info t4 on t1.course_info_id = t4.id
+        where t1.del_flag = '0'
+            <if test="criteria.memberId != null">
+                and t1.member_id = #{criteria.memberId}
+            </if>
+            <if test="criteria.belongCoachId != null">
+                and t1.belong_coach_id = #{criteria.belongCoachId}
+            </if>
+            <if test="criteria.contractStatus != null">
+                and t1.contract_status = #{criteria.contractStatus}
+            </if>
+            <if test="criteria.contractRemark != null">
+                and t1.contract_remark like concat('%',#{criteria.contractRemark},'%')
+            </if>
+            <if test="criteria.courseInfoId != null">
+                and t1.course_info_id = #{criteria.courseInfoId}
+            </if>
+            <if test="criteria.id != null">
+                and t1.id = #{criteria.id}
+            </if>
+        order by t1.id desc
+    </select>
+</mapper>

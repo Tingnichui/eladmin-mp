@@ -3,8 +3,8 @@ package me.zhengjie.task;
 import cn.hutool.core.lang.Validator;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
-import me.zhengjie.gym.domain.JljsMemberInfo;
-import me.zhengjie.gym.service.JljsMemberInfoService;
+import me.zhengjie.gym.domain.GymMemberInfo;
+import me.zhengjie.gym.service.GymMemberInfoService;
 import me.zhengjie.modules.system.domain.Dept;
 import me.zhengjie.modules.system.domain.Job;
 import me.zhengjie.modules.system.domain.Role;
@@ -29,7 +29,7 @@ public class SyncMemberUserTask {
     @Resource
     private RedisUtils redisUtils;
     @Resource
-    private JljsMemberInfoService jljsMemberInfoService;
+    private GymMemberInfoService gymMemberInfoService;
     @Resource
     private UserService userService;
     @Resource
@@ -54,8 +54,8 @@ public class SyncMemberUserTask {
             Dept dept = new Dept();
             dept.setId(20L);
 
-            List<JljsMemberInfo> jljsMemberInfoList = jljsMemberInfoService.list();
-            for (JljsMemberInfo memberInfo : jljsMemberInfoList) {
+            List<GymMemberInfo> gymMemberInfoList = gymMemberInfoService.list();
+            for (GymMemberInfo memberInfo : gymMemberInfoList) {
                 String memberPhoneNum = memberInfo.getMemberPhoneNum();
                 if (StringUtils.isBlank(memberPhoneNum) || !Validator.isMobile(memberPhoneNum)) {
                     continue;
@@ -75,10 +75,10 @@ public class SyncMemberUserTask {
                     user.setPassword(passwordEncoder.encode(rawPassword));
                     userService.create(user);
 
-                    jljsMemberInfoService.update(
-                            Wrappers.lambdaUpdate(JljsMemberInfo.class)
-                                    .eq(JljsMemberInfo::getId, memberInfo.getId())
-                                    .set(JljsMemberInfo::getUserId, user.getId())
+                    gymMemberInfoService.update(
+                            Wrappers.lambdaUpdate(GymMemberInfo.class)
+                                    .eq(GymMemberInfo::getId, memberInfo.getId())
+                                    .set(GymMemberInfo::getUserId, user.getId())
                     );
                 }
             }

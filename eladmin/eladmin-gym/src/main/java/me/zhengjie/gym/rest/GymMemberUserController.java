@@ -9,18 +9,18 @@ import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.exception.BadRequestException;
-import me.zhengjie.gym.domain.JljsClassRecord;
-import me.zhengjie.gym.domain.JljsContractInfo;
-import me.zhengjie.gym.domain.JljsContractOperateRecord;
-import me.zhengjie.gym.domain.JljsMemberInfo;
-import me.zhengjie.gym.domain.vo.JljsClassRecordQueryCriteria;
-import me.zhengjie.gym.domain.vo.JljsContractInfoQueryCriteria;
-import me.zhengjie.gym.domain.vo.JljsContractOperateRecordQueryCriteria;
-import me.zhengjie.gym.domain.vo.UserHomeFuncConfig;
-import me.zhengjie.gym.service.JljsClassRecordService;
-import me.zhengjie.gym.service.JljsContractInfoService;
-import me.zhengjie.gym.service.JljsContractOperateRecordService;
-import me.zhengjie.gym.service.JljsMemberInfoService;
+import me.zhengjie.gym.domain.GymClassRecord;
+import me.zhengjie.gym.domain.GymContractInfo;
+import me.zhengjie.gym.domain.GymContractOperateRecord;
+import me.zhengjie.gym.domain.GymMemberInfo;
+import me.zhengjie.gym.domain.vo.GymClassRecordQueryCriteria;
+import me.zhengjie.gym.domain.vo.GymContractInfoQueryCriteria;
+import me.zhengjie.gym.domain.vo.GymContractOperateRecordQueryCriteria;
+import me.zhengjie.gym.domain.vo.GymUserHomeFuncConfig;
+import me.zhengjie.gym.service.GymClassRecordService;
+import me.zhengjie.gym.service.GymContractInfoService;
+import me.zhengjie.gym.service.GymContractOperateRecordService;
+import me.zhengjie.gym.service.GymMemberInfoService;
 import me.zhengjie.utils.PageResult;
 import me.zhengjie.utils.SecurityUtils;
 import org.apache.commons.collections4.CollectionUtils;
@@ -43,20 +43,20 @@ import java.util.stream.Collectors;
 public class GymMemberUserController {
 
     @Resource
-    private JljsMemberInfoService jljsMemberInfoService;
+    private GymMemberInfoService gymMemberInfoService;
     @Resource
-    private JljsContractInfoService jljsContractInfoService;
+    private GymContractInfoService gymContractInfoService;
     @Resource
-    private JljsClassRecordService jljsClassRecordService;
+    private GymClassRecordService gymClassRecordService;
     @Resource
-    private JljsContractOperateRecordService jljsContractOperateRecordService;
+    private GymContractOperateRecordService gymContractOperateRecordService;
 
     @GetMapping("getGymUserHomeFuncConfig")
     @Log("查询首页功能配置")
     @ApiOperation("查询上课记录")
     @PreAuthorize("@el.check('gymMember:homeFuncConf:list')")
-    public ResponseEntity<List<UserHomeFuncConfig>> getGymUserHomeFuncConfig() {
-        JljsMemberInfo memberInfo = this.getJljsMemberInfo();
+    public ResponseEntity<List<GymUserHomeFuncConfig>> getGymUserHomeFuncConfig() {
+        GymMemberInfo memberInfo = this.getJljsMemberInfo();
         String memberInfoId = memberInfo.getId();
 
 
@@ -87,74 +87,74 @@ public class GymMemberUserController {
                 "  },\n" +
                 "]";
 
-        List<UserHomeFuncConfig> userHomeFuncConfigs = JSON.parseArray(configStr, UserHomeFuncConfig.class);
-        for (UserHomeFuncConfig userHomeFuncConfig : userHomeFuncConfigs) {
-            String countSql = userHomeFuncConfig.getCountSql();
+        List<GymUserHomeFuncConfig> gymUserHomeFuncConfigs = JSON.parseArray(configStr, GymUserHomeFuncConfig.class);
+        for (GymUserHomeFuncConfig gymUserHomeFuncConfig : gymUserHomeFuncConfigs) {
+            String countSql = gymUserHomeFuncConfig.getCountSql();
             if (StringUtils.isBlank(countSql)) {
                 continue;
             }
             countSql = countSql.replaceAll("\\{member_id}", memberInfoId);
             try {
                 long count = SqlRunner.db().selectCount(countSql);
-                userHomeFuncConfig.setCount(String.valueOf(count));
+                gymUserHomeFuncConfig.setCount(String.valueOf(count));
             } catch (Exception e) {
                 log.error("查询计数出现异常", e);
             }
         }
 
 
-        return new ResponseEntity<>(userHomeFuncConfigs, HttpStatus.OK);
+        return new ResponseEntity<>(gymUserHomeFuncConfigs, HttpStatus.OK);
     }
 
     @GetMapping("/getGymClassRecordList")
     @Log("查询上课记录")
     @ApiOperation("查询上课记录")
     @PreAuthorize("@el.check('gymMember:classRecord:list')")
-    public ResponseEntity<PageResult<JljsClassRecord>> getGymClassRecordList(JljsClassRecordQueryCriteria criteria, Page<Object> page){
-        JljsMemberInfo memberInfo = this.getJljsMemberInfo();
-        List<JljsContractInfo> contractInfoList = jljsContractInfoService.list(
-                Wrappers.lambdaQuery(JljsContractInfo.class)
-                        .eq(JljsContractInfo::getMemberId, memberInfo.getId())
+    public ResponseEntity<PageResult<GymClassRecord>> getGymClassRecordList(GymClassRecordQueryCriteria criteria, Page<Object> page){
+        GymMemberInfo memberInfo = this.getJljsMemberInfo();
+        List<GymContractInfo> contractInfoList = gymContractInfoService.list(
+                Wrappers.lambdaQuery(GymContractInfo.class)
+                        .eq(GymContractInfo::getMemberId, memberInfo.getId())
         );
         if (CollectionUtils.isEmpty(contractInfoList)) {
             return new ResponseEntity<>(HttpStatus.OK);
         }
-        criteria.setContractInfoIdList(contractInfoList.stream().map(JljsContractInfo::getId).collect(Collectors.toList()));
-        return new ResponseEntity<>(jljsClassRecordService.queryAll(criteria,page),HttpStatus.OK);
+        criteria.setContractInfoIdList(contractInfoList.stream().map(GymContractInfo::getId).collect(Collectors.toList()));
+        return new ResponseEntity<>(gymClassRecordService.queryAll(criteria,page),HttpStatus.OK);
     }
 
     @GetMapping("/getGymContractOperateRecordList")
     @Log("会员:查询合同操作记录")
     @ApiOperation("会员:查询合同操作记录")
     @PreAuthorize("@el.check('gymMember:contractOperateRecord:list')")
-    public ResponseEntity<PageResult<JljsContractOperateRecord>> getGymContractOperateRecordList(JljsContractOperateRecordQueryCriteria criteria, Page<Object> page){
-        JljsMemberInfo memberInfo = this.getJljsMemberInfo();
-        List<JljsContractInfo> contractInfoList = jljsContractInfoService.list(
-                Wrappers.lambdaQuery(JljsContractInfo.class)
-                        .eq(JljsContractInfo::getMemberId, memberInfo.getId())
+    public ResponseEntity<PageResult<GymContractOperateRecord>> getGymContractOperateRecordList(GymContractOperateRecordQueryCriteria criteria, Page<Object> page){
+        GymMemberInfo memberInfo = this.getJljsMemberInfo();
+        List<GymContractInfo> contractInfoList = gymContractInfoService.list(
+                Wrappers.lambdaQuery(GymContractInfo.class)
+                        .eq(GymContractInfo::getMemberId, memberInfo.getId())
         );
         if (CollectionUtils.isEmpty(contractInfoList)) {
             return new ResponseEntity<>(HttpStatus.OK);
         }
-        criteria.setContractInfoIdList(contractInfoList.stream().map(JljsContractInfo::getId).collect(Collectors.toList()));
-        return new ResponseEntity<>(jljsContractOperateRecordService.queryAll(criteria,page),HttpStatus.OK);
+        criteria.setContractInfoIdList(contractInfoList.stream().map(GymContractInfo::getId).collect(Collectors.toList()));
+        return new ResponseEntity<>(gymContractOperateRecordService.queryAll(criteria,page),HttpStatus.OK);
     }
 
     @GetMapping("/getGymContractInfoList")
     @Log("会员:查询合同管理")
     @ApiOperation("会员:查询合同管理")
     @PreAuthorize("@el.check('gymMember:contractInfo:list')")
-    public ResponseEntity<PageResult<JljsContractInfo>> getGymContractInfoList(JljsContractInfoQueryCriteria criteria, Page<Object> page){
-        JljsMemberInfo memberInfo = this.getJljsMemberInfo();
+    public ResponseEntity<PageResult<GymContractInfo>> getGymContractInfoList(GymContractInfoQueryCriteria criteria, Page<Object> page){
+        GymMemberInfo memberInfo = this.getJljsMemberInfo();
         criteria.setMemberId(memberInfo.getId());
-        return new ResponseEntity<>(jljsContractInfoService.queryAll(criteria,page),HttpStatus.OK);
+        return new ResponseEntity<>(gymContractInfoService.queryAll(criteria,page),HttpStatus.OK);
     }
 
-    private JljsMemberInfo getJljsMemberInfo() {
+    private GymMemberInfo getJljsMemberInfo() {
         Long currentUserId = SecurityUtils.getCurrentUserId();
-        JljsMemberInfo memberInfo = jljsMemberInfoService.getBaseMapper().selectOne(
-                Wrappers.lambdaQuery(JljsMemberInfo.class)
-                        .eq(JljsMemberInfo::getUserId, currentUserId)
+        GymMemberInfo memberInfo = gymMemberInfoService.getBaseMapper().selectOne(
+                Wrappers.lambdaQuery(GymMemberInfo.class)
+                        .eq(GymMemberInfo::getUserId, currentUserId)
         );
         if (null == memberInfo) {
             throw new BadRequestException("当前用户不是健身会员");
