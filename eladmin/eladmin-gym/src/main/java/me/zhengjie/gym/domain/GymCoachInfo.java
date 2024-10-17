@@ -36,7 +36,7 @@ import javax.validation.constraints.NotNull;
 * @date 2024-06-30
 **/
 @Data
-@TableName("jljs_coach_info")
+@TableName("gym_coach_info")
 public class GymCoachInfo extends BaseEntity implements Serializable {
 
     @TableId(value = "id")

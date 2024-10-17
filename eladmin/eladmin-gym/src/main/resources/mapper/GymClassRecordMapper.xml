@@ -25,8 +25,8 @@
         select
             t1.*,
             t2.coach_name
-        from jljs_class_record t1
-            left join jljs_coach_info t2 on t2.id = t1.coach_id
+        from gym_class_record t1
+            left join gym_coach_info t2 on t2.id = t1.coach_id
         where t1.del_flag = '0'
             <if test="criteria.coachId != null">
                 and t1.coach_id = #{criteria.coachId}
@@ -55,7 +55,7 @@
     <select id="getClassStatsByDay" resultType="java.util.Map">
         SELECT COUNT(1)                                AS `count`,
                DATE_FORMAT(class_begin_time, '%Y%m%d') AS `day`
-        FROM jljs_class_record
+        FROM gym_class_record
         where del_flag = '0'
         GROUP BY DATE_FORMAT(class_begin_time, '%Y%m%d')
         ORDER BY DATE_FORMAT(class_begin_time, '%Y%m%d') ASC

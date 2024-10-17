@@ -22,7 +22,7 @@
     <select id="findAll" resultMap="BaseResultMap">
         select
         <include refid="Base_Column_List"/>
-        from jljs_member_info
+        from gym_member_info
         where del_flag = '0'
             <if test="criteria.memberName != null">
                 and member_name like concat('%',#{criteria.memberName},'%')
@@ -46,7 +46,7 @@
         SELECT GROUP_CONCAT(member_name)                                                             AS memberName,
                birth_day                                                                             AS birthDay,
                DATE_FORMAT(STR_TO_DATE(CONCAT(YEAR(CURDATE()), '/', birth_day), '%Y/%m/%d'), '%m%d') AS sort
-        FROM jljs_member_info t1
+        FROM gym_member_info t1
         WHERE t1.del_flag = '0'
           AND birth_day IS NOT NULL
         GROUP BY birth_day

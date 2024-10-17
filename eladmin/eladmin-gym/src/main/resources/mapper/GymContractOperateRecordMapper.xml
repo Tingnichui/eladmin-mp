@@ -42,10 +42,10 @@
             t1.operate_status,
             t3.member_name,
             t4.course_name
-        from jljs_contract_operate_record t1
-            left join jljs_contract_info t2 on t1.contract_info_id = t2.id
-            left join jljs_member_info t3 on t2.member_id = t3.id
-            left join jljs_course_info t4 on t2.course_info_id = t4.id
+        from gym_contract_operate_record t1
+            left join gym_contract_info t2 on t1.contract_info_id = t2.id
+            left join gym_member_info t3 on t2.member_id = t3.id
+            left join gym_course_info t4 on t2.course_info_id = t4.id
         where t1.del_flag = '0'
             <if test="criteria.contractInfoId != null">
                 and t1.contract_info_id = #{criteria.contractInfoId}

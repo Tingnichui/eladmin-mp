@@ -19,7 +19,7 @@
     <select id="findAll" resultMap="BaseResultMap">
         select
         <include refid="Base_Column_List"/>
-        from jljs_coach_info
+        from gym_coach_info
         where del_flag = '0'
             <if test="criteria.coachName != null">
                 and coach_name like concat('%',#{criteria.coachName},'%')
