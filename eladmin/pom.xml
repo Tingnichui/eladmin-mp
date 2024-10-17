@@ -15,7 +15,7 @@
         <module>eladmin-system</module>
         <module>eladmin-tools</module>
         <module>eladmin-generator</module>
-        <module>eladmin-jljs</module>
+        <module>eladmin-gym</module>
         <module>eladmin-media-crawler</module>
         <module>eladmin-other</module>
     </modules>

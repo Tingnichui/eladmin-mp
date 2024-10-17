@@ -90,7 +90,7 @@
         <!-- 加励健身 -->
         <dependency>
             <groupId>me.zhengjie</groupId>
-            <artifactId>eladmin-jljs</artifactId>
+            <artifactId>eladmin-gym</artifactId>
             <version>1.1</version>
             <exclusions>
                 <exclusion>
