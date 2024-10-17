@@ -25,8 +25,8 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
-@Service("syncContractInfoTask")
-public class SyncContractInfoTask {
+@Service("syncGymContractInfoStatusTask")
+public class SyncGymContractInfoStatusTask {
 
     @Resource
     private GymContractInfoMapper gymContractInfoMapper;

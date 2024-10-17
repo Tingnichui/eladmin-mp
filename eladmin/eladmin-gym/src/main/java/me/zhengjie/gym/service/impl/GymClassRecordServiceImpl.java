@@ -19,7 +19,7 @@ import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.gym.domain.GymClassRecord;
 import me.zhengjie.gym.domain.GymContractInfo;
 import me.zhengjie.gym.service.GymContractInfoService;
-import me.zhengjie.gym.task.SyncContractInfoTask;
+import me.zhengjie.gym.task.SyncGymContractInfoStatusTask;
 import me.zhengjie.utils.FileUtil;
 import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -53,7 +53,7 @@ public class GymClassRecordServiceImpl extends ServiceImpl<GymClassRecordMapper,
     @Resource
     private GymContractInfoService gymContractInfoService;
     @Resource
-    private SyncContractInfoTask syncContractInfoTask;
+    private SyncGymContractInfoStatusTask syncGymContractInfoStatusTask;
 
     @Override
     public PageResult<GymClassRecord> queryAll(GymClassRecordQueryCriteria criteria, Page<Object> page){
@@ -80,7 +80,7 @@ public class GymClassRecordServiceImpl extends ServiceImpl<GymClassRecordMapper,
         resources.setContractInfoId(contractInfoId);
         save(resources);
         // 更新合同信息
-        syncContractInfoTask.sync(contractInfoId);
+        syncGymContractInfoStatusTask.sync(contractInfoId);
     }
 
     @Override
@@ -100,7 +100,7 @@ public class GymClassRecordServiceImpl extends ServiceImpl<GymClassRecordMapper,
         gymClassRecord.setContractInfoId(contractInfoId);
         saveOrUpdate(gymClassRecord);
         // 更新合同信息
-        syncContractInfoTask.sync(contractInfoId);
+        syncGymContractInfoStatusTask.sync(contractInfoId);
     }
 
     @Override
@@ -109,7 +109,7 @@ public class GymClassRecordServiceImpl extends ServiceImpl<GymClassRecordMapper,
         removeBatchByIds(ids);
         // 更新合同信息
         for (String id : ids) {
-            syncContractInfoTask.sync(id);
+            syncGymContractInfoStatusTask.sync(id);
         }
     }
 

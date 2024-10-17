@@ -24,7 +24,7 @@ import me.zhengjie.gym.domain.GymContractInfo;
 import me.zhengjie.gym.domain.GymMemberInfo;
 import me.zhengjie.gym.service.GymClassRecordService;
 import me.zhengjie.gym.service.GymMemberInfoService;
-import me.zhengjie.gym.task.SyncContractInfoTask;
+import me.zhengjie.gym.task.SyncGymContractInfoStatusTask;
 import me.zhengjie.utils.FileUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -58,7 +58,7 @@ public class GymContractInfoServiceImpl extends ServiceImpl<GymContractInfoMappe
     @Resource
     private GymClassRecordService gymClassRecordService;
     @Resource
-    private SyncContractInfoTask syncContractInfoTask;
+    private SyncGymContractInfoStatusTask syncGymContractInfoStatusTask;
 
     @Override
     public PageResult<GymContractInfo> queryAll(GymContractInfoQueryCriteria criteria, Page<Object> page){
@@ -84,7 +84,7 @@ public class GymContractInfoServiceImpl extends ServiceImpl<GymContractInfoMappe
         GymContractInfo gymContractInfo = getById(id);
         gymContractInfo.copy(resources);
         saveOrUpdate(gymContractInfo);
-        syncContractInfoTask.sync(id);
+        syncGymContractInfoStatusTask.sync(id);
     }
 
     @Override

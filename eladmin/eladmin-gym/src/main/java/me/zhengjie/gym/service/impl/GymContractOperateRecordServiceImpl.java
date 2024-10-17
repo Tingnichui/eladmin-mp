@@ -26,7 +26,7 @@ import me.zhengjie.gym.domain.GymContractInfo;
 import me.zhengjie.gym.domain.GymContractOperateRecord;
 import me.zhengjie.gym.mapper.GymContractInfoMapper;
 import me.zhengjie.gym.service.GymContractInfoService;
-import me.zhengjie.gym.task.SyncContractInfoTask;
+import me.zhengjie.gym.task.SyncGymContractInfoStatusTask;
 import me.zhengjie.utils.FileUtil;
 import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -56,7 +56,7 @@ import me.zhengjie.utils.PageResult;
 public class GymContractOperateRecordServiceImpl extends ServiceImpl<GymContractOperateRecordMapper, GymContractOperateRecord> implements GymContractOperateRecordService {
 
     private final GymContractOperateRecordMapper gymContractOperateRecordMapper;
-    private final SyncContractInfoTask syncContractInfoTask;
+    private final SyncGymContractInfoStatusTask syncGymContractInfoStatusTask;
     private final GymContractInfoMapper jljsContractInfoDao;
     private final GymContractInfoService gymContractInfoService;
 
@@ -167,7 +167,7 @@ public class GymContractOperateRecordServiceImpl extends ServiceImpl<GymContract
             }
         } finally {
             // 更新合同信息
-            syncContractInfoTask.sync(resources.getContractInfoId());
+            syncGymContractInfoStatusTask.sync(resources.getContractInfoId());
         }
 
     }
@@ -229,6 +229,6 @@ public class GymContractOperateRecordServiceImpl extends ServiceImpl<GymContract
             jljsContractInfoDao.update(null, update);
         }
 
-        syncContractInfoTask.sync(record.getContractInfoId());
+        syncGymContractInfoStatusTask.sync(record.getContractInfoId());
     }
 }
