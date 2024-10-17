@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
 @RestController
 @Api(tags = "健身房会员用户H5")
 @RequestMapping("/api/h5/")
-public class GymMemberUserController {
+public class GymMemberUserH5Controller {
 
     @Resource
     private GymMemberInfoService gymMemberInfoService;
