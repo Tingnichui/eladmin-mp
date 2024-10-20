@@ -154,6 +154,8 @@ file:
 other:
   yxt:
     url: ENC(xm5nHjMTUIoI19nV9Tf0r235D4ByksIT/Iea4pOzyiFc0DxWKlLVy4XcuzjDwHZGFH+lrX+i0aoOxwdgEmickA==)
+  fengliu:
+    url: ENC(2JadBstp7Eea37SDPqZ5v56b78wp4xloNe0HAjN+Zi8jckwi/bfoaFmRO80Xyva19WDr20Ve17xYLpnvWK5LJtMJHOe2kFXzLjC+OqXXLJM=)
 proxy:
   host: 127.0.0.1
   port: 7890
