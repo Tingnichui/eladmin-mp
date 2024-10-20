@@ -1,5 +1,8 @@
 package me.zhengjie.other.task;
 
+import cn.hutool.core.date.DatePattern;
+import cn.hutool.core.date.DateTime;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +14,7 @@ import org.htmlunit.BrowserVersion;
 import org.htmlunit.NicelyResynchronizingAjaxController;
 import org.htmlunit.WebClient;
 import org.htmlunit.WebRequest;
+import org.htmlunit.html.DomElement;
 import org.htmlunit.html.HtmlPage;
 import org.htmlunit.util.Cookie;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,10 +75,21 @@ public class FengliuTask {
             // 发送请求
             HtmlPage dailyPage = webClient.getPage(webRequest);
 
-            // 登录成功就行了
-            boolean contains = dailyPage.asXml().contains("您尚未登录");
-            if (contains) {
+            String pageXml = dailyPage.asXml();
+            if (pageXml.contains("您需要先登录才能继续本操作") || !pageXml.contains("您上次签到时间:")) {
                 throw new RuntimeException("cookie失效，及时处理");
+            }
+
+            // 找到上次签到时间
+            DomElement lastSignTimeDom = dailyPage.getFirstByXPath("//p[contains(text(), '您上次签到时间:')]/font");
+            if (null == lastSignTimeDom) {
+                throw new RuntimeException("签到时间不存在");
+            }
+
+            DateTime today = new DateTime();
+            DateTime lastSignTime = DateUtil.parse(lastSignTimeDom.getTextContent(), DatePattern.NORM_DATETIME_MINUTE_PATTERN);
+            if (!lastSignTime.toDateStr().equals(today.toDateStr()) && DateUtil.hour(today, true) > 18) {
+                throw new RuntimeException("今日签到还未成功");
             }
 
         } finally {
