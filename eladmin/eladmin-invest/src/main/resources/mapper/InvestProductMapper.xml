@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="me.zhengjie.invest.mapper.InvestProductMapper">
+    <resultMap id="BaseResultMap" type="me.zhengjie.invest.domain.InvestProduct">
+        <id column="id" property="id"/>
+        <result column="invest_type" property="investType"/>
+        <result column="invest_product_code" property="investProductCode"/>
+        <result column="invest_product_name" property="investProductName"/>
+        <result column="min_size" property="minSize"/>
+        <result column="measurement_unit" property="measurementUnit"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_by" property="updateBy"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="create_by" property="createBy"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, invest_type, invest_product_code, invest_product_name, min_size, measurement_unit, create_time, update_by, update_time, create_by
+    </sql>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List"/>
+        from invest_product
+        <where>
+            <if test="criteria.investType != null">
+                and invest_type = #{criteria.investType}
+            </if>
+            <if test="criteria.investProductCode != null">
+                and invest_product_code like concat('%',#{criteria.investProductCode},'%')
+            </if>
+            <if test="criteria.investProductName != null">
+                and invest_product_name like concat('%',#{criteria.investProductName},'%')
+            </if>
+            <if test="criteria.measurementUnit != null">
+                and measurement_unit like concat('%',#{criteria.measurementUnit},'%')
+            </if>
+            <if test="criteria.minSize != null and criteria.minSize.size() > 0">
+                AND min_size BETWEEN #{criteria.minSize[0]} AND #{criteria.minSize[1]}
+            </if>
+        </where>
+        order by id desc
+    </select>
+</mapper>
