@@ -5,13 +5,28 @@
       <div v-if="crud.props.searchToggle">
         <!-- 搜索 -->
         <label class="el-form-item-label">产品类型</label>
-        <el-input v-model="query.investType" clearable placeholder="投资类型；1股票；2期货；3加密货币" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+        <el-select
+          v-model="query.investType"
+          clearable
+          size="small"
+          placeholder="投资类型"
+          class="filter-item"
+          style="width: 185px"
+          @change="crud.toQuery"
+        >
+          <el-option
+            v-for="item in dict.invest_type"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
         <label class="el-form-item-label">产品编码</label>
         <el-input v-model="query.investProductCode" clearable placeholder="投资产品编码" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
         <label class="el-form-item-label">产品名称</label>
         <el-input v-model="query.investProductName" clearable placeholder="投资产品名称" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
-        <label class="el-form-item-label">计量单位</label>
-        <el-input v-model="query.measurementUnit" clearable placeholder="计量单位" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+        <!--        <label class="el-form-item-label">计量单位</label>-->
+        <!--        <el-input v-model="query.measurementUnit" clearable placeholder="计量单位" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />-->
         <date-range-picker
           v-model="query.minSize"
           start-placeholder="minSizeStart"

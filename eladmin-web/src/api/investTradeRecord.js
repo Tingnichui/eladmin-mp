@@ -2,7 +2,7 @@ import request from '@/utils/request'
 
 export function add(data) {
   return request({
-    url: 'api/investProduct',
+    url: 'api/investTradeRecord',
     method: 'post',
     data
   })
@@ -10,7 +10,7 @@ export function add(data) {
 
 export function del(ids) {
   return request({
-    url: 'api/investProduct/',
+    url: 'api/investTradeRecord/',
     method: 'delete',
     data: ids
   })
@@ -18,20 +18,9 @@ export function del(ids) {
 
 export function edit(data) {
   return request({
-    url: 'api/investProduct',
+    url: 'api/investTradeRecord',
     method: 'put',
     data
-  })
-}
-
-export function listAllProduct(params) {
-  return request({
-    url: 'api/investProduct',
-    method: 'get',
-    params: {
-      size: -1,
-      ...params
-    }
   })
 }
 

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="me.zhengjie.invest.mapper.InvestTradeRecordMapper">
+    <resultMap id="BaseResultMap" type="me.zhengjie.invest.domain.InvestTradeRecord">
+        <id column="id" property="id"/>
+        <result column="product_id" property="productId"/>
+        <result column="invest_product_name" property="investProductName"/>
+        <result column="trade_type" property="tradeType"/>
+        <result column="trade_num" property="tradeNum"/>
+        <result column="open_price" property="openPrice"/>
+        <result column="leverage" property="leverage"/>
+        <result column="coust" property="coust"/>
+        <result column="stop_loss" property="stopLoss"/>
+        <result column="take_profit" property="takeProfit"/>
+        <result column="close_price" property="closePrice"/>
+        <result column="operate_status" property="operateStatus"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_by" property="updateBy"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="create_by" property="createBy"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, product_id, trade_type, trade_num, open_price, leverage, coust, stop_loss, take_profit, close_price, operate_status, create_time, update_by, update_time, create_by
+    </sql>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        select
+            t1.*,
+            t2.invest_product_name
+        from invest_trade_record t1
+        left join invest_product t2 on t1.product_id = t2.id
+        <where>
+            <if test="criteria.productId != null">
+                and t1.product_id = #{criteria.productId}
+            </if>
+            <if test="criteria.tradeType != null">
+                and t1.trade_type = #{criteria.tradeType}
+            </if>
+            <if test="criteria.operateStatus != null">
+                and t1.operate_status = #{criteria.operateStatus}
+            </if>
+        </where>
+        order by id desc
+    </select>
+</mapper>
