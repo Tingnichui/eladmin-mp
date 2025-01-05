@@ -139,13 +139,13 @@
             {{ dict.label.invest_trade_type[scope.row.tradeType] }}
           </template>
         </el-table-column>
-        <el-table-column prop="tradeNum" label="交易数量" />
-        <el-table-column prop="openPrice" label="开仓价格" />
         <el-table-column prop="leverage" label="杠杆" />
-        <el-table-column prop="coust" label="开仓金额" />
-        <el-table-column prop="stopLoss" label="止损价格" />
-        <el-table-column prop="takeProfit" label="止盈价格" />
-        <el-table-column prop="closePrice" label="平仓价格" />
+        <el-table-column prop="tradeNum" label="交易数量" />
+        <el-table-column prop="openPrice" label="开仓价格" :formatter="convertAmount" />
+        <el-table-column prop="coust" label="开仓金额" :formatter="convertAmount" />
+        <el-table-column prop="stopLoss" label="止损价格" :formatter="convertAmount" />
+        <el-table-column prop="takeProfit" label="止盈价格" :formatter="convertAmount" />
+        <el-table-column prop="closePrice" label="平仓价格" :formatter="convertAmount" />
         <el-table-column prop="operateStatus" label="交易状态">
           <template slot-scope="scope">
             {{ dict.label.invest_trade_operate_status[scope.row.operateStatus] }}
@@ -181,6 +181,7 @@
 </template>
 
 <script>
+import { convertAmountToYuan } from '@/utils/numberUtil'
 import crudInvestTradeRecord from '@/api/invest/investTradeRecord'
 import CRUD, { presenter, header, form, crud } from '@crud/crud'
 import rrOperation from '@crud/RR.operation'
@@ -250,6 +251,9 @@ export default {
     }
   },
   methods: {
+    convertAmount(row, column, cellValue, index) {
+      return convertAmountToYuan(cellValue)
+    },
     // 钩子：在获取表格数据之前执行，false 则代表不获取数据
     [CRUD.HOOK.beforeRefresh]() {
       return true

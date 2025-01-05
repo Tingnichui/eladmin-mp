@@ -80,7 +80,7 @@ public class InvestTradeRecord implements Serializable {
     @ApiModelProperty(value = "止损价格")
     private Long stopLoss;
 
-    @Min(value = 1)
+    @Min(value = 0)
     @ApiModelProperty(value = "止盈价格")
     private Long takeProfit;
 
