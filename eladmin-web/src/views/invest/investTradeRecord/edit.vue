@@ -9,7 +9,7 @@
           :value="item.id"
         />
       </el-select>
-      ，以 <el-input v-model="form.leverage" class="input-short" /> 倍杠杆
+      ，以 <el-input v-model="form.leverage" type="number" min="0" class="input-short" /> 倍杠杆
       <el-select v-model="form.tradeType" filterable placeholder="请选择" class="select-short">
         <el-option
           v-for="item in dict.invest_trade_type"
@@ -18,7 +18,7 @@
           :value="parseInt(item.value)"
         />
       </el-select>
-      <el-input v-model="form.tradeNum" class="input-short" /> *
+      <el-input v-model="form.tradeNum" type="number" min="0" class="input-short" /> *
       <div v-for="item in productList" :key="item.id">
         <span v-if="item.id === form.productId"> {{ 1/item.minSize }} </span>
       </div>
@@ -26,10 +26,10 @@
         <span v-if="item.id === form.productId"> {{ item.measurementUnit }} </span>
       </div>
       ，
-      开仓价格设置为 <el-input v-model="form.openPrice" class="input-short" />，
-      开仓金额为 <el-input v-model="form.coust" class="input-short" />，
-      止损价格为 <el-input v-model="form.stopLoss" class="input-short" />，
-      止盈价格为 <el-input v-model="form.takeProfit" class="input-short" />，
+      开仓价格设置为 <el-input v-model="form.openPrice" type="number" step="0.01" class="input-short" />，
+      开仓金额为 <el-input v-model="form.coust" type="number" step="0.01" class="input-short" />，
+      止损价格为 <el-input v-model="form.stopLoss" type="number" step="0.01" class="input-short" />，
+      止盈价格为 <el-input v-model="form.takeProfit" type="number" step="0.01" class="input-short" />，
       当前交易状态
       <el-select v-model="form.operateStatus" filterable placeholder="请选择" class="select-short">
         <el-option
@@ -39,19 +39,20 @@
           :value="parseInt(item.value)"
         />
       </el-select>
-      ，平仓价格为 <el-input v-model="form.closePrice" class="input-short" />。
+      ，平仓价格为 <el-input v-model="form.closePrice" type="number" step="0.01" class="input-short" />。
     </div>
     <div style="margin-top: 20px;">
       <mavon-editor ref="md" v-model="form.analysis" :style="'height:' + editorHeight" @imgAdd="imgAdd" />
     </div>
     <div class="button-container">
       <el-button type="primary" @click="save">保存</el-button>
-      <el-button type="plain" @click="cancel">取消</el-button>
+      <el-button @click="cancel">取消</el-button>
     </div>
   </div>
 </template>
 
 <script>
+import { convertAmountToYuan, convertAmountToCent } from '@/utils/numberUtil'
 import crudInvestTradeRecord from '@/api/invest/investTradeRecord'
 import { listAllProduct } from '@/api/invest/investProduct'
 import { upload } from '@/utils/upload'
@@ -60,6 +61,8 @@ import { mavonEditor } from 'mavon-editor'
 import 'mavon-editor/dist/css/index.css'
 import CRUD from '@crud/crud'
 
+// 需要转换单位的字段
+const amountFields = ['openPrice', 'coust', 'stopLoss', 'takeProfit', 'closePrice']
 export default {
   name: 'Markdown',
   components: {
@@ -92,6 +95,10 @@ export default {
     if (this.form.id) {
       crudInvestTradeRecord.getById(this.form.id).then(data => {
         this.form = data
+        // 奖金额转换为元
+        amountFields.forEach(field => {
+          this.form[field] = convertAmountToYuan(this.form[field])
+        })
       })
     }
     // 初始化
@@ -116,8 +123,13 @@ export default {
       })
     },
     save() {
+      const saveData = { ...this.form }
+      // 将金额转化为分单位
+      amountFields.forEach(field => {
+        saveData[field] = convertAmountToCent(saveData[field])
+      })
       if (this.form.id) {
-        crudInvestTradeRecord.edit(this.form).then(() => {
+        crudInvestTradeRecord.edit(saveData).then(() => {
           this.$notify({
             title: '保存成功',
             type: CRUD.NOTIFICATION_TYPE.SUCCESS,
@@ -125,7 +137,7 @@ export default {
           })
         })
       } else {
-        crudInvestTradeRecord.add(this.form).then((data) => {
+        crudInvestTradeRecord.add(saveData).then((data) => {
           // 删除当前路由页面
           this.$store.state.tagsView.visitedViews.splice(this.$store.state.tagsView.visitedViews.findIndex(item => item.path === this.$route.path), 1)
           // 跳转页面
@@ -159,7 +171,7 @@ export default {
 }
 
 .input-short {
-  width: 80px;
+  width: 110px;
   margin: 0 5px;
 }
 
