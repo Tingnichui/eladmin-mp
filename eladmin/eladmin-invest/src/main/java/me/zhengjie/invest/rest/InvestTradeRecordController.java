@@ -60,13 +60,21 @@ public class InvestTradeRecordController {
         return new ResponseEntity<>(investTradeRecordService.queryAll(criteria,page),HttpStatus.OK);
     }
 
+    @GetMapping("/getById")
+    @Log("查询投资记录")
+    @ApiOperation("查询投资记录")
+    @PreAuthorize("@el.check('investTradeRecord:list')")
+    public ResponseEntity<InvestTradeRecord> queryInvestTradeRecordById(Integer id) {
+        return new ResponseEntity<>(investTradeRecordService.getById(id), HttpStatus.OK);
+    }
+
     @PostMapping
     @Log("新增投资记录")
     @ApiOperation("新增投资记录")
     @PreAuthorize("@el.check('investTradeRecord:add')")
-    public ResponseEntity<Object> createInvestTradeRecord(@Validated @RequestBody InvestTradeRecord resources){
+    public ResponseEntity<Integer> createInvestTradeRecord(@Validated @RequestBody InvestTradeRecord resources){
         investTradeRecordService.create(resources);
-        return new ResponseEntity<>(HttpStatus.CREATED);
+        return new ResponseEntity<>(resources.getId(), HttpStatus.CREATED);
     }
 
     @PutMapping

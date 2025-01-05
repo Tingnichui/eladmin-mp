@@ -58,7 +58,18 @@
         <rrOperation :crud="crud" />
       </div>
       <!--如果想在工具栏加入更多按钮，可以使用插槽方式， slot = 'left' or 'right'-->
-      <crudOperation :permission="permission" />
+      <crudOperation>
+        <el-button
+          slot="left"
+          class="filter-item"
+          type="primary"
+          icon="el-icon-plus"
+          size="mini"
+          @click="doAdd()"
+        >
+          新增
+        </el-button>
+      </crudOperation>
       <!--表单组件-->
       <el-dialog :close-on-click-modal="false" :before-close="crud.cancelCU" :visible.sync="crud.status.cu > 0" :title="crud.status.title" width="500px">
         <el-form ref="form" :model="form" :rules="rules" size="small" label-width="80px">
@@ -142,10 +153,24 @@
         </el-table-column>
         <el-table-column v-if="checkPer(['admin','investTradeRecord:edit','investTradeRecord:del'])" label="操作" width="150px" align="center">
           <template slot-scope="scope">
-            <udOperation
-              :data="scope.row"
-              :permission="permission"
-            />
+            <el-button size="mini" style="margin-right: 2px" type="text">
+              <router-link :to="'/invest/investTradeRecord/edit/' + scope.row.id">
+                编辑
+              </router-link>
+            </el-button>
+            <el-popover
+              :ref="scope.row.id"
+              v-permission="['admin','investTradeRecord:del']"
+              placement="top"
+              width="200"
+            >
+              <p>确定删除该条记录吗？</p>
+              <div style="text-align: right; margin: 0">
+                <el-button size="mini" type="text" @click="$refs[scope.row.id].doClose()">取消</el-button>
+                <el-button :loading="delLoading" type="primary" size="mini" @click="delMethod(scope.row.id)">确定</el-button>
+              </div>
+              <el-button slot="reference" type="text" size="mini" style="color: #FF4949">删除</el-button>
+            </el-popover>
           </template>
         </el-table-column>
       </el-table>
@@ -160,14 +185,13 @@ import crudInvestTradeRecord from '@/api/invest/investTradeRecord'
 import CRUD, { presenter, header, form, crud } from '@crud/crud'
 import rrOperation from '@crud/RR.operation'
 import crudOperation from '@crud/CRUD.operation'
-import udOperation from '@crud/UD.operation'
 import pagination from '@crud/Pagination'
 import { listAllProduct } from '@/api/invest/investProduct'
 
 const defaultForm = { id: null, productId: null, tradeType: null, tradeNum: null, openPrice: null, leverage: null, coust: null, stopLoss: null, takeProfit: null, closePrice: null, operateStatus: null, createTime: null, updateBy: null, updateTime: null, createBy: null }
 export default {
   name: 'InvestTradeRecord',
-  components: { pagination, crudOperation, rrOperation, udOperation },
+  components: { pagination, crudOperation, rrOperation },
   mixins: [presenter(), header(), form(defaultForm), crud()],
   dicts: ['invest_trade_type', 'invest_trade_operate_status'],
   cruds() {
@@ -210,11 +234,20 @@ export default {
         { key: 'tradeType', display_name: '交易类型' },
         { key: 'operateStatus', display_name: '交易状态' }
       ],
+      delLoading: false,
       productList: []
     }
   },
   mounted() {
     this.refreshProductList()
+  },
+  created() {
+    this.crud.optShow = {
+      add: false,
+      edit: false,
+      del: false,
+      download: true
+    }
   },
   methods: {
     // 钩子：在获取表格数据之前执行，false 则代表不获取数据
@@ -225,6 +258,22 @@ export default {
       listAllProduct().then(data => {
         this.productList = data.content
       })
+    },
+    delMethod(id) {
+      this.delLoading = true
+      crudInvestTradeRecord.del([id]).then(() => {
+        this.delLoading = false
+        this.$refs[id].doClose()
+        this.crud.dleChangePage(1)
+        this.crud.delSuccessNotify()
+        this.crud.toQuery()
+      }).catch(() => {
+        this.delLoading = false
+        this.$refs[id].doClose()
+      })
+    },
+    doAdd() {
+      this.$router.push('/invest/investTradeRecord/edit/:id')
     }
   }
 }

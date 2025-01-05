@@ -23,6 +23,7 @@ import lombok.Data;
 **/
 @Data
 public class InvestTradeRecordQueryCriteria{
+    private Integer id;
     private Integer tradeType;
     private Integer operateStatus;
     private Integer productId;

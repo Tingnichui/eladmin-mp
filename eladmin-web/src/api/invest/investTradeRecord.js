@@ -24,4 +24,14 @@ export function edit(data) {
   })
 }
 
-export default { add, edit, del }
+export function getById(id) {
+  return request({
+    url: 'api/investTradeRecord/getById',
+    method: 'get',
+    params: {
+      id: id
+    }
+  })
+}
+
+export default { add, edit, del, getById }

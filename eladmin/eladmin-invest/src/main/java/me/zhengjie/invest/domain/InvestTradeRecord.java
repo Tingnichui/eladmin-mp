@@ -26,6 +26,8 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
 /**
@@ -45,7 +47,6 @@ public class InvestTradeRecord implements Serializable {
     @ApiModelProperty(value = "投资产品")
     private Integer productId;
 
-    @NotNull
     @ApiModelProperty(value = "投资产品名称")
     @TableField(exist = false)
     private String investProductName;
@@ -55,34 +56,48 @@ public class InvestTradeRecord implements Serializable {
     private Integer tradeType;
 
     @NotNull
+    @Min(value = 1)
     @ApiModelProperty(value = "交易数量")
     private Integer tradeNum;
 
     @NotNull
+    @Min(value = 1)
     @ApiModelProperty(value = "开仓价格")
     private Long openPrice;
 
     @NotNull
+    @Min(value = 1)
     @ApiModelProperty(value = "杠杆")
     private Integer leverage;
 
     @NotNull
+    @Min(value = 1)
     @ApiModelProperty(value = "开仓金额")
     private Long coust;
 
     @NotNull
+    @Min(value = 1)
     @ApiModelProperty(value = "止损价格")
     private Long stopLoss;
 
+    @Min(value = 1)
     @ApiModelProperty(value = "止盈价格")
     private Long takeProfit;
 
+    @Min(value = 1)
     @ApiModelProperty(value = "平仓价格")
     private Long closePrice;
 
     @NotNull
     @ApiModelProperty(value = "交易状态")
     private Integer operateStatus;
+
+    @NotBlank
+    @ApiModelProperty(value = "分析")
+    private String analysis;
+
+    @ApiModelProperty(value = "复盘")
+    private String review;
 
     @ApiModelProperty(value = "创建时间")
     private Timestamp createTime;
