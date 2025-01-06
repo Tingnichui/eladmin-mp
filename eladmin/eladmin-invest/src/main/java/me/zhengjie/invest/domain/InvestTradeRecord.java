@@ -25,6 +25,7 @@ import java.io.Serializable;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import me.zhengjie.base.BaseEntity;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
@@ -37,7 +38,7 @@ import javax.validation.constraints.NotNull;
 **/
 @Data
 @TableName("invest_trade_record")
-public class InvestTradeRecord implements Serializable {
+public class InvestTradeRecord extends BaseEntity implements Serializable {
 
     @TableId(value = "id", type = IdType.AUTO)
     @ApiModelProperty(value = "id")
@@ -65,6 +66,9 @@ public class InvestTradeRecord implements Serializable {
     @ApiModelProperty(value = "开仓价格")
     private Long openPrice;
 
+    @ApiModelProperty(value = "建仓时间")
+    private Timestamp openTime;
+
     @NotNull
     @Min(value = 1)
     @ApiModelProperty(value = "杠杆")
@@ -88,6 +92,12 @@ public class InvestTradeRecord implements Serializable {
     @ApiModelProperty(value = "平仓价格")
     private Long closePrice;
 
+    @ApiModelProperty(value = "平仓时间")
+    private Timestamp closeTime;
+
+    @ApiModelProperty(value = "收益")
+    private Long profit;
+
     @NotNull
     @ApiModelProperty(value = "交易状态")
     private Integer operateStatus;
@@ -98,18 +108,6 @@ public class InvestTradeRecord implements Serializable {
 
     @ApiModelProperty(value = "复盘")
     private String review;
-
-    @ApiModelProperty(value = "创建时间")
-    private Timestamp createTime;
-
-    @ApiModelProperty(value = "更新人")
-    private String updateBy;
-
-    @ApiModelProperty(value = "更新时间")
-    private Timestamp updateTime;
-
-    @ApiModelProperty(value = "创建人")
-    private String createBy;
 
     public void copy(InvestTradeRecord source){
         BeanUtil.copyProperties(source,this, CopyOptions.create().setIgnoreNullValue(true));

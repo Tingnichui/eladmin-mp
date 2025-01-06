@@ -26,10 +26,11 @@
         <span v-if="item.id === form.productId"> {{ item.measurementUnit }} </span>
       </div>
       ，
-      开仓价格设置为 <el-input v-model="form.openPrice" type="number" step="0.01" class="input-short" />，
-      开仓金额为 <el-input v-model="form.coust" type="number" step="0.01" class="input-short" />，
-      止损价格为 <el-input v-model="form.stopLoss" type="number" step="0.01" class="input-short" />，
-      止盈价格为 <el-input v-model="form.takeProfit" type="number" step="0.01" class="input-short" />，
+      开仓价格设置为 <el-input v-model="form.openPrice" type="number" step="0.00000001" class="input-short" />，
+      开仓金额为 <el-input v-model="form.coust" type="number" step="0.00000001" class="input-short" />，
+      建仓时间为 <el-date-picker v-model="form.openTime" type="datetime" placeholder="选择日期时间" />
+      止损价格为 <el-input v-model="form.stopLoss" type="number" step="0.00000001" class="input-short" />，
+      止盈价格为 <el-input v-model="form.takeProfit" type="number" step="0.00000001" class="input-short" />，
       当前交易状态
       <el-select v-model="form.operateStatus" filterable placeholder="请选择" class="select-short">
         <el-option
@@ -39,7 +40,10 @@
           :value="parseInt(item.value)"
         />
       </el-select>
-      ，平仓价格为 <el-input v-model="form.closePrice" type="number" step="0.01" class="input-short" />。
+      ，平仓价格为 <el-input v-model="form.closePrice" type="number" step="0.00000001" class="input-short" />
+      ，平仓时间为 <el-date-picker v-model="form.closeTime" type="datetime" placeholder="选择日期时间" />
+      ，收益为 <el-input v-model="form.profit" type="number" step="0.00000001" class="input-short" />
+      。
     </div>
     <div style="margin-top: 20px;">
       <mavon-editor ref="md" v-model="form.analysis" :style="'height:' + editorHeight" @imgAdd="imgAdd" />
@@ -62,7 +66,7 @@ import 'mavon-editor/dist/css/index.css'
 import CRUD from '@crud/crud'
 
 // 需要转换单位的字段
-const amountFields = ['openPrice', 'coust', 'stopLoss', 'takeProfit', 'closePrice']
+const amountFields = ['openPrice', 'coust', 'stopLoss', 'takeProfit', 'closePrice', 'profit']
 export default {
   name: 'Markdown',
   components: {

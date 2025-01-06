@@ -24,6 +24,7 @@ import java.io.Serializable;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import me.zhengjie.base.BaseEntity;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -35,7 +36,7 @@ import javax.validation.constraints.NotNull;
 **/
 @Data
 @TableName("invest_product")
-public class InvestProduct implements Serializable {
+public class InvestProduct extends BaseEntity implements Serializable {
 
     @TableId(value = "id", type = IdType.AUTO)
     @ApiModelProperty(value = "id")
@@ -59,18 +60,6 @@ public class InvestProduct implements Serializable {
     @NotBlank
     @ApiModelProperty(value = "计量单位")
     private String measurementUnit;
-
-    @ApiModelProperty(value = "创建时间")
-    private Timestamp createTime;
-
-    @ApiModelProperty(value = "更新人")
-    private String updateBy;
-
-    @ApiModelProperty(value = "更新时间")
-    private Timestamp updateTime;
-
-    @ApiModelProperty(value = "创建人")
-    private String createBy;
 
     public void copy(InvestProduct source){
         BeanUtil.copyProperties(source,this, CopyOptions.create().setIgnoreNullValue(true));
