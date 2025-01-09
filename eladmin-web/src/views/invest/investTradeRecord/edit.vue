@@ -46,7 +46,24 @@
       。
     </div>
     <div style="margin-top: 20px;">
-      <mavon-editor ref="md" v-model="form.analysis" :style="'height:' + editorHeight" @imgAdd="imgAdd" />
+      <mavon-editor
+        ref="md"
+        v-model="form.analysis"
+        :style="'height:' + editorHeight"
+        :subfield="subfield"
+        default-open="preview"
+        @imgAdd="imgAdd"
+      >
+        <template slot="right-toolbar-after">
+          <button
+            type="button"
+            class="op-icon far fa-mavon-eye"
+            aria-hidden="true"
+            title="预览"
+            @click="changePreviewStatus"
+          />
+        </template>
+      </mavon-editor>
     </div>
     <div class="button-container">
       <el-button type="primary" @click="save">保存</el-button>
@@ -77,7 +94,9 @@ export default {
     return {
       editorHeight: '500px',
       productList: [],
-      form: {}
+      form: {},
+      subfield: true,
+      defaultOpen: 'edit'
     }
   },
   computed: {
@@ -159,6 +178,14 @@ export default {
       this.$store.state.tagsView.visitedViews.splice(this.$store.state.tagsView.visitedViews.findIndex(item => item.path === this.$route.path), 1)
       // 跳转页面
       this.$router.push('/invest/investTradeRecord')
+    },
+    changePreviewStatus() {
+      if (this.subfield) {
+        this.defaultOpen = 'edit'
+      } else {
+        this.defaultOpen = 'preview'
+      }
+      this.subfield = !this.subfield
     }
   }
 }

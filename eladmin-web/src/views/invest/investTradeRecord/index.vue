@@ -146,6 +146,7 @@
         <el-table-column prop="stopLoss" label="止损价格" :formatter="convertAmount" />
         <el-table-column prop="takeProfit" label="止盈价格" :formatter="convertAmount" />
         <el-table-column prop="closePrice" label="平仓价格" :formatter="convertAmount" />
+        <el-table-column prop="profit" label="收益" :formatter="convertAmount" />
         <el-table-column prop="operateStatus" label="交易状态">
           <template slot-scope="scope">
             {{ dict.label.invest_trade_operate_status[scope.row.operateStatus] }}
