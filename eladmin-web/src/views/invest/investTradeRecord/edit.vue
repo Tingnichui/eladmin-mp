@@ -66,7 +66,7 @@
       </mavon-editor>
     </div>
     <div class="button-container">
-      <el-button type="primary" @click="save">保存</el-button>
+      <el-button v-permission="['admin','investTradeRecord:edit']" type="primary" @click="save">保存</el-button>
       <el-button @click="cancel">取消</el-button>
     </div>
   </div>

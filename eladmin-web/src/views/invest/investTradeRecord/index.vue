@@ -61,6 +61,7 @@
       <crudOperation>
         <el-button
           slot="left"
+          v-permission="['admin','investTradeRecord:add']"
           class="filter-item"
           type="primary"
           icon="el-icon-plus"
@@ -156,7 +157,7 @@
           <template slot-scope="scope">
             <el-button size="mini" style="margin-right: 2px" type="text">
               <router-link :to="'/invest/investTradeRecord/edit/' + scope.row.id">
-                编辑
+                详情
               </router-link>
             </el-button>
             <el-popover
