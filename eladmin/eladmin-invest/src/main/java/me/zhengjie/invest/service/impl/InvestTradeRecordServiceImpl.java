@@ -85,7 +85,7 @@ public class InvestTradeRecordServiceImpl extends ServiceImpl<InvestTradeRecordM
             map.put("交易数量", investTradeRecord.getTradeNum());
             map.put("开仓价格", investTradeRecord.getOpenPrice());
             map.put("杠杆", investTradeRecord.getLeverage());
-            map.put("开仓金额", investTradeRecord.getCoust());
+            map.put("开仓成本", investTradeRecord.getCost());
             map.put("止损价格", investTradeRecord.getStopLoss());
             map.put("止盈价格", investTradeRecord.getTakeProfit());
             map.put("平仓价格", investTradeRecord.getClosePrice());

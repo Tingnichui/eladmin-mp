@@ -102,8 +102,8 @@
           <el-form-item label="杠杆" prop="leverage">
             <el-input-number v-model="form.leverage" style="width: 370px;" />
           </el-form-item>
-          <el-form-item label="开仓金额" prop="coust">
-            <el-input-number v-model="form.coust" style="width: 370px;" />
+          <el-form-item label="开仓金额" prop="cost">
+            <el-input-number v-model="form.cost" style="width: 370px;" />
           </el-form-item>
           <el-form-item label="止损价格" prop="stopLoss">
             <el-input-number v-model="form.stopLoss" style="width: 370px;" />
@@ -142,7 +142,7 @@
         <el-table-column prop="leverage" label="杠杆" />
         <el-table-column prop="tradeNum" label="交易数量" />
         <el-table-column prop="openPrice" label="开仓价格" :formatter="convertAmount" />
-        <el-table-column prop="coust" label="开仓金额" :formatter="convertAmount" />
+        <el-table-column prop="cost" label="开仓成本" :formatter="convertAmount" />
         <el-table-column prop="stopLoss" label="止损价格" :formatter="convertAmount" />
         <el-table-column prop="takeProfit" label="止盈价格" :formatter="convertAmount" />
         <el-table-column prop="closePrice" label="平仓价格" :formatter="convertAmount" />
@@ -190,7 +190,7 @@ import crudOperation from '@crud/CRUD.operation'
 import pagination from '@crud/Pagination'
 import { listAllProduct } from '@/api/invest/investProduct'
 
-const defaultForm = { id: null, productId: null, tradeType: null, tradeNum: null, openPrice: null, leverage: null, coust: null, stopLoss: null, takeProfit: null, closePrice: null, operateStatus: null, createTime: null, updateBy: null, updateTime: null, createBy: null }
+const defaultForm = { id: null, productId: null, tradeType: null, tradeNum: null, openPrice: null, leverage: null, cost: null, stopLoss: null, takeProfit: null, closePrice: null, operateStatus: null, createTime: null, updateBy: null, updateTime: null, createBy: null }
 export default {
   name: 'InvestTradeRecord',
   components: { pagination, crudOperation, rrOperation },
@@ -222,7 +222,7 @@ export default {
         leverage: [
           { required: true, message: '杠杆不能为空', trigger: 'blur' }
         ],
-        coust: [
+        cost: [
           { required: true, message: '开仓金额不能为空', trigger: 'blur' }
         ],
         stopLoss: [

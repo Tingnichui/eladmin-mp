@@ -76,8 +76,8 @@ public class InvestTradeRecord extends BaseEntity implements Serializable {
 
     @NotNull
     @Min(value = 1)
-    @ApiModelProperty(value = "开仓金额")
-    private Long coust;
+    @ApiModelProperty(value = "开仓成本")
+    private Long cost;
 
     @NotNull
     @Min(value = 1)
