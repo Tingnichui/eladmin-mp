@@ -75,7 +75,6 @@ public class InvestTradeRecord extends BaseEntity implements Serializable {
     private Integer leverage;
 
     @NotNull
-    @Min(value = 0)
     @ApiModelProperty(value = "开仓成本")
     private Long cost;
 
@@ -84,11 +83,9 @@ public class InvestTradeRecord extends BaseEntity implements Serializable {
     @ApiModelProperty(value = "止损价格")
     private Long stopLoss;
 
-    @Min(value = 0)
     @ApiModelProperty(value = "止盈价格")
     private Long takeProfit;
 
-    @Min(value = 0)
     @ApiModelProperty(value = "平仓价格")
     private Long closePrice;
 
