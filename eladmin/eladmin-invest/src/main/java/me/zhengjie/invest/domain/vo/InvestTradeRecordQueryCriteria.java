@@ -17,6 +17,8 @@ package me.zhengjie.invest.domain.vo;
 
 import lombok.Data;
 
+import javax.validation.constraints.Pattern;
+
 /**
 * @author genghui
 * @date 2025-01-04
@@ -27,4 +29,8 @@ public class InvestTradeRecordQueryCriteria{
     private Integer tradeType;
     private Integer operateStatus;
     private Integer productId;
+    @Pattern(regexp = "|profit")
+    private String sortField;
+    @Pattern(regexp = "|asc|desc")
+    private String sortOrder;
 }

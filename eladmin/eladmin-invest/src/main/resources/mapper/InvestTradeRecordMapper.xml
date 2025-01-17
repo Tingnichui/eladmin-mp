@@ -41,6 +41,13 @@
                 and t1.operate_status = #{criteria.operateStatus}
             </if>
         </where>
-        order by id desc
+        <choose>
+            <when test="criteria.sortField != null and criteria.sortOrder != null">
+                order by ${criteria.sortField} ${criteria.sortOrder}
+            </when>
+            <otherwise>
+                order by t1.id desc
+            </otherwise>
+        </choose>
     </select>
 </mapper>

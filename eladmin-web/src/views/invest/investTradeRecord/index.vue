@@ -132,7 +132,7 @@
         </div>
       </el-dialog>
       <!--表格渲染-->
-      <el-table ref="table" v-loading="crud.loading" :data="crud.data" size="small" style="width: 100%;" @selection-change="crud.selectionChangeHandler">
+      <el-table ref="table" v-loading="crud.loading" :data="crud.data" size="small" style="width: 100%;" @selection-change="crud.selectionChangeHandler" @sort-change="sortChange">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="investProductName" label="投资产品" width="100" />
         <el-table-column prop="tradeType" label="交易类型">
@@ -147,13 +147,13 @@
         <el-table-column prop="stopLoss" label="止损价格" :formatter="convertAmount" />
         <el-table-column prop="takeProfit" label="止盈价格" :formatter="convertAmount" />
         <el-table-column prop="closePrice" label="平仓价格" :formatter="convertAmount" />
-        <el-table-column prop="profit" label="收益" :formatter="convertAmount" />
+        <el-table-column prop="profit" label="收益" sortable="custom" :formatter="convertAmount" />
         <el-table-column prop="operateStatus" label="交易状态">
           <template slot-scope="scope">
             {{ dict.label.invest_trade_operate_status[scope.row.operateStatus] }}
           </template>
         </el-table-column>
-        <el-table-column v-if="checkPer(['admin','investTradeRecord:edit','investTradeRecord:del'])" label="操作" width="150px" align="center">
+        <el-table-column v-if="checkPer(['admin','investTradeRecord:edit','investTradeRecord:del'])" label="操作" width="150px" align="center" fixed="right">
           <template slot-scope="scope">
             <el-button size="mini" style="margin-right: 2px" type="text">
               <router-link :to="'/invest/investTradeRecord/edit/' + scope.row.id">
@@ -280,6 +280,17 @@ export default {
     },
     doAdd() {
       this.$router.push('/invest/investTradeRecord/edit/:id')
+    },
+    sortChange(sortInfo) {
+      console.log(sortInfo)
+      if (sortInfo && sortInfo.prop && sortInfo.order) {
+        this.query.sortField = sortInfo.prop
+        this.query.sortOrder = sortInfo.order === 'ascending' ? 'asc' : 'desc'
+      } else {
+        this.query.sortField = null
+        this.query.sortOrder = null
+      }
+      this.crud.toQuery()
     }
   }
 }

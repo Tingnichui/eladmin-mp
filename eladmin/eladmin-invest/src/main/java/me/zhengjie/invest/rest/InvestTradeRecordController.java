@@ -48,7 +48,7 @@ public class InvestTradeRecordController {
     @ApiOperation("导出数据")
     @GetMapping(value = "/download")
     @PreAuthorize("@el.check('investTradeRecord:list')")
-    public void exportInvestTradeRecord(HttpServletResponse response, InvestTradeRecordQueryCriteria criteria) throws IOException {
+    public void exportInvestTradeRecord(HttpServletResponse response,@Validated InvestTradeRecordQueryCriteria criteria) throws IOException {
         investTradeRecordService.download(investTradeRecordService.queryAll(criteria), response);
     }
 
@@ -56,7 +56,7 @@ public class InvestTradeRecordController {
     @Log("查询投资记录")
     @ApiOperation("查询投资记录")
     @PreAuthorize("@el.check('investTradeRecord:list')")
-    public ResponseEntity<PageResult<InvestTradeRecord>> queryInvestTradeRecord(InvestTradeRecordQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<InvestTradeRecord>> queryInvestTradeRecord(@Validated InvestTradeRecordQueryCriteria criteria, Page<Object> page){
         return new ResponseEntity<>(investTradeRecordService.queryAll(criteria,page),HttpStatus.OK);
     }
 
