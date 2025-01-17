@@ -155,6 +155,8 @@
             {{ dict.label.invest_trade_operate_status[scope.row.operateStatus] }}
           </template>
         </el-table-column>
+        <el-table-column prop="openTime" label="开仓时间" />
+        <el-table-column prop="closeTime" label="平仓时间" />
         <el-table-column v-if="checkPer(['admin','investTradeRecord:edit','investTradeRecord:del'])" label="操作" width="150px" align="center" fixed="right">
           <template slot-scope="scope">
             <el-button size="mini" style="margin-right: 2px" type="text">
