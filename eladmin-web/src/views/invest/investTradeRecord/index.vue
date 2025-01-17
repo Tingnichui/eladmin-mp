@@ -55,6 +55,8 @@
             :value="item.value"
           />
         </el-select>
+        <label class="el-form-item-label">开仓时间</label>
+        <date-range-picker v-model="query.openTime" class="date-item" @change="crud.toQuery" />
         <rrOperation :crud="crud" />
       </div>
       <!--如果想在工具栏加入更多按钮，可以使用插槽方式， slot = 'left' or 'right'-->
@@ -190,11 +192,12 @@ import rrOperation from '@crud/RR.operation'
 import crudOperation from '@crud/CRUD.operation'
 import pagination from '@crud/Pagination'
 import { listAllProduct } from '@/api/invest/investProduct'
+import DateRangePicker from '@/components/DateRangePicker/index.vue'
 
 const defaultForm = { id: null, productId: null, tradeType: null, tradeNum: null, openPrice: null, leverage: null, cost: null, stopLoss: null, takeProfit: null, closePrice: null, operateStatus: null, createTime: null, updateBy: null, updateTime: null, createBy: null }
 export default {
   name: 'InvestTradeRecord',
-  components: { pagination, crudOperation, rrOperation },
+  components: { DateRangePicker, pagination, crudOperation, rrOperation },
   mixins: [presenter(), header(), form(defaultForm), crud()],
   dicts: ['invest_trade_type', 'invest_trade_operate_status'],
   cruds() {

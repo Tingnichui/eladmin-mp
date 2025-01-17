@@ -40,6 +40,9 @@
             <if test="criteria.operateStatus != null">
                 and t1.operate_status = #{criteria.operateStatus}
             </if>
+            <if test="criteria.openTime != null and criteria.openTime.size() > 0">
+                AND t1.open_time BETWEEN #{criteria.openTime[0]} AND #{criteria.openTime[1]}
+            </if>
         </where>
         <choose>
             <when test="criteria.sortField != null and criteria.sortOrder != null">

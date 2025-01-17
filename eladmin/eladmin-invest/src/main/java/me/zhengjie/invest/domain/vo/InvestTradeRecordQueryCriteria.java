@@ -18,6 +18,8 @@ package me.zhengjie.invest.domain.vo;
 import lombok.Data;
 
 import javax.validation.constraints.Pattern;
+import java.sql.Timestamp;
+import java.util.List;
 
 /**
 * @author genghui
@@ -29,6 +31,7 @@ public class InvestTradeRecordQueryCriteria{
     private Integer tradeType;
     private Integer operateStatus;
     private Integer productId;
+    private List<Timestamp> openTime;
     @Pattern(regexp = "|profit")
     private String sortField;
     @Pattern(regexp = "|asc|desc")
