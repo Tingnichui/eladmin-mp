@@ -134,7 +134,7 @@
         </div>
       </el-dialog>
       <!--表格渲染-->
-      <el-table ref="table" v-loading="crud.loading" :data="crud.data" size="small" style="width: 100%;" @selection-change="crud.selectionChangeHandler" @sort-change="sortChange">
+      <el-table ref="table" v-loading="crud.loading" :data="crud.data" size="small" style="width: 100%;" :row-class-name="tableRowClassName" @selection-change="crud.selectionChangeHandler" @sort-change="sortChange">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="investProductName" label="投资产品" width="100" />
         <el-table-column prop="tradeType" label="交易类型">
@@ -145,27 +145,34 @@
         <el-table-column prop="leverage" label="杠杆" />
         <el-table-column prop="tradeNum" label="交易数量" />
         <el-table-column prop="openPrice" label="开仓价格" :formatter="convertAmount" />
-        <el-table-column prop="cost" label="开仓成本" :formatter="convertAmount" />
-        <el-table-column prop="stopLoss" label="止损价格" :formatter="convertAmount" />
-        <el-table-column prop="takeProfit" label="止盈价格" :formatter="convertAmount" />
         <el-table-column prop="closePrice" label="平仓价格" :formatter="convertAmount" />
+        <el-table-column label="持仓时间">
+          <template slot-scope="scope">
+            <el-tooltip class="item" effect="dark" :content="(scope.row.openTime || '暂无') + ' ~ ' + (scope.row.closeTime || '暂无')" placement="top">
+              <div>{{ timeDiff(scope.row.openTime || new Date() , scope.row.closeTime || new Date()) }}</div>
+            </el-tooltip>
+          </template>
+        </el-table-column>
+        <!--        <el-table-column prop="cost" label="开仓成本" :formatter="convertAmount" />-->
+        <!--        <el-table-column prop="stopLoss" label="止损价格" :formatter="convertAmount" />-->
+        <!--        <el-table-column prop="takeProfit" label="止盈价格" :formatter="convertAmount" />-->
         <el-table-column prop="profit" label="收益" sortable="custom" :formatter="convertAmount" />
         <el-table-column prop="operateStatus" label="交易状态">
           <template slot-scope="scope">
             {{ dict.label.invest_trade_operate_status[scope.row.operateStatus] }}
           </template>
         </el-table-column>
-        <el-table-column prop="openTime" label="开仓时间" />
-        <el-table-column prop="closeTime" label="平仓时间" />
-        <el-table-column prop="score" label="评分">
+        <el-table-column prop="score" label="评分" width="140">
           <template slot-scope="scope">
-            <el-rate
-              v-model="scope.row.score"
-              disabled
-              :icon-classes="iconClasses"
-              void-icon-class="icon-rate-face-off"
-              :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
-            />
+            <el-tooltip class="item" effect="dark" :content="scope.row.review" placement="top">
+              <el-rate
+                v-model="scope.row.score"
+                disabled
+                :icon-classes="iconClasses"
+                void-icon-class="icon-rate-face-off"
+                :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
+              />
+            </el-tooltip>
           </template>
         </el-table-column>
         <el-table-column v-if="checkPer(['admin','investTradeRecord:edit','investTradeRecord:del'])" label="操作" width="150px" align="center" fixed="right">
@@ -200,6 +207,7 @@
 <script>
 import '@/assets/styles/fonts/style.css'
 import { convertAmountToYuan } from '@/utils/numberUtil'
+import { timeDiff } from '@/utils/dateUtil'
 import crudInvestTradeRecord from '@/api/invest/investTradeRecord'
 import CRUD, { presenter, header, form, crud } from '@crud/crud'
 import rrOperation from '@crud/RR.operation'
@@ -271,6 +279,7 @@ export default {
     }
   },
   methods: {
+    timeDiff,
     convertAmount(row, column, cellValue, index) {
       return convertAmountToYuan(cellValue)
     },
@@ -309,11 +318,26 @@ export default {
         this.query.sortOrder = null
       }
       this.crud.toQuery()
+    },
+    tableRowClassName({ row, rowIndex }) {
+      console.log(row)
+      if (row.operateStatus <= 3 || (!row.score || row.score <= 0)) {
+        return 'warning-row'
+      } else if (row.score.operateStatus === 2) {
+        return 'success-row'
+      }
+      return ''
     }
   }
 }
 </script>
 
-<style scoped>
+<style>
+.el-table .warning-row {
+  background: oldlace;
+}
 
+.el-table .success-row {
+  background: #f0f9eb;
+}
 </style>
