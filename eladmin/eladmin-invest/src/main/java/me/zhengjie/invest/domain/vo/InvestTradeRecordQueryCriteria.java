@@ -32,6 +32,7 @@ public class InvestTradeRecordQueryCriteria{
     private Integer operateStatus;
     private Integer productId;
     private List<Timestamp> openTime;
+    private Integer score;
     @Pattern(regexp = "|profit")
     private String sortField;
     @Pattern(regexp = "|asc|desc")

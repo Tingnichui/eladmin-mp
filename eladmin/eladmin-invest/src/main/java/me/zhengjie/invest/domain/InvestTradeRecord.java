@@ -99,6 +99,9 @@ public class InvestTradeRecord extends BaseEntity implements Serializable {
     @ApiModelProperty(value = "复盘")
     private String review;
 
+    @ApiModelProperty(value = "评分")
+    private Integer score;
+
     public void copy(InvestTradeRecord source){
         BeanUtil.copyProperties(source,this, CopyOptions.create().setIgnoreNullValue(true));
     }

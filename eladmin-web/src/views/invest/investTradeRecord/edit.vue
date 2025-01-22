@@ -65,8 +65,35 @@
         </template>
       </mavon-editor>
     </div>
+    <!-- 评价弹窗 -->
+    <el-dialog :close-on-click-modal="false" :visible.sync="reviewLoading" title="评价" width="500px">
+      <el-form ref="form" :model="form" :rules="rules" size="small" label-width="80px">
+        <el-form-item label="评价内容" prop="review">
+          <el-input
+            v-model="form.review"
+            type="textarea"
+            :rows="2"
+            placeholder="请输入内容"
+          />
+        </el-form-item>
+        <el-form-item label="评分" prop="score">
+          <el-rate
+            v-model="form.score"
+            :icon-classes="iconClasses"
+            void-icon-class="icon-rate-face-off"
+            :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
+          />
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="reviewLoading = false">确认</el-button>
+        <el-button type="text" @click="reviewLoading = false;form.review = '';form.score = '';">取消</el-button>
+      </div>
+    </el-dialog>
+    <!-- 底部操作按钮 -->
     <div class="button-container">
       <el-button v-permission="['admin','investTradeRecord:edit']" type="primary" @click="save">保存</el-button>
+      <el-button v-permission="['admin','investTradeRecord:edit']" type="primary" @click="reviewLoading = true">评价</el-button>
       <el-button @click="cancel">取消</el-button>
     </div>
   </div>
@@ -80,6 +107,7 @@ import { upload } from '@/utils/upload'
 import { mapGetters } from 'vuex'
 import { mavonEditor } from 'mavon-editor'
 import 'mavon-editor/dist/css/index.css'
+import '@/assets/styles/fonts/style.css'
 import CRUD from '@crud/crud'
 
 // 需要转换单位的字段
@@ -123,7 +151,9 @@ export default {
           '**平仓分析：** '
       },
       subfield: true,
-      defaultOpen: 'edit'
+      defaultOpen: 'edit',
+      iconClasses: ['icon-rate-face-1', 'icon-rate-face-2', 'icon-rate-face-3'],
+      reviewLoading: false
     }
   },
   computed: {
