@@ -157,6 +157,17 @@
         </el-table-column>
         <el-table-column prop="openTime" label="开仓时间" />
         <el-table-column prop="closeTime" label="平仓时间" />
+        <el-table-column prop="score" label="评分">
+          <template slot-scope="scope">
+            <el-rate
+              v-model="scope.row.score"
+              disabled
+              :icon-classes="iconClasses"
+              void-icon-class="icon-rate-face-off"
+              :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
+            />
+          </template>
+        </el-table-column>
         <el-table-column v-if="checkPer(['admin','investTradeRecord:edit','investTradeRecord:del'])" label="操作" width="150px" align="center" fixed="right">
           <template slot-scope="scope">
             <el-button size="mini" style="margin-right: 2px" type="text">
@@ -187,6 +198,7 @@
 </template>
 
 <script>
+import '@/assets/styles/fonts/style.css'
 import { convertAmountToYuan } from '@/utils/numberUtil'
 import crudInvestTradeRecord from '@/api/invest/investTradeRecord'
 import CRUD, { presenter, header, form, crud } from '@crud/crud'
@@ -243,7 +255,8 @@ export default {
         { key: 'operateStatus', display_name: '交易状态' }
       ],
       delLoading: false,
-      productList: []
+      productList: [],
+      iconClasses: ['icon-rate-face-1', 'icon-rate-face-2', 'icon-rate-face-3']
     }
   },
   mounted() {

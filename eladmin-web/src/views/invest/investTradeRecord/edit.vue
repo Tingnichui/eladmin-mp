@@ -66,13 +66,13 @@
       </mavon-editor>
     </div>
     <!-- 评价弹窗 -->
-    <el-dialog :close-on-click-modal="false" :visible.sync="reviewLoading" title="评价" width="500px">
+    <el-dialog :close-on-click-modal="false" :visible.sync="reviewLoading" title="评价" width="500px" center>
       <el-form ref="form" :model="form" :rules="rules" size="small" label-width="80px">
         <el-form-item label="评价内容" prop="review">
           <el-input
             v-model="form.review"
             type="textarea"
-            :rows="2"
+            :rows="5"
             placeholder="请输入内容"
           />
         </el-form-item>
