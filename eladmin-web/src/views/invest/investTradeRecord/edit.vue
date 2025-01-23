@@ -66,7 +66,7 @@
       </mavon-editor>
     </div>
     <!-- 评价弹窗 -->
-    <el-dialog :close-on-click-modal="false" :visible.sync="reviewLoading" title="评价" width="500px" center>
+    <el-dialog :visible.sync="reviewLoading" title="评价" width="500px" center>
       <el-form ref="form" :model="form" :rules="rules" size="small" label-width="80px">
         <el-form-item label="评价内容" prop="review">
           <el-input
@@ -85,10 +85,6 @@
           />
         </el-form-item>
       </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="reviewLoading = false">确认</el-button>
-        <el-button type="text" @click="reviewLoading = false;form.review = '';form.score = '';">取消</el-button>
-      </div>
     </el-dialog>
     <!-- 底部操作按钮 -->
     <div class="button-container">
