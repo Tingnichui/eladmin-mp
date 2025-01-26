@@ -164,7 +164,8 @@
         </el-table-column>
         <el-table-column prop="score" label="评分" width="140">
           <template slot-scope="scope">
-            <el-tooltip class="item" effect="dark" :content="scope.row.review" placement="top">
+            <el-tooltip class="item" effect="dark" placement="top">
+              <div slot="content" style="white-space: pre-line" v-html="scope.row.review" />
               <el-rate
                 v-model="scope.row.score"
                 disabled
