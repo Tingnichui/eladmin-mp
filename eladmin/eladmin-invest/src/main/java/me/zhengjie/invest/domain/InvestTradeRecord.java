@@ -76,6 +76,9 @@ public class InvestTradeRecord extends BaseEntity implements Serializable {
     @ApiModelProperty(value = "止损价格")
     private Long stopLoss;
 
+    @ApiModelProperty(value = "止损成本")
+    private Long stopLossCost;
+
     @ApiModelProperty(value = "止盈价格")
     private Long takeProfit;
 

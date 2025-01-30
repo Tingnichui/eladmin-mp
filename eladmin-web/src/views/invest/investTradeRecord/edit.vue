@@ -28,8 +28,9 @@
       ，
       开仓价格设置为 <el-input v-model="form.openPrice" type="number" step="0.00000001" class="input-short" />，
       开仓成本为 <el-input v-model="form.cost" type="number" step="0.00000001" class="input-short" />，
-      建仓时间为 <el-date-picker v-model="form.openTime" type="datetime" placeholder="选择日期时间" />
+      开仓时间为 <el-date-picker v-model="form.openTime" type="datetime" placeholder="选择日期时间" />
       止损价格为 <el-input v-model="form.stopLoss" type="number" step="0.00000001" class="input-short" />，
+      止损成本为 <el-input v-model="form.stopLossCost" type="number" step="0.00000001" class="input-short" />，
       止盈价格为 <el-input v-model="form.takeProfit" type="number" step="0.00000001" class="input-short" />，
       当前交易状态
       <el-select v-model="form.operateStatus" filterable placeholder="请选择" class="select-short">
@@ -107,7 +108,7 @@ import '@/assets/styles/fonts/style.css'
 import CRUD from '@crud/crud'
 
 // 需要转换单位的字段
-const amountFields = ['openPrice', 'cost', 'stopLoss', 'takeProfit', 'closePrice', 'profit']
+const amountFields = ['openPrice', 'cost', 'stopLoss', 'stopLossCost', 'takeProfit', 'closePrice', 'profit']
 export default {
   name: 'Markdown',
   components: {
