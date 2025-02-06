@@ -324,8 +324,8 @@ export default {
       console.log(row)
       if (row.operateStatus <= 3 || (!row.score || row.score <= 0)) {
         return 'warning-row'
-      } else if (row.score.operateStatus === 2) {
-        return 'success-row'
+      } else if (row.reviewStatus !== 3) {
+        return 'resolve-row'
       }
       return ''
     }
@@ -335,9 +335,11 @@ export default {
 
 <style>
 .el-table .warning-row {
-  background: oldlace;
+  background: #FFEBEE;
 }
-
+.el-table .resolve-row {
+  background: #FFF8E1;
+}
 .el-table .success-row {
   background: #f0f9eb;
 }

@@ -75,7 +75,7 @@
               v-for="item in dict.invest_review_status"
               :key="item.id"
               :label="item.label"
-              :value="item.value"
+              :value="parseInt(item.value)"
             />
           </el-select>
         </el-form-item>

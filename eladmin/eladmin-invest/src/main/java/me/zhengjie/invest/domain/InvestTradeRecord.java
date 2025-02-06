@@ -103,7 +103,7 @@ public class InvestTradeRecord extends BaseEntity implements Serializable {
     private String review;
 
     @ApiModelProperty(value = "复盘状态")
-    private String reviewStatus;
+    private Integer reviewStatus;
 
     @ApiModelProperty(value = "评分")
     private Integer score;
