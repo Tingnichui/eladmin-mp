@@ -69,7 +69,17 @@
     <!-- 评价弹窗 -->
     <el-dialog :visible.sync="reviewLoading" title="评价" width="500px" center>
       <el-form ref="form" :model="form" :rules="rules" size="small" label-width="80px">
-        <el-form-item label="评价内容" prop="review">
+        <el-form-item label="状态" prop="reviewStatus">
+          <el-select v-model="form.reviewStatus" filterable placeholder="请选择">
+            <el-option
+              v-for="item in dict.invest_review_status"
+              :key="item.id"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="复盘" prop="review">
           <el-input
             v-model="form.review"
             type="textarea"
@@ -114,7 +124,7 @@ export default {
   components: {
     mavonEditor
   },
-  dicts: ['invest_trade_type', 'invest_trade_operate_status'],
+  dicts: ['invest_trade_type', 'invest_trade_operate_status', 'invest_review_status'],
   data() {
     return {
       editorHeight: '500px',
