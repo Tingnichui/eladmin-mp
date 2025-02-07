@@ -41,6 +41,7 @@
             t1.close_time,
             t1.profit,
             t1.operate_status,
+            t1.review,
             t1.review_status,
             t1.score,
             t1.create_time,
