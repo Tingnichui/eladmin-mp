@@ -26,7 +26,27 @@
 
     <select id="findAll" resultMap="BaseResultMap">
         select
-            t1.*,
+            t1.id,
+            t1.product_id,
+            t1.trade_type,
+            t1.trade_num,
+            t1.open_price,
+            t1.open_time,
+            t1.leverage,
+            t1.cost,
+            t1.stop_loss,
+            t1.stop_loss_cost,
+            t1.take_profit,
+            t1.close_price,
+            t1.close_time,
+            t1.profit,
+            t1.operate_status,
+            t1.review_status,
+            t1.score,
+            t1.create_time,
+            t1.update_by,
+            t1.update_time,
+            t1.create_by,
             t2.invest_product_name
         from invest_trade_record t1
         left join invest_product t2 on t1.product_id = t2.id
