@@ -29,6 +29,14 @@ export const calendarBaseShortcuts = [{
     picker.$emit('pick', [startTime, endTime])
   }
 }, {
+  text: '上个月',
+  onClick(picker) {
+    const now = new Date()
+    const startTime = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0)
+    const endTime = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
+    picker.$emit('pick', [startTime, endTime])
+  }
+}, {
   text: '当前季度',
   onClick(picker) {
     const startTime = new Date(new Date().quarterBegin().setHours(0, 0, 0))
