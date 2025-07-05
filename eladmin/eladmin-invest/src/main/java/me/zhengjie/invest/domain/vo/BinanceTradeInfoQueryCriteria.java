@@ -16,9 +16,14 @@
 package me.zhengjie.invest.domain.vo;
 
 import lombok.Data;
+import me.zhengjie.utils.enums.OrderDirectionEnum;
+
 import java.sql.Timestamp;
 import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /**
 * @author genghui
@@ -37,4 +42,25 @@ public class BinanceTradeInfoQueryCriteria{
     private List<BigDecimal> commission;
     private List<Timestamp> time;
     private List<BigDecimal> quoteQty;
+
+    private String orderColumn = "time";
+    private String orderDirection = "desc";
+
+    private static final List<String> ALLOWED_COLUMNS = Collections.unmodifiableList(
+            Arrays.asList("orderId", "price", "qty", "time", "quoteQty")
+    );
+
+    public void setOrderColumn(String orderColumn) {
+        if (!ALLOWED_COLUMNS.contains(orderColumn)) {
+            throw new IllegalArgumentException("非法排序字段: " + orderColumn);
+        }
+        this.orderColumn = orderColumn;
+    }
+
+    public void setOrderDirection(String orderDirection) {
+        if (null == OrderDirectionEnum.getByValue(orderDirection)) {
+            throw new IllegalArgumentException("非法排序方向: " + orderDirection);
+        }
+        this.orderDirection = orderDirection;
+    }
 }

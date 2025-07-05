@@ -59,6 +59,9 @@
                 AND quote_qty BETWEEN #{criteria.quoteQty[0]} AND #{criteria.quoteQty[1]}
             </if>
         </where>
-        order by time desc
+        <if test="criteria.orderColumn != null and criteria.orderColumn != ''">
+            ORDER BY ${criteria.orderColumn} ${criteria.orderDirection}
+        </if>
+
     </select>
 </mapper>

@@ -31,6 +31,7 @@ import me.zhengjie.invest.service.BinanceTradeInfoService;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.mapper.BinanceTradeInfoMapper;
 import me.zhengjie.utils.StringUtils;
+import me.zhengjie.utils.enums.OrderDirectionEnum;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -173,22 +174,22 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
     @Override
     public BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria) {
-        String symbol = criteria.getSymbol();
-        // 查询所有买入 价格从低到高
-        List<BinanceTradeInfo> buyTradeList = this.list(
-                Wrappers.lambdaQuery(BinanceTradeInfo.class)
-                        .eq(BinanceTradeInfo::getSymbol, symbol)
-                        .eq(BinanceTradeInfo::getIsBuyer, 1)
-                        .orderByAsc(BinanceTradeInfo::getPrice)
-        );
+        List<BinanceTradeInfo> buyTradeList,sellTradeList;
 
-        // 查询所有卖出 价格从高到低
-        List<BinanceTradeInfo> sellTradeList = this.list(
-                Wrappers.lambdaQuery(BinanceTradeInfo.class)
-                        .eq(BinanceTradeInfo::getSymbol, symbol)
-                        .eq(BinanceTradeInfo::getIsBuyer, 0)
-                        .orderByDesc(BinanceTradeInfo::getPrice)
-        );
+        // 最大收益
+        {
+            // 查询所有买入 价格从低到高
+            criteria.setOrderColumn("price");
+            criteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
+            criteria.setIsBuyer(1);
+            buyTradeList = binanceTradeInfoMapper.findAll(criteria);
+            // 查询所有卖出 价格从高到低
+            criteria.setOrderColumn("price");
+            criteria.setOrderDirection(OrderDirectionEnum.DESC.getValue());
+            criteria.setIsBuyer(0);
+            sellTradeList = binanceTradeInfoMapper.findAll(criteria);
+        }
+
 
         // 匹配高低 最高的卖出等量匹配最低的买入
         int buyIndex = 0;
