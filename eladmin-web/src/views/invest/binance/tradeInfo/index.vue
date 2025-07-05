@@ -221,10 +221,8 @@
         </el-table-column>
         <el-table-column prop="price" label="成交价格" />
         <el-table-column prop="qty" label="成交数量" />
-        <el-table-column prop="commission" label="手续费" />
-        <el-table-column prop="time" label="成交时间" />
-        <el-table-column prop="orderId" label="订单 ID" />
         <el-table-column prop="quoteQty" label="成交额" />
+        <el-table-column prop="commission" label="手续费" />
         <el-table-column prop="commissionAsset" label="手续费资产">
           <template slot-scope="scope">
             {{ dict.label.invest_binance_commission_asset[scope.row.commissionAsset] }}
@@ -245,6 +243,8 @@
             {{ dict.label.invest_binance_is_best_match[scope.row.isBestMatch] }}
           </template>
         </el-table-column>
+        <el-table-column prop="orderId" label="订单 ID" />
+        <el-table-column prop="time" label="成交时间" />
         <el-table-column v-if="checkPer(['admin','binanceTradeInfo:edit','binanceTradeInfo:del'])" label="操作" width="150px" align="center">
           <template slot-scope="scope">
             <udOperation

@@ -59,6 +59,6 @@
                 AND quote_qty BETWEEN #{criteria.quoteQty[0]} AND #{criteria.quoteQty[1]}
             </if>
         </where>
-        order by id desc
+        order by time desc
     </select>
 </mapper>
