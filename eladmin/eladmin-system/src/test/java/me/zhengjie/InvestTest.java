@@ -1,7 +1,5 @@
 package me.zhengjie;
 
-import cn.hutool.core.date.DatePattern;
-import cn.hutool.core.date.DateUtil;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,7 +14,7 @@ public class InvestTest {
 
     @Test
     void syncTradeInfo() {
-        binanceTradeInfoService.syncTradeInfo(DateUtil.parse("2025-07-04", DatePattern.NORM_DATE_PATTERN));
+        binanceTradeInfoService.syncTradeInfo("BTCUSDT");
     }
 
 

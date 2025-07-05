@@ -119,11 +119,11 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
     private String apiSecret;
 
     @Override
-    public void syncTradeInfo(Date startTime) {
+    public void syncTradeInfo(String symbol) {
         String url = "/api/v3/myTrades";
 
         Map<String, Object> params = new HashMap<>();
-        params.put("symbol", "BTCUSDT");
+        params.put("symbol", symbol);
 //        params.put("startTime", startTime.getTime());
         params.put("timestamp", System.currentTimeMillis());
 

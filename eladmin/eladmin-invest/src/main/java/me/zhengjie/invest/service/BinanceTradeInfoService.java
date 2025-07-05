@@ -75,6 +75,6 @@ public interface BinanceTradeInfoService extends IService<BinanceTradeInfo> {
     */
     void download(List<BinanceTradeInfo> all, HttpServletResponse response) throws IOException;
 
-    void syncTradeInfo(Date startTime);
+    void syncTradeInfo(String symbol);
 
 }
