@@ -109,12 +109,9 @@
         <!--          end-placeholder="commissionStart"-->
         <!--          class="date-item"-->
         <!--        />-->
-        <!--        <date-range-picker-->
-        <!--          v-model="query.time"-->
-        <!--          start-placeholder="timeStart"-->
-        <!--          end-placeholder="timeStart"-->
-        <!--          class="date-item"-->
-        <!--        />-->
+        <label class="el-form-item-label">成交时间</label>
+        <date-range-picker v-model="query.time" class="date-item" @change="crud.toQuery" />
+
         <!--        <date-range-picker-->
         <!--          v-model="query.quoteQty"-->
         <!--          start-placeholder="quoteQtyStart"-->
@@ -277,6 +274,8 @@
               :value="item.value"
             />
           </el-select>
+          <label class="el-form-item-label">成交时间</label>
+          <date-range-picker v-model="statsQuery.time" class="date-item" @change="doStats" />
         </div>
 
         <el-descriptions :column="3" border class="stats-descriptions">
@@ -325,11 +324,12 @@ import rrOperation from '@crud/RR.operation'
 import crudOperation from '@crud/CRUD.operation'
 import udOperation from '@crud/UD.operation'
 import pagination from '@crud/Pagination'
+import DateRangePicker from '@/components/DateRangePicker/index.vue'
 
 const defaultForm = { id: null, symbol: null, price: null, qty: null, commission: null, time: null, orderId: null, quoteQty: null, commissionAsset: null, isBuyer: null, isMaker: null, isBestMatch: null }
 export default {
   name: 'BinanceTradeInfo',
-  components: { pagination, crudOperation, rrOperation, udOperation },
+  components: { DateRangePicker, pagination, crudOperation, rrOperation, udOperation },
   mixins: [presenter(), header(), form(defaultForm), crud()],
   dicts: ['invest_binance_symbol', 'invest_binance_commission_asset', 'invest_binance_is_buyer', 'invest_binance_is_maker', 'invest_binance_is_best_match'],
   cruds() {
