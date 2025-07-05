@@ -91,40 +91,49 @@
             :value="item.value"
           />
         </el-select>
-        <date-range-picker
-          v-model="query.price"
-          start-placeholder="priceStart"
-          end-placeholder="priceStart"
-          class="date-item"
-        />
-        <date-range-picker
-          v-model="query.qty"
-          start-placeholder="qtyStart"
-          end-placeholder="qtyStart"
-          class="date-item"
-        />
-        <date-range-picker
-          v-model="query.commission"
-          start-placeholder="commissionStart"
-          end-placeholder="commissionStart"
-          class="date-item"
-        />
-        <date-range-picker
-          v-model="query.time"
-          start-placeholder="timeStart"
-          end-placeholder="timeStart"
-          class="date-item"
-        />
-        <date-range-picker
-          v-model="query.quoteQty"
-          start-placeholder="quoteQtyStart"
-          end-placeholder="quoteQtyStart"
-          class="date-item"
-        />
+        <!--        <date-range-picker-->
+        <!--          v-model="query.price"-->
+        <!--          start-placeholder="priceStart"-->
+        <!--          end-placeholder="priceStart"-->
+        <!--          class="date-item"-->
+        <!--        />-->
+        <!--        <date-range-picker-->
+        <!--          v-model="query.qty"-->
+        <!--          start-placeholder="qtyStart"-->
+        <!--          end-placeholder="qtyStart"-->
+        <!--          class="date-item"-->
+        <!--        />-->
+        <!--        <date-range-picker-->
+        <!--          v-model="query.commission"-->
+        <!--          start-placeholder="commissionStart"-->
+        <!--          end-placeholder="commissionStart"-->
+        <!--          class="date-item"-->
+        <!--        />-->
+        <!--        <date-range-picker-->
+        <!--          v-model="query.time"-->
+        <!--          start-placeholder="timeStart"-->
+        <!--          end-placeholder="timeStart"-->
+        <!--          class="date-item"-->
+        <!--        />-->
+        <!--        <date-range-picker-->
+        <!--          v-model="query.quoteQty"-->
+        <!--          start-placeholder="quoteQtyStart"-->
+        <!--          end-placeholder="quoteQtyStart"-->
+        <!--          class="date-item"-->
+        <!--        />-->
         <rrOperation :crud="crud" />
       </div>
       <!--如果想在工具栏加入更多按钮，可以使用插槽方式， slot = 'left' or 'right'-->
-      <crudOperation :permission="permission" />
+      <crudOperation :permission="permission">
+        <el-button
+          slot="right"
+          class="filter-item"
+          size="mini"
+          type="success"
+          icon="el-icon-tickets"
+          @click="showStats = true;doStats()"
+        >汇总</el-button>
+      </crudOperation>
       <!--表单组件-->
       <el-dialog :close-on-click-modal="false" :before-close="crud.cancelCU" :visible.sync="crud.status.cu > 0" :title="crud.status.title" width="500px">
         <el-form ref="form" :model="form" :rules="rules" size="small" label-width="80px">
@@ -247,12 +256,70 @@
       </el-table>
       <!--分页组件-->
       <pagination />
+
+      <el-dialog :visible.sync="showStats" append-to-body title="交易汇总" width="60%" class="stats-dialog">
+        <!-- 搜索 -->
+        <div class="head-container">
+          <label class="el-form-item-label">交易对</label>
+          <el-select
+            v-model="statsQuery.symbol"
+            clearable
+            size="small"
+            placeholder="投资类型"
+            class="filter-item"
+            style="width: 185px"
+            @change="doStats"
+          >
+            <el-option
+              v-for="item in dict.invest_binance_symbol"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </div>
+
+        <el-descriptions :column="3" border class="stats-descriptions">
+          <el-descriptions-item label="买入均价">
+            {{ formatDecimal(statsInfo.avgBuyPrice) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="卖出均价">
+            {{ formatDecimal(statsInfo.avgSellPrice) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="收益率">
+            {{ formatPercent(statsInfo.profitPct) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="买入总金额">
+            {{ formatDecimal(statsInfo.totalBuyAmount) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="卖出总金额">
+            {{ formatDecimal(statsInfo.totalSellAmount) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="利润">
+            {{ formatDecimal(statsInfo.profit) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="未平仓均价">
+            {{ formatDecimal(statsInfo.totalWaitAvgSellPrice) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="未平仓数量">
+            {{ formatDecimal(statsInfo.totalWaitSellQty) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="未平仓总额">
+            {{ formatDecimal(statsInfo.totalWaitSellAmount) }}
+          </el-descriptions-item>
+        </el-descriptions>
+        <template #footer>
+          <div style="text-align: center;">
+            <el-button type="primary" @click="showStats = false;statsQuery.symbol = 'BTCUSDT'">关闭</el-button>
+          </div>
+        </template>
+      </el-dialog>
     </div>
   </div>
 </template>
 
 <script>
-import crudBinanceTradeInfo from '@/api/binanceTradeInfo'
+import crudBinanceTradeInfo, { stats } from '@/api/binanceTradeInfo'
 import CRUD, { presenter, header, form, crud } from '@crud/crud'
 import rrOperation from '@crud/RR.operation'
 import crudOperation from '@crud/CRUD.operation'
@@ -270,6 +337,11 @@ export default {
   },
   data() {
     return {
+      showStats: false,
+      statsInfo: {},
+      statsQuery: {
+        symbol: 'BTCUSDT'
+      },
       permission: {
         add: ['admin', 'binanceTradeInfo:add'],
         edit: ['admin', 'binanceTradeInfo:edit'],
@@ -324,6 +396,22 @@ export default {
     // 钩子：在获取表格数据之前执行，false 则代表不获取数据
     [CRUD.HOOK.beforeRefresh]() {
       return true
+    },
+    // 显示汇总
+    doStats() {
+      if (this.statsQuery.symbol) {
+        stats(this.statsQuery).then(res => {
+          this.statsInfo = res
+        })
+      } else {
+        this.statsInfo = {}
+      }
+    },
+    formatDecimal(val) {
+      return val != null ? Number(val).toFixed(4) : '--'
+    },
+    formatPercent(val) {
+      return val != null ? (val * 100).toFixed(2) + '%' : '--'
     }
   }
 }

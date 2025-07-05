@@ -17,6 +17,7 @@ package me.zhengjie.invest.rest;
 
 import me.zhengjie.annotation.Log;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
+import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 import lombok.RequiredArgsConstructor;
@@ -86,4 +87,13 @@ public class BinanceTradeInfoController {
         binanceTradeInfoService.deleteAll(ids);
         return new ResponseEntity<>(HttpStatus.OK);
     }
+
+    @GetMapping("/stats")
+    @Log("查询交易汇总")
+    @ApiOperation("查询交易汇总")
+    @PreAuthorize("@el.check('binanceTradeInfo:list')")
+    public ResponseEntity<BinanceTradeStatsInfoVO> queryBinanceTradeInfo(BinanceTradeInfoQueryCriteria criteria){
+        return new ResponseEntity<>(binanceTradeInfoService.stats(criteria),HttpStatus.OK);
+    }
+
 }

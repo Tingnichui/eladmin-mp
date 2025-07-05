@@ -24,4 +24,12 @@ export function edit(data) {
   })
 }
 
+export function stats(params) {
+  return request({
+    url: 'api/binanceTradeInfo/stats',
+    method: 'get',
+    params
+  })
+}
+
 export default { add, edit, del }

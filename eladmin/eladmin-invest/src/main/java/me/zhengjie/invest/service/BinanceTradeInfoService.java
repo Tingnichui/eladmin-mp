@@ -25,6 +25,7 @@ import java.io.IOException;
 import javax.servlet.http.HttpServletResponse;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
+import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
 import me.zhengjie.utils.PageResult;
 
 /**
@@ -76,5 +77,7 @@ public interface BinanceTradeInfoService extends IService<BinanceTradeInfo> {
     void download(List<BinanceTradeInfo> all, HttpServletResponse response) throws IOException;
 
     void syncTradeInfo(String symbol);
+
+    BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria);
 
 }
