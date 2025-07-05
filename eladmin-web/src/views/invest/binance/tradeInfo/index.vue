@@ -22,10 +22,10 @@
           />
         </el-select>
         <label class="el-form-item-label">订单ID</label>
-        <el-input v-model="query.orderid" clearable placeholder="订单 ID" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+        <el-input v-model="query.orderId" clearable placeholder="订单 ID" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
         <label class="el-form-item-label">手续费资产</label>
         <el-select
-          v-model="query.commissionasset"
+          v-model="query.commissionAsset"
           clearable
           size="small"
           placeholder="手续费资产"
@@ -34,7 +34,7 @@
           @change="crud.toQuery"
         >
           <el-option
-            v-for="item in dict.invest_binance_commission"
+            v-for="item in dict.invest_binance_commission_asset"
             :key="item.value"
             :label="item.label"
             :value="item.value"
@@ -42,7 +42,7 @@
         </el-select>
         <label class="el-form-item-label">操作方向</label>
         <el-select
-          v-model="query.isbuyer"
+          v-model="query.isBuyer"
           clearable
           size="small"
           placeholder="操作方向"
@@ -59,7 +59,7 @@
         </el-select>
         <label class="el-form-item-label">订单类型</label>
         <el-select
-          v-model="query.ismaker"
+          v-model="query.isMaker"
           clearable
           size="small"
           placeholder="订单类型"
@@ -76,7 +76,7 @@
         </el-select>
         <label class="el-form-item-label">最佳匹配</label>
         <el-select
-          v-model="query.isbestmatch"
+          v-model="query.isBestMatch"
           clearable
           size="small"
           placeholder="最佳匹配"
@@ -104,12 +104,6 @@
           class="date-item"
         />
         <date-range-picker
-          v-model="query.quoteqty"
-          start-placeholder="quoteqtyStart"
-          end-placeholder="quoteqtyStart"
-          class="date-item"
-        />
-        <date-range-picker
           v-model="query.commission"
           start-placeholder="commissionStart"
           end-placeholder="commissionStart"
@@ -119,6 +113,12 @@
           v-model="query.time"
           start-placeholder="timeStart"
           end-placeholder="timeStart"
+          class="date-item"
+        />
+        <date-range-picker
+          v-model="query.quoteQty"
+          start-placeholder="quoteQtyStart"
+          end-placeholder="quoteQtyStart"
           class="date-item"
         />
         <rrOperation :crud="crud" />
@@ -138,35 +138,63 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="订单 ID" prop="orderid">
-            <el-input v-model="form.orderid" style="width: 370px;" />
-          </el-form-item>
           <el-form-item label="成交价格" prop="price">
             <el-input v-model="form.price" style="width: 370px;" />
           </el-form-item>
           <el-form-item label="成交数量" prop="qty">
             <el-input v-model="form.qty" style="width: 370px;" />
           </el-form-item>
-          <el-form-item label="成交额" prop="quoteqty">
-            <el-input v-model="form.quoteqty" style="width: 370px;" />
-          </el-form-item>
           <el-form-item label="手续费" prop="commission">
             <el-input v-model="form.commission" style="width: 370px;" />
           </el-form-item>
-          <el-form-item label="手续费资产" prop="commissionasset">
-            <el-input v-model="form.commissionasset" style="width: 370px;" />
-          </el-form-item>
           <el-form-item label="成交时间" prop="time">
-            <el-input v-model="form.time" style="width: 370px;" />
+            <el-date-picker v-model="form.time" type="datetime" style="width: 370px;" />
           </el-form-item>
-          <el-form-item label="操作方向" prop="isbuyer">
-            <el-input v-model="form.isbuyer" style="width: 370px;" />
+          <el-form-item label="订单 ID" prop="orderId">
+            <el-input v-model="form.orderId" style="width: 370px;" />
           </el-form-item>
-          <el-form-item label="订单类型" prop="ismaker">
-            <el-input v-model="form.ismaker" style="width: 370px;" />
+          <el-form-item label="成交额" prop="quoteQty">
+            <el-input v-model="form.quoteQty" style="width: 370px;" />
           </el-form-item>
-          <el-form-item label="最佳匹配" prop="isbestmatch">
-            <el-input v-model="form.isbestmatch" style="width: 370px;" />
+          <el-form-item label="手续费资产" prop="commissionAsset">
+            <el-select v-model="form.commissionAsset" filterable placeholder="请选择">
+              <el-option
+                v-for="item in dict.invest_binance_commission_asset"
+                :key="item.id"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="是否为买方" prop="isBuyer">
+            <el-select v-model="form.isBuyer" filterable placeholder="请选择">
+              <el-option
+                v-for="item in dict.invest_binance_is_buyer"
+                :key="item.id"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="是否为挂单方" prop="isMaker">
+            <el-select v-model="form.isMaker" filterable placeholder="请选择">
+              <el-option
+                v-for="item in dict.invest_binance_is_maker"
+                :key="item.id"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="是否为最佳匹配" prop="isBestMatch">
+            <el-select v-model="form.isBestMatch" filterable placeholder="请选择">
+              <el-option
+                v-for="item in dict.invest_binance_is_best_match"
+                :key="item.id"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
           </el-form-item>
         </el-form>
         <div slot="footer" class="dialog-footer">
@@ -182,30 +210,30 @@
             {{ dict.label.invest_binance_symbol[scope.row.symbol] }}
           </template>
         </el-table-column>
-        <el-table-column prop="orderid" label="订单 ID" />
         <el-table-column prop="price" label="成交价格" />
         <el-table-column prop="qty" label="成交数量" />
-        <el-table-column prop="quoteqty" label="成交额" />
         <el-table-column prop="commission" label="手续费" />
-        <el-table-column prop="commissionasset" label="手续费资产">
-          <template slot-scope="scope">
-            {{ dict.label.invest_binance_commission[scope.row.commissionasset] }}
-          </template>
-        </el-table-column>
         <el-table-column prop="time" label="成交时间" />
-        <el-table-column prop="isbuyer" label="操作方向">
+        <el-table-column prop="orderId" label="订单 ID" />
+        <el-table-column prop="quoteQty" label="成交额" />
+        <el-table-column prop="commissionAsset" label="手续费资产">
           <template slot-scope="scope">
-            {{ dict.label.invest_binance_is_buyer[scope.row.isbuyer] }}
+            {{ dict.label.invest_binance_commission_asset[scope.row.commissionAsset] }}
           </template>
         </el-table-column>
-        <el-table-column prop="ismaker" label="是否为挂单方">
+        <el-table-column prop="isBuyer" label="操作类型">
           <template slot-scope="scope">
-            {{ dict.label.invest_binance_is_maker[scope.row.ismaker] }}
+            {{ dict.label.invest_binance_is_buyer[scope.row.isBuyer] }}
           </template>
         </el-table-column>
-        <el-table-column prop="isbestmatch" label="是否为最佳匹配">
+        <el-table-column prop="isMaker" label="订单类型">
           <template slot-scope="scope">
-            {{ dict.label.invest_binance_is_best_match[scope.row.isbestmatch] }}
+            {{ dict.label.invest_binance_is_maker[scope.row.isMaker] }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="isBestMatch" label="最佳匹配">
+          <template slot-scope="scope">
+            {{ dict.label.invest_binance_is_best_match[scope.row.isBestMatch] }}
           </template>
         </el-table-column>
         <el-table-column v-if="checkPer(['admin','binanceTradeInfo:edit','binanceTradeInfo:del'])" label="操作" width="150px" align="center">
@@ -231,12 +259,12 @@ import crudOperation from '@crud/CRUD.operation'
 import udOperation from '@crud/UD.operation'
 import pagination from '@crud/Pagination'
 
-const defaultForm = { id: null, symbol: null, orderid: null, price: null, qty: null, quoteqty: null, commission: null, commissionasset: null, time: null, isbuyer: null, ismaker: null, isbestmatch: null }
+const defaultForm = { id: null, symbol: null, price: null, qty: null, commission: null, time: null, orderId: null, quoteQty: null, commissionAsset: null, isBuyer: null, isMaker: null, isBestMatch: null }
 export default {
   name: 'BinanceTradeInfo',
   components: { pagination, crudOperation, rrOperation, udOperation },
   mixins: [presenter(), header(), form(defaultForm), crud()],
-  dicts: ['invest_binance_symbol', 'invest_binance_commission', 'invest_binance_is_buyer', 'invest_binance_is_maker', 'invest_binance_is_best_match'],
+  dicts: ['invest_binance_symbol', 'invest_binance_commission_asset', 'invest_binance_is_buyer', 'invest_binance_is_maker', 'invest_binance_is_best_match'],
   cruds() {
     return CRUD({ title: '币安交易', url: 'api/binanceTradeInfo', idField: 'id', sort: 'id,desc', crudMethod: { ...crudBinanceTradeInfo }})
   },
@@ -251,44 +279,44 @@ export default {
         symbol: [
           { required: true, message: '交易对不能为空', trigger: 'blur' }
         ],
-        orderid: [
-          { required: true, message: '订单 ID不能为空', trigger: 'blur' }
-        ],
         price: [
           { required: true, message: '成交价格不能为空', trigger: 'blur' }
         ],
         qty: [
           { required: true, message: '成交数量不能为空', trigger: 'blur' }
         ],
-        quoteqty: [
-          { required: true, message: '成交额不能为空', trigger: 'blur' }
-        ],
         commission: [
           { required: true, message: '手续费不能为空', trigger: 'blur' }
-        ],
-        commissionasset: [
-          { required: true, message: '手续费资产不能为空', trigger: 'blur' }
         ],
         time: [
           { required: true, message: '成交时间不能为空', trigger: 'blur' }
         ],
-        isbuyer: [
-          { required: true, message: '操作方向不能为空', trigger: 'blur' }
+        orderId: [
+          { required: true, message: '订单 ID不能为空', trigger: 'blur' }
         ],
-        ismaker: [
+        quoteQty: [
+          { required: true, message: '成交额不能为空', trigger: 'blur' }
+        ],
+        commissionAsset: [
+          { required: true, message: '手续费资产不能为空', trigger: 'blur' }
+        ],
+        isBuyer: [
+          { required: true, message: '是否为买方不能为空', trigger: 'blur' }
+        ],
+        isMaker: [
           { required: true, message: '是否为挂单方不能为空', trigger: 'blur' }
         ],
-        isbestmatch: [
+        isBestMatch: [
           { required: true, message: '是否为最佳匹配不能为空', trigger: 'blur' }
         ]
       },
       queryTypeOptions: [
         { key: 'symbol', display_name: '交易对' },
-        { key: 'orderid', display_name: '订单 ID' },
-        { key: 'commissionasset', display_name: '手续费资产' },
-        { key: 'isbuyer', display_name: '操作方向' },
-        { key: 'ismaker', display_name: '是否为挂单方' },
-        { key: 'isbestmatch', display_name: '是否为最佳匹配' }
+        { key: 'orderId', display_name: '订单 ID' },
+        { key: 'commissionAsset', display_name: '手续费资产' },
+        { key: 'isBuyer', display_name: '是否为买方' },
+        { key: 'isMaker', display_name: '是否为挂单方' },
+        { key: 'isBestMatch', display_name: '是否为最佳匹配' }
       ]
     }
   },

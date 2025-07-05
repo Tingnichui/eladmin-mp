@@ -46,10 +46,6 @@ public class BinanceTradeInfo implements Serializable {
     private String symbol;
 
     @NotNull
-    @ApiModelProperty(value = "订单 ID")
-    private Long orderid;
-
-    @NotNull
     @ApiModelProperty(value = "成交价格")
     private BigDecimal price;
 
@@ -58,32 +54,36 @@ public class BinanceTradeInfo implements Serializable {
     private BigDecimal qty;
 
     @NotNull
-    @ApiModelProperty(value = "成交额")
-    private BigDecimal quoteqty;
-
-    @NotNull
     @ApiModelProperty(value = "手续费")
     private BigDecimal commission;
-
-    @NotBlank
-    @ApiModelProperty(value = "手续费资产")
-    private String commissionasset;
 
     @NotNull
     @ApiModelProperty(value = "成交时间")
     private Timestamp time;
 
     @NotNull
+    @ApiModelProperty(value = "订单 ID")
+    private Long orderId;
+
+    @NotNull
+    @ApiModelProperty(value = "成交额")
+    private BigDecimal quoteQty;
+
+    @NotBlank
+    @ApiModelProperty(value = "手续费资产")
+    private String commissionAsset;
+
+    @NotNull
     @ApiModelProperty(value = "是否为买方")
-    private Integer isbuyer;
+    private Integer isBuyer;
 
     @NotNull
     @ApiModelProperty(value = "是否为挂单方")
-    private Integer ismaker;
+    private Integer isMaker;
 
     @NotNull
     @ApiModelProperty(value = "是否为最佳匹配")
-    private Integer isbestmatch;
+    private Integer isBestMatch;
 
     public void copy(BinanceTradeInfo source){
         BeanUtil.copyProperties(source,this, CopyOptions.create().setIgnoreNullValue(true));

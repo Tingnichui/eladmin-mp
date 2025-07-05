@@ -92,16 +92,16 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         for (BinanceTradeInfo binanceTradeInfo : all) {
             Map<String,Object> map = new LinkedHashMap<>();
             map.put("交易对", binanceTradeInfo.getSymbol());
-            map.put("订单 ID", binanceTradeInfo.getOrderid());
             map.put("成交价格", binanceTradeInfo.getPrice());
             map.put("成交数量", binanceTradeInfo.getQty());
-            map.put("成交额", binanceTradeInfo.getQuoteqty());
             map.put("手续费", binanceTradeInfo.getCommission());
-            map.put("手续费资产", binanceTradeInfo.getCommissionasset());
             map.put("成交时间", binanceTradeInfo.getTime());
-            map.put("是否为买方", binanceTradeInfo.getIsbuyer());
-            map.put("是否为挂单方", binanceTradeInfo.getIsmaker());
-            map.put("是否为最佳匹配", binanceTradeInfo.getIsbestmatch());
+            map.put("订单 ID", binanceTradeInfo.getOrderId());
+            map.put("成交额", binanceTradeInfo.getQuoteQty());
+            map.put("手续费资产", binanceTradeInfo.getCommissionAsset());
+            map.put("是否为买方", binanceTradeInfo.getIsBuyer());
+            map.put("是否为挂单方", binanceTradeInfo.getIsMaker());
+            map.put("是否为最佳匹配", binanceTradeInfo.getIsBestMatch());
             list.add(map);
         }
         FileUtil.downloadExcel(list, response);
@@ -155,11 +155,11 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         // 查询已经在库中的数据
         List<Long> haveInDbOrderIdList = this.list(
                 Wrappers.lambdaQuery(BinanceTradeInfo.class)
-                        .select(BinanceTradeInfo::getOrderid)
-                        .in(BinanceTradeInfo::getOrderid, javaList.stream().map(BinanceTradeInfo::getOrderid).collect(Collectors.toList()))
-        ).stream().map(BinanceTradeInfo::getOrderid).collect(Collectors.toList());
+                        .select(BinanceTradeInfo::getOrderId)
+                        .in(BinanceTradeInfo::getOrderId, javaList.stream().map(BinanceTradeInfo::getOrderId).collect(Collectors.toList()))
+        ).stream().map(BinanceTradeInfo::getOrderId).collect(Collectors.toList());
 
-        javaList.removeIf(v -> haveInDbOrderIdList.contains(v.getOrderid()));
+        javaList.removeIf(v -> haveInDbOrderIdList.contains(v.getOrderId()));
 
         for (BinanceTradeInfo binanceTradeInfo : javaList) {
             this.saveOrUpdate(binanceTradeInfo);

@@ -27,14 +27,14 @@ import java.util.List;
 @Data
 public class BinanceTradeInfoQueryCriteria{
     private String symbol;
-    private Long orderid;
-    private String commissionasset;
-    private Integer isbuyer;
-    private Integer ismaker;
-    private Integer isbestmatch;
+    private Long orderId;
+    private String commissionAsset;
+    private Integer isBuyer;
+    private Integer isMaker;
+    private Integer isBestMatch;
     private List<BigDecimal> price;
     private List<BigDecimal> qty;
-    private List<BigDecimal> quoteqty;
     private List<BigDecimal> commission;
     private List<Timestamp> time;
+    private List<BigDecimal> quoteQty;
 }

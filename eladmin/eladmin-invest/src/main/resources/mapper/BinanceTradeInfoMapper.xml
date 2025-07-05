@@ -4,20 +4,20 @@
     <resultMap id="BaseResultMap" type="me.zhengjie.invest.domain.BinanceTradeInfo">
         <id column="id" property="id"/>
         <result column="symbol" property="symbol"/>
-        <result column="orderId" property="orderid"/>
         <result column="price" property="price"/>
         <result column="qty" property="qty"/>
-        <result column="quoteQty" property="quoteqty"/>
         <result column="commission" property="commission"/>
-        <result column="commissionAsset" property="commissionasset"/>
         <result column="time" property="time"/>
-        <result column="isBuyer" property="isbuyer"/>
-        <result column="isMaker" property="ismaker"/>
-        <result column="isBestMatch" property="isbestmatch"/>
+        <result column="order_id" property="orderId"/>
+        <result column="quote_qty" property="quoteQty"/>
+        <result column="commission_asset" property="commissionAsset"/>
+        <result column="is_buyer" property="isBuyer"/>
+        <result column="is_maker" property="isMaker"/>
+        <result column="is_best_match" property="isBestMatch"/>
     </resultMap>
 
     <sql id="Base_Column_List">
-        id, symbol, orderId, price, qty, quoteQty, commission, commissionAsset, time, isBuyer, isMaker, isBestMatch
+        id, symbol, price, qty, commission, time, order_id, quote_qty, commission_asset, is_buyer, is_maker, is_best_match
     </sql>
 
     <select id="findAll" resultMap="BaseResultMap">
@@ -28,20 +28,20 @@
             <if test="criteria.symbol != null">
                 and symbol = #{criteria.symbol}
             </if>
-            <if test="criteria.orderid != null">
-                and orderId = #{criteria.orderid}
+            <if test="criteria.orderId != null">
+                and order_id = #{criteria.orderId}
             </if>
-            <if test="criteria.commissionasset != null">
-                and commissionAsset = #{criteria.commissionasset}
+            <if test="criteria.commissionAsset != null">
+                and commission_asset = #{criteria.commissionAsset}
             </if>
-            <if test="criteria.isbuyer != null">
-                and isBuyer = #{criteria.isbuyer}
+            <if test="criteria.isBuyer != null">
+                and is_buyer = #{criteria.isBuyer}
             </if>
-            <if test="criteria.ismaker != null">
-                and isMaker = #{criteria.ismaker}
+            <if test="criteria.isMaker != null">
+                and is_maker = #{criteria.isMaker}
             </if>
-            <if test="criteria.isbestmatch != null">
-                and isBestMatch = #{criteria.isbestmatch}
+            <if test="criteria.isBestMatch != null">
+                and is_best_match = #{criteria.isBestMatch}
             </if>
             <if test="criteria.price != null and criteria.price.size() > 0">
                 AND price BETWEEN #{criteria.price[0]} AND #{criteria.price[1]}
@@ -49,14 +49,14 @@
             <if test="criteria.qty != null and criteria.qty.size() > 0">
                 AND qty BETWEEN #{criteria.qty[0]} AND #{criteria.qty[1]}
             </if>
-            <if test="criteria.quoteqty != null and criteria.quoteqty.size() > 0">
-                AND quoteQty BETWEEN #{criteria.quoteqty[0]} AND #{criteria.quoteqty[1]}
-            </if>
             <if test="criteria.commission != null and criteria.commission.size() > 0">
                 AND commission BETWEEN #{criteria.commission[0]} AND #{criteria.commission[1]}
             </if>
             <if test="criteria.time != null and criteria.time.size() > 0">
                 AND time BETWEEN #{criteria.time[0]} AND #{criteria.time[1]}
+            </if>
+            <if test="criteria.quoteQty != null and criteria.quoteQty.size() > 0">
+                AND quote_qty BETWEEN #{criteria.quoteQty[0]} AND #{criteria.quoteQty[1]}
             </if>
         </where>
         order by id desc
