@@ -53,9 +53,6 @@ public class V2exTask {
         log.info("定时任务：{}，获取锁：{}", keyEnum.getDesc(), lock);
         if (!lock) return;
 
-        // 随机暂停一会
-        TimeUnit.MINUTES.sleep(RandomUtil.randomInt(1, 8));
-
         try (WebClient webClient = new WebClient(BrowserVersion.FIREFOX)) {
             webClient.getOptions().setCssEnabled(false);//关闭css
             webClient.getOptions().setJavaScriptEnabled(true);//开启js
@@ -101,6 +98,10 @@ public class V2exTask {
             if (null == signInDocument) {
                 throw new RuntimeException("找不到签到元素，请即时处理");
             }
+            
+            // 随机暂停一会
+            TimeUnit.MINUTES.sleep(RandomUtil.randomInt(1, 8));
+
             // 点击签到
             HtmlPage clickResultPage = signInDocument.click();
             // 再次请求一下签到页面之后找一下是否签到成功，如果没找说明签到失败了
