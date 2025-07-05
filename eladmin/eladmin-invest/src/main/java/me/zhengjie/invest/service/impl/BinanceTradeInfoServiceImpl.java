@@ -15,14 +15,12 @@
 */
 package me.zhengjie.invest.service.impl;
 
-import cn.hutool.core.date.DatePattern;
-import cn.hutool.core.date.DateTime;
-import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.net.URLEncodeUtil;
 import cn.hutool.crypto.digest.HMac;
 import cn.hutool.crypto.digest.HmacAlgorithm;
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson.JSON;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.utils.FileUtil;
 import lombok.RequiredArgsConstructor;
@@ -153,6 +151,15 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
         List<BinanceTradeInfo> javaList = JSON.parseArray(body).toJavaList(BinanceTradeInfo.class);
         System.err.println(javaList);
+
+        // 查询已经在库中的数据
+        List<Long> haveInDbOrderIdList = this.list(
+                Wrappers.lambdaQuery(BinanceTradeInfo.class)
+                        .select(BinanceTradeInfo::getOrderid)
+                        .in(BinanceTradeInfo::getOrderid, javaList.stream().map(BinanceTradeInfo::getOrderid).collect(Collectors.toList()))
+        ).stream().map(BinanceTradeInfo::getOrderid).collect(Collectors.toList());
+
+        javaList.removeIf(v -> haveInDbOrderIdList.contains(v.getOrderid()));
 
         for (BinanceTradeInfo binanceTradeInfo : javaList) {
             this.saveOrUpdate(binanceTradeInfo);
