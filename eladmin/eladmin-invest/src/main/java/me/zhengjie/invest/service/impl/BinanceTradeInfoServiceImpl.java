@@ -235,6 +235,11 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                 matched.setSellPrice(sell.getPrice());
                 matched.setBuyTime(buy.getTime());
                 matched.setSellTime(sell.getTime());
+                // 是否符合撮合策略
+                if (!tradePairingLogicEnum.allowMatch(matched)) {
+                    continue;
+                }
+
                 matchedList.add(matched);
                 // 更新买入剩余量
                 buy.setQty(buy.getQty().subtract(matchQty));

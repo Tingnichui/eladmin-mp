@@ -3,6 +3,7 @@ package me.zhengjie.invest.domain.dto;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 
 @Data
@@ -27,6 +28,17 @@ public class MatchedTradeInfo {
 
     public BigDecimal getSellAmount() {
         return qty.multiply(sellPrice);
+    }
+
+    public BigDecimal getProfit() {
+        return getSellAmount().subtract(getBuyAmount());
+    }
+
+    /**
+     * 收益率
+     */
+    public BigDecimal profitRate() {
+        return getProfit().divide(getBuyAmount(), 4, RoundingMode.HALF_UP);
     }
 
 }

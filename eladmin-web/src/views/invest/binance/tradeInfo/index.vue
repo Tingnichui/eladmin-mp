@@ -356,7 +356,7 @@ export default {
       statsInfo: {},
       statsQuery: {
         symbol: 'BTCUSDT',
-        tradePairingLogic: 'MAX_PROFIT'
+        tradePairingLogic: 'FIFO'
       },
       permission: {
         add: ['admin', 'binanceTradeInfo:add'],
