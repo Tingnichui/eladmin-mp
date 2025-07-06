@@ -260,7 +260,6 @@
           <label class="el-form-item-label">交易对</label>
           <el-select
             v-model="statsQuery.symbol"
-            clearable
             size="small"
             placeholder="投资类型"
             class="filter-item"
@@ -269,6 +268,22 @@
           >
             <el-option
               v-for="item in dict.invest_binance_symbol"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+          <label class="el-form-item-label">撮合逻辑</label>
+          <el-select
+            v-model="statsQuery.tradePairingLogic"
+            size="small"
+            placeholder="投资类型"
+            class="filter-item"
+            style="width: 185px"
+            @change="doStats"
+          >
+            <el-option
+              v-for="item in dict.invest_binance_trade_pairing_logic"
               :key="item.value"
               :label="item.label"
               :value="item.value"
@@ -309,7 +324,7 @@
         </el-descriptions>
         <template #footer>
           <div style="text-align: center;">
-            <el-button type="primary" @click="showStats = false;statsQuery.symbol = 'BTCUSDT'">关闭</el-button>
+            <el-button type="primary" @click="showStats = false">关闭</el-button>
           </div>
         </template>
       </el-dialog>
@@ -331,7 +346,7 @@ export default {
   name: 'BinanceTradeInfo',
   components: { DateRangePicker, pagination, crudOperation, rrOperation, udOperation },
   mixins: [presenter(), header(), form(defaultForm), crud()],
-  dicts: ['invest_binance_symbol', 'invest_binance_commission_asset', 'invest_binance_is_buyer', 'invest_binance_is_maker', 'invest_binance_is_best_match'],
+  dicts: ['invest_binance_trade_pairing_logic', 'invest_binance_symbol', 'invest_binance_commission_asset', 'invest_binance_is_buyer', 'invest_binance_is_maker', 'invest_binance_is_best_match'],
   cruds() {
     return CRUD({ title: '币安交易', url: 'api/binanceTradeInfo', idField: 'id', sort: 'id,desc', crudMethod: { ...crudBinanceTradeInfo }})
   },
@@ -340,7 +355,8 @@ export default {
       showStats: false,
       statsInfo: {},
       statsQuery: {
-        symbol: 'BTCUSDT'
+        symbol: 'BTCUSDT',
+        tradePairingLogic: 'MAX_PROFIT'
       },
       permission: {
         add: ['admin', 'binanceTradeInfo:add'],
@@ -399,13 +415,9 @@ export default {
     },
     // 显示汇总
     doStats() {
-      if (this.statsQuery.symbol) {
-        stats(this.statsQuery).then(res => {
-          this.statsInfo = res
-        })
-      } else {
-        this.statsInfo = {}
-      }
+      stats(this.statsQuery).then(res => {
+        this.statsInfo = res
+      })
     },
     formatDecimal(val) {
       return val != null ? Number(val).toFixed(4) : '--'

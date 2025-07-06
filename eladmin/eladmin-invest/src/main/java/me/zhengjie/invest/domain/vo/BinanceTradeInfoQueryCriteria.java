@@ -43,6 +43,11 @@ public class BinanceTradeInfoQueryCriteria{
     private List<Timestamp> time;
     private List<BigDecimal> quoteQty;
 
+    /**
+     * 撮合逻辑
+     */
+    private String tradePairingLogic;
+
     private String orderColumn = "time";
     private String orderDirection = "desc";
 

@@ -21,40 +21,41 @@ import cn.hutool.crypto.digest.HmacAlgorithm;
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import me.zhengjie.invest.domain.BinanceTradeInfo;
-import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
-import me.zhengjie.utils.FileUtil;
-import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import me.zhengjie.invest.service.BinanceTradeInfoService;
+import lombok.RequiredArgsConstructor;
+import me.zhengjie.exception.BadRequestException;
+import me.zhengjie.invest.constants.TradePairingLogicEnum;
+import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
+import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.mapper.BinanceTradeInfoMapper;
+import me.zhengjie.invest.service.BinanceTradeInfoService;
+import me.zhengjie.utils.FileUtil;
+import me.zhengjie.utils.PageResult;
+import me.zhengjie.utils.PageUtil;
 import me.zhengjie.utils.StringUtils;
 import me.zhengjie.utils.enums.OrderDirectionEnum;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import me.zhengjie.utils.PageUtil;
 
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.io.IOException;
 import java.util.stream.Collectors;
-import javax.servlet.http.HttpServletResponse;
-
-import me.zhengjie.utils.PageResult;
 
 /**
-* @description 服务实现
-* @author genghui
-* @date 2025-07-05
-**/
+ * @author genghui
+ * @description 服务实现
+ * @date 2025-07-05
+ **/
 @Service
 @RequiredArgsConstructor
 public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMapper, BinanceTradeInfo> implements BinanceTradeInfoService {
@@ -62,12 +63,12 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
     private final BinanceTradeInfoMapper binanceTradeInfoMapper;
 
     @Override
-    public PageResult<BinanceTradeInfo> queryAll(BinanceTradeInfoQueryCriteria criteria, Page<Object> page){
+    public PageResult<BinanceTradeInfo> queryAll(BinanceTradeInfoQueryCriteria criteria, Page<Object> page) {
         return PageUtil.toPage(binanceTradeInfoMapper.findAll(criteria, page));
     }
 
     @Override
-    public List<BinanceTradeInfo> queryAll(BinanceTradeInfoQueryCriteria criteria){
+    public List<BinanceTradeInfo> queryAll(BinanceTradeInfoQueryCriteria criteria) {
         return binanceTradeInfoMapper.findAll(criteria);
     }
 
@@ -95,7 +96,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
     public void download(List<BinanceTradeInfo> all, HttpServletResponse response) throws IOException {
         List<Map<String, Object>> list = new ArrayList<>();
         for (BinanceTradeInfo binanceTradeInfo : all) {
-            Map<String,Object> map = new LinkedHashMap<>();
+            Map<String, Object> map = new LinkedHashMap<>();
             map.put("交易对", binanceTradeInfo.getSymbol());
             map.put("成交价格", binanceTradeInfo.getPrice());
             map.put("成交数量", binanceTradeInfo.getQty());
@@ -174,20 +175,38 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
     @Override
     public BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria) {
-        List<BinanceTradeInfo> buyTradeList,sellTradeList;
+        List<BinanceTradeInfo> buyTradeList, sellTradeList;
 
-        // 最大收益
-        {
-            // 查询所有买入 价格从低到高
-            criteria.setOrderColumn("price");
-            criteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
-            criteria.setIsBuyer(1);
-            buyTradeList = binanceTradeInfoMapper.findAll(criteria);
-            // 查询所有卖出 价格从高到低
-            criteria.setOrderColumn("price");
-            criteria.setOrderDirection(OrderDirectionEnum.DESC.getValue());
-            criteria.setIsBuyer(0);
-            sellTradeList = binanceTradeInfoMapper.findAll(criteria);
+        TradePairingLogicEnum tradePairingLogicEnum = TradePairingLogicEnum.getByKey(criteria.getTradePairingLogic());
+        switch (tradePairingLogicEnum) {
+            // 最大收益
+            case MAX_PROFIT:
+                // 查询所有买入 价格从低到高
+                criteria.setOrderColumn("price");
+                criteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
+                criteria.setIsBuyer(1);
+                buyTradeList = binanceTradeInfoMapper.findAll(criteria);
+                // 查询所有卖出 价格从高到低
+                criteria.setOrderColumn("price");
+                criteria.setOrderDirection(OrderDirectionEnum.DESC.getValue());
+                criteria.setIsBuyer(0);
+                sellTradeList = binanceTradeInfoMapper.findAll(criteria);
+                break;
+            // 时间顺序 先进先出
+            case FIFO:
+                // 查询所有买入 时间从早到晚
+                criteria.setOrderColumn("time");
+                criteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
+                criteria.setIsBuyer(1);
+                buyTradeList = binanceTradeInfoMapper.findAll(criteria);
+                // 查询所有卖出 时间从早到晚
+                criteria.setOrderColumn("time");
+                criteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
+                criteria.setIsBuyer(0);
+                sellTradeList = binanceTradeInfoMapper.findAll(criteria);
+                break;
+            default:
+                throw new BadRequestException("未知撮合方式");
         }
 
 
