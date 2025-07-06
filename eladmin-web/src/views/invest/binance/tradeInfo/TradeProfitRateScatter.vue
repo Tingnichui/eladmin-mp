@@ -6,6 +6,8 @@
 import echarts from 'echarts'
 require('echarts/theme/macarons') // echarts theme
 import { debounce } from '@/utils'
+import { formatPercent } from '@/utils/numberUtil'
+import { formatDuration } from '@/utils/dateUtil'
 
 export default {
   props: {
@@ -63,7 +65,11 @@ export default {
     updateChart() {
       if (!this.chart || !this.rowData.length) return
 
-      const chartData = this.rowData.map(d => [d.holdHours, d.profitRate])
+      const chartData = this.rowData.map(d => ({
+        value: [Math.floor(d.holdMillis / 1000 / 60 / 60), d.profitRate],
+        ...d
+      }))
+
       console.log(JSON.stringify(chartData))
       this.chart.setOption({
         title: {
@@ -76,7 +82,17 @@ export default {
         },
         tooltip: {
           formatter: function(params) {
-            return `持仓时间：${params.data[0]} 小时<br/>收益率：${(params.data[1] * 100).toFixed(2)}%`
+            const d = params.data
+            return `
+              买入价格：${d.buyPrice}<br/>
+              卖出价格：${d.sellPrice}<br/>
+              成交数量：${d.qty}<br/>
+              买入时间：${d.buyTime}<br/>
+              卖出时间：${d.sellTime}<br/>
+              持仓时间：${formatDuration(d.holdMillis)}<br/>
+              收益：${d.profit}<br/>
+              收益率：${formatPercent(d.profitRate)}<br/>
+            `
           }
         },
         grid: {
@@ -94,7 +110,7 @@ export default {
           name: '收益率',
           type: 'value',
           axisLabel: {
-            formatter: val => `${(val * 100).toFixed(2)}%`
+            formatter: val => formatPercent(val)
           },
           splitLine: { lineStyle: { type: 'dashed' }}
         },

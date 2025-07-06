@@ -235,6 +235,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                 matched.setSellPrice(sell.getPrice());
                 matched.setBuyTime(buy.getTime());
                 matched.setSellTime(sell.getTime());
+                matched.computeDerivedFields();
                 // 是否符合撮合策略
                 if (!tradePairingLogicEnum.allowMatch(matched)) {
                     continue;
@@ -243,7 +244,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                 matchedList.add(matched);
                 // 更新买入剩余量
                 buy.setQty(buy.getQty().subtract(matchQty));
-                // 更新卖出剩余量
+                // 更新卖出剩余量`
                 sell.setQty(sell.getQty().subtract(matchQty));
 
                 // 卖出是否还有剩余 没有剩余就直接移除
@@ -304,7 +305,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
         // 持仓时间（单位：毫秒）
         List<Long> holdDurations = matchedList.stream()
-                .map(m -> m.getSellTime().getTime() - m.getBuyTime().getTime())
+                .map(MatchedTradeInfo::getHoldMillis)
                 .collect(Collectors.toList());
 
         if (!holdDurations.isEmpty()) {
@@ -320,23 +321,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             statsInfoVO.setMaxHoldTimeMs(maxHoldTimeMs);
         }
 
-        List<Map<String, Object>> profitVsHoldScatter = matchedList.stream()
-                .map(m -> {
-                    Map<String, Object> point = new HashMap<>();
-
-                    // 持仓时间（小时，保留 2 位小数）
-                    long durationMillis = m.getSellTime().getTime() - m.getBuyTime().getTime();
-                    BigDecimal holdTimeHours = new BigDecimal(durationMillis)
-                            .divide(BigDecimal.valueOf(3600_000), 2, RoundingMode.HALF_UP);
-                    point.put("holdHours", holdTimeHours);
-
-                    // 收益率（例如 0.0123 表示 1.23%）
-                    point.put("profitRate", m.getProfitRate());
-
-                    return point;
-                })
-                .collect(Collectors.toList());
-        statsInfoVO.setProfitVsHoldScatter(profitVsHoldScatter);
+        statsInfoVO.setMatchedTradeInfoList(matchedList);
 
         return statsInfoVO;
 

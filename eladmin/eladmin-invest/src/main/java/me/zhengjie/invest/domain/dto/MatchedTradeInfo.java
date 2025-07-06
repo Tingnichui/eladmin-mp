@@ -15,30 +15,20 @@ public class MatchedTradeInfo {
     private Timestamp buyTime;
     private Timestamp sellTime;
 
-    // 计算持仓秒数
-    public long getHoldingSeconds() {
-        long diffMillis = sellTime.getTime() - buyTime.getTime();
-        return diffMillis > 0 ? diffMillis / 1000 : 0;
+    // 以下字段通过基础信息计算
+    private BigDecimal buyAmount;
+    private BigDecimal sellAmount;
+    private BigDecimal profit;
+    private BigDecimal profitRate;
+    private Long holdMillis;
+
+    public void computeDerivedFields() {
+        this.buyAmount = qty.multiply(buyPrice);
+        this.sellAmount = qty.multiply(sellPrice);
+        this.profit = this.sellAmount.subtract(this.buyAmount);
+        this.profitRate = this.profit.divide(this.buyAmount, 4, RoundingMode.HALF_UP);
+        this.holdMillis = sellTime.getTime() - buyTime.getTime();
     }
 
-    // 计算买入金额
-    public BigDecimal getBuyAmount() {
-        return qty.multiply(buyPrice);
-    }
-
-    public BigDecimal getSellAmount() {
-        return qty.multiply(sellPrice);
-    }
-
-    public BigDecimal getProfit() {
-        return getSellAmount().subtract(getBuyAmount());
-    }
-
-    /**
-     * 收益率
-     */
-    public BigDecimal getProfitRate() {
-        return getProfit().divide(getBuyAmount(), 4, RoundingMode.HALF_UP);
-    }
 
 }

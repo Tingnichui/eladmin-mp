@@ -16,9 +16,11 @@
 package me.zhengjie.invest.domain.vo;
 
 import lombok.Data;
+import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * @author genghui
@@ -49,7 +51,7 @@ public class BinanceTradeStatsInfoVO implements Serializable {
     private Long minHoldTimeMs;
     private Long maxHoldTimeMs;
 
-    private Object profitVsHoldScatter;
+    private List<MatchedTradeInfo> matchedTradeInfoList;
 
 
 }
