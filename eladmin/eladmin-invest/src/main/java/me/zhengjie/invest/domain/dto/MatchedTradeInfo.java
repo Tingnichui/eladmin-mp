@@ -37,7 +37,7 @@ public class MatchedTradeInfo {
     /**
      * 收益率
      */
-    public BigDecimal profitRate() {
+    public BigDecimal getProfitRate() {
         return getProfit().divide(getBuyAmount(), 4, RoundingMode.HALF_UP);
     }
 

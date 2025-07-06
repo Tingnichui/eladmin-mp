@@ -49,5 +49,7 @@ public class BinanceTradeStatsInfoVO implements Serializable {
     private Long minHoldTimeMs;
     private Long maxHoldTimeMs;
 
+    private Object profitVsHoldScatter;
+
 
 }

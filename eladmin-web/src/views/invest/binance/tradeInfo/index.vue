@@ -331,6 +331,9 @@
             {{ formatDuration(statsInfo.avgHoldTimeMs) }}
           </el-descriptions-item>
         </el-descriptions>
+        <div>
+          <trade-profit-rate-scatter :row-data="statsInfo.profitVsHoldScatter" height="400px" />
+        </div>
         <template #footer>
           <div style="text-align: center;">
             <el-button type="primary" @click="showStats = false">关闭</el-button>
@@ -350,11 +353,12 @@ import udOperation from '@crud/UD.operation'
 import pagination from '@crud/Pagination'
 import DateRangePicker from '@/components/DateRangePicker/index.vue'
 import { formatDuration } from '../../../../utils/dateUtil'
+import TradeProfitRateScatter from '@/views/invest/binance/tradeInfo/TradeProfitRateScatter.vue'
 
 const defaultForm = { id: null, symbol: null, price: null, qty: null, commission: null, time: null, orderId: null, quoteQty: null, commissionAsset: null, isBuyer: null, isMaker: null, isBestMatch: null }
 export default {
   name: 'BinanceTradeInfo',
-  components: { DateRangePicker, pagination, crudOperation, rrOperation, udOperation },
+  components: { TradeProfitRateScatter, DateRangePicker, pagination, crudOperation, rrOperation, udOperation },
   mixins: [presenter(), header(), form(defaultForm), crud()],
   dicts: ['invest_binance_trade_pairing_logic', 'invest_binance_symbol', 'invest_binance_commission_asset', 'invest_binance_is_buyer', 'invest_binance_is_maker', 'invest_binance_is_best_match'],
   cruds() {

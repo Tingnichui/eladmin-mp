@@ -320,6 +320,24 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             statsInfoVO.setMaxHoldTimeMs(maxHoldTimeMs);
         }
 
+        List<Map<String, Object>> profitVsHoldScatter = matchedList.stream()
+                .map(m -> {
+                    Map<String, Object> point = new HashMap<>();
+
+                    // 持仓时间（小时，保留 2 位小数）
+                    long durationMillis = m.getSellTime().getTime() - m.getBuyTime().getTime();
+                    BigDecimal holdTimeHours = new BigDecimal(durationMillis)
+                            .divide(BigDecimal.valueOf(3600_000), 2, RoundingMode.HALF_UP);
+                    point.put("holdHours", holdTimeHours);
+
+                    // 收益率（例如 0.0123 表示 1.23%）
+                    point.put("profitRate", m.getProfitRate());
+
+                    return point;
+                })
+                .collect(Collectors.toList());
+        statsInfoVO.setProfitVsHoldScatter(profitVsHoldScatter);
+
         return statsInfoVO;
 
     }
