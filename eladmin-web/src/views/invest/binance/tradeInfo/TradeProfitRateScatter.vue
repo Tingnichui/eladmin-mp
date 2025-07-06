@@ -1,5 +1,20 @@
 <template>
-  <div :class="className" :style="{ height: height, width: width }" />
+  <div>
+    <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 10px;">
+      <label style="margin-right: 10px;">最小收益率：</label>
+      <input
+        v-model.number="minProfitRate"
+        type="range"
+        min="0"
+        max="0.1"
+        step="0.001"
+        style="width: 300px;"
+        @input="updateChart"
+      >
+      <span style="margin-left: 10px;">{{ (minProfitRate * 100).toFixed(2) }}%</span>
+    </div>
+    <div ref="chartContainer" :class="className" :style="{ height: height, width: width }" />
+  </div>
 </template>
 
 <script>
@@ -30,7 +45,8 @@ export default {
   },
   data() {
     return {
-      chart: null
+      chart: null,
+      minProfitRate: 0
     }
   },
   watch: {
@@ -59,18 +75,18 @@ export default {
   },
   methods: {
     initChart() {
-      this.chart = echarts.init(this.$el, 'macarons')
+      this.chart = echarts.init(this.$refs.chartContainer, 'macarons')
       this.updateChart()
     },
     updateChart() {
       if (!this.chart || !this.rowData.length) return
 
-      const chartData = this.rowData.map(d => ({
-        value: [Math.floor(d.holdMillis / 1000 / 60 / 60), d.profitRate],
-        ...d
-      }))
-
-      console.log(JSON.stringify(chartData))
+      const chartData = this.rowData
+        .filter(d => d.profitRate >= this.minProfitRate)
+        .map(d => ({
+          value: [Math.floor(d.holdMillis / 1000 / 60 / 60), d.profitRate],
+          ...d
+        }))
       this.chart.setOption({
         title: {
           text: '持仓时间 vs 收益率',

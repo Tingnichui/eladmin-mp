@@ -332,7 +332,7 @@
           </el-descriptions-item>
         </el-descriptions>
         <div>
-          <trade-profit-rate-scatter :row-data="statsInfo.matchedTradeInfoList" height="400px" />
+          <trade-profit-rate-scatter :row-data="statsInfo.matchedTradeInfoList" height="400px" style="margin-top: 20px" />
         </div>
         <template #footer>
           <div style="text-align: center;">
