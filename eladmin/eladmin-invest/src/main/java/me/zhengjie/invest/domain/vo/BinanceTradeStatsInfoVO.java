@@ -45,4 +45,9 @@ public class BinanceTradeStatsInfoVO implements Serializable {
     private BigDecimal totalWaitSellQty;
     //剩余未平仓均价
     private BigDecimal totalWaitAvgSellPrice;
+    private Long avgHoldTimeMs;
+    private Long minHoldTimeMs;
+    private Long maxHoldTimeMs;
+
+
 }

@@ -24,7 +24,8 @@ public enum TradePairingLogicEnum {
         @Override
         public boolean allowMatch(MatchedTradeInfo matchedTradeInfo) {
             // 收益必须大于0.3%
-            return matchedTradeInfo.profitRate().compareTo(new BigDecimal("0.003")) > 0;
+            return matchedTradeInfo.getBuyTime().before(matchedTradeInfo.getSellTime()) &&
+                    matchedTradeInfo.profitRate().compareTo(new BigDecimal("0.003")) > 0;
         }
     },
     ;

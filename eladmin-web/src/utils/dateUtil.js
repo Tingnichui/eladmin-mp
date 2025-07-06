@@ -24,3 +24,23 @@ export function timeDiff(begin_time, end_time) {
   var mins = parseInt(remain / 60)
   return days + '天' + hours + '小时' + mins + '分'
 }
+
+export function formatDuration(ms) {
+  if (ms == null || isNaN(ms)) return '-'
+
+  const seconds = Math.floor(ms / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
+
+  if (days > 0) {
+    return `${days}天 ${hours % 24}小时 ${minutes % 60}分`
+  } else if (hours > 0) {
+    return `${hours}小时 ${minutes % 60}分`
+  } else if (minutes > 0) {
+    return `${minutes}分 ${seconds % 60}秒`
+  } else {
+    return `${seconds}秒`
+  }
+}
+

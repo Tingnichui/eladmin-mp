@@ -24,7 +24,7 @@
         select
         <include refid="Base_Column_List"/>
         from binance_trade_info
-        <where>
+        where time > '2025-01-01'
             <if test="criteria.symbol != null">
                 and symbol = #{criteria.symbol}
             </if>
@@ -58,7 +58,6 @@
             <if test="criteria.quoteQty != null and criteria.quoteQty.size() > 0">
                 AND quote_qty BETWEEN #{criteria.quoteQty[0]} AND #{criteria.quoteQty[1]}
             </if>
-        </where>
         <if test="criteria.orderColumn != null and criteria.orderColumn != ''">
             ORDER BY ${criteria.orderColumn} ${criteria.orderDirection}
         </if>

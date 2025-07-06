@@ -321,6 +321,15 @@
           <el-descriptions-item label="未平仓总额">
             {{ formatDecimal(statsInfo.totalWaitSellAmount) }}
           </el-descriptions-item>
+          <el-descriptions-item label="最短持仓">
+            {{ formatDuration(statsInfo.minHoldTimeMs) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="最长持仓">
+            {{ formatDuration(statsInfo.maxHoldTimeMs) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="平均持仓">
+            {{ formatDuration(statsInfo.avgHoldTimeMs) }}
+          </el-descriptions-item>
         </el-descriptions>
         <template #footer>
           <div style="text-align: center;">
@@ -340,6 +349,7 @@ import crudOperation from '@crud/CRUD.operation'
 import udOperation from '@crud/UD.operation'
 import pagination from '@crud/Pagination'
 import DateRangePicker from '@/components/DateRangePicker/index.vue'
+import { formatDuration } from '../../../../utils/dateUtil'
 
 const defaultForm = { id: null, symbol: null, price: null, qty: null, commission: null, time: null, orderId: null, quoteQty: null, commissionAsset: null, isBuyer: null, isMaker: null, isBestMatch: null }
 export default {
@@ -409,6 +419,7 @@ export default {
     }
   },
   methods: {
+    formatDuration,
     // 钩子：在获取表格数据之前执行，false 则代表不获取数据
     [CRUD.HOOK.beforeRefresh]() {
       return true

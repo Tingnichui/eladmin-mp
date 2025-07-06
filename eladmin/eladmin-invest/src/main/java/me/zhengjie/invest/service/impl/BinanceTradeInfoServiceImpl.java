@@ -302,6 +302,24 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         BigDecimal totalWaitAvgSellPrice = totalWaitSellAmount.divide(totalWaitSellQty, 8, RoundingMode.HALF_UP);
         statsInfoVO.setTotalWaitAvgSellPrice(totalWaitAvgSellPrice);
 
+        // 持仓时间（单位：毫秒）
+        List<Long> holdDurations = matchedList.stream()
+                .map(m -> m.getSellTime().getTime() - m.getBuyTime().getTime())
+                .collect(Collectors.toList());
+
+        if (!holdDurations.isEmpty()) {
+            // 平均持仓时间（毫秒）
+            long avgHoldTimeMs = (long) holdDurations.stream().mapToLong(Long::longValue).average().orElse(0);
+            // 最小/最大持仓时间
+            long minHoldTimeMs = Collections.min(holdDurations);
+            long maxHoldTimeMs = Collections.max(holdDurations);
+
+            // 可选择换算成小时/分钟/秒
+            statsInfoVO.setAvgHoldTimeMs(avgHoldTimeMs);
+            statsInfoVO.setMinHoldTimeMs(minHoldTimeMs);
+            statsInfoVO.setMaxHoldTimeMs(maxHoldTimeMs);
+        }
+
         return statsInfoVO;
 
     }
