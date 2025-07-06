@@ -29,14 +29,10 @@ import java.math.BigDecimal;
 public class BinanceTradeStatsInfoVO implements Serializable {
     //买入总金额
     private BigDecimal totalBuyAmount;
-    //买入总数量
-    private BigDecimal totalBuyQty;
     //买入均价
     private BigDecimal avgBuyPrice;
     //卖出总金额
     private BigDecimal totalSellAmount;
-    //卖出总数量
-    private BigDecimal totalSellQty;
     //卖出均价
     private BigDecimal avgSellPrice;
     //总的利润

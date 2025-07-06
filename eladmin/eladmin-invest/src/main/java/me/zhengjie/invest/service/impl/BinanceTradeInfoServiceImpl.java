@@ -27,6 +27,7 @@ import lombok.RequiredArgsConstructor;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.invest.constants.TradePairingLogicEnum;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
+import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.mapper.BinanceTradeInfoMapper;
@@ -210,69 +211,69 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         }
 
 
-        // 匹配高低 最高的卖出等量匹配最低的买入
-        int buyIndex = 0;
-        List<BinanceTradeInfo> matchedBuyList = new ArrayList<>();
-        for (BinanceTradeInfo sell : sellTradeList) {
-            BigDecimal sellQty = sell.getQty();
+        // 撮合交易对
+        List<MatchedTradeInfo> matchedList = new ArrayList<>();
+        Iterator<BinanceTradeInfo> buyIterator = buyTradeList.iterator();
+        while (buyIterator.hasNext()) {
+            BinanceTradeInfo buy = buyIterator.next();
+            // 按照顺序寻找卖单
+            Iterator<BinanceTradeInfo> sellIterator = sellTradeList.iterator();
+            while (sellIterator.hasNext()) {
+                // 进入撮合首先判断是否买入还有剩余 已经平仓掉了就直接去除
+                if (buy.getQty().compareTo(BigDecimal.ZERO) <= 0) {
+                    buyIterator.remove();
+                    break;
+                }
 
-            while (sellQty.compareTo(BigDecimal.ZERO) > 0 && buyIndex < buyTradeList.size()) {
-                BinanceTradeInfo buyTradeInfo = buyTradeList.get(buyIndex);
-                // 已匹配完，跳过
-                if (buyTradeInfo.getQty().compareTo(BigDecimal.ZERO) == 0) {
-                    buyIndex++;
+                BinanceTradeInfo sell = sellIterator.next();
+                // 可匹配的仓位数量
+                BigDecimal matchQty = buy.getQty().min(sell.getQty());
+                // 撮合交易记录
+                MatchedTradeInfo matched = new MatchedTradeInfo();
+                matched.setQty(matchQty);
+                matched.setBuyPrice(buy.getPrice());
+                matched.setSellPrice(sell.getPrice());
+                matched.setBuyTime(buy.getTime());
+                matched.setSellTime(sell.getTime());
+                matchedList.add(matched);
+                // 更新买入剩余量
+                buy.setQty(buy.getQty().subtract(matchQty));
+                // 更新卖出剩余量
+                sell.setQty(sell.getQty().subtract(matchQty));
+
+                // 卖出是否还有剩余 没有剩余就直接移除
+                if (sell.getQty().compareTo(BigDecimal.ZERO) <= 0) {
+                    sellIterator.remove();
                     continue;
                 }
-                // 可匹配的仓位数量
-                BigDecimal matchQty = sellQty.min(buyTradeInfo.getQty());
 
-                // 拷贝买入记录用于展示匹配信息（只包含部分成交）
-                BinanceTradeInfo partialBuy = new BinanceTradeInfo();
-                BeanUtils.copyProperties(buyTradeInfo, partialBuy);
-                partialBuy.setQty(matchQty);
-                matchedBuyList.add(partialBuy);
-
-                // 更新买入剩余量
-                buyTradeInfo.setQty(buyTradeInfo.getQty().subtract(matchQty));
-                // 更新卖出剩余量
-                sellQty = sellQty.subtract(matchQty);
-
-                // 买入剩余量不足
-                if (buyTradeInfo.getQty().compareTo(BigDecimal.ZERO) == 0) {
-                    buyIndex++;
-                }
             }
 
         }
 
         BinanceTradeStatsInfoVO statsInfoVO = new BinanceTradeStatsInfoVO();
 
+        // 撮合总量
+        BigDecimal totalQty = matchedList.stream()
+                .map(MatchedTradeInfo::getQty)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         // 买入总金额
-        BigDecimal totalBuyAmount = matchedBuyList.stream()
-                .map(b -> b.getQty().multiply(b.getPrice()))
+        BigDecimal totalBuyAmount = matchedList.stream()
+                .map(MatchedTradeInfo::getBuyAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         statsInfoVO.setTotalBuyAmount(totalBuyAmount);
-        // 买入总数量
-        BigDecimal totalBuyQty = matchedBuyList.stream()
-                .map(BinanceTradeInfo::getQty)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        statsInfoVO.setTotalBuyQty(totalBuyQty);
         // 买入均价
-        BigDecimal avgBuyPrice = totalBuyAmount.divide(totalBuyQty, 8, RoundingMode.HALF_UP);
+        BigDecimal avgBuyPrice = totalBuyAmount.divide(totalQty, 8, RoundingMode.HALF_UP);
         statsInfoVO.setAvgBuyPrice(avgBuyPrice);
 
         // 卖出总金额
-        BigDecimal totalSellAmount = sellTradeList.stream()
-                .map(b -> b.getQty().multiply(b.getPrice()))
+        BigDecimal totalSellAmount = matchedList.stream()
+                .map(MatchedTradeInfo::getSellAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         statsInfoVO.setTotalSellAmount(totalSellAmount);
-        // 卖出总数量
-        BigDecimal totalSellQty = sellTradeList.stream()
-                .map(BinanceTradeInfo::getQty)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        statsInfoVO.setTotalSellQty(totalSellQty);
         // 卖出均价
-        BigDecimal avgSellPrice = totalSellAmount.divide(totalSellQty, 8, RoundingMode.HALF_UP);
+        BigDecimal avgSellPrice = totalSellAmount.divide(totalQty, 8, RoundingMode.HALF_UP);
         statsInfoVO.setAvgSellPrice(avgSellPrice);
 
         // 总的利润
