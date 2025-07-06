@@ -87,6 +87,34 @@ export default {
           value: [Math.floor(d.holdMillis / 1000 / 60 / 60), d.profitRate],
           ...d
         }))
+
+      const stats = {
+        '0-1%': { count: 0, totalProfit: 0 },
+        '1%-3%': { count: 0, totalProfit: 0 },
+        '3%以上': { count: 0, totalProfit: 0 }
+      }
+
+      chartData.forEach(d => {
+        const rate = d.profitRate
+        const profit = d.profit
+        if (rate < 0.01) {
+          stats['0-1%'].count++
+          stats['0-1%'].totalProfit += profit
+        } else if (rate < 0.03) {
+          stats['1%-3%'].count++
+          stats['1%-3%'].totalProfit += profit
+        } else {
+          stats['3%以上'].count++
+          stats['3%以上'].totalProfit += profit
+        }
+      })
+
+      // 计算平均收益
+      Object.keys(stats).forEach(key => {
+        const { count, totalProfit } = stats[key]
+        stats[key].avgProfit = count ? (totalProfit / count).toFixed(4) : 0
+      })
+
       this.chart.setOption({
         title: {
           text: '持仓时间 vs 收益率',
@@ -114,9 +142,26 @@ export default {
         grid: {
           left: '10%',
           right: '10%',
-          bottom: '10%',
+          bottom: '15%',
           containLabel: true
         },
+        graphic: [
+          {
+            type: 'text',
+            left: 'center',
+            bottom: 10,
+            style: {
+              text: `0~1%: ${stats['0-1%'].count} 笔，收益 ${stats['0-1%'].totalProfit.toFixed(2)}，均值 ${stats['0-1%'].avgProfit}\n` +
+                `1~3%: ${stats['1%-3%'].count} 笔，收益 ${stats['1%-3%'].totalProfit.toFixed(2)}，均值 ${stats['1%-3%'].avgProfit}\n` +
+                `3%以上: ${stats['3%以上'].count} 笔，收益 ${stats['3%以上'].totalProfit.toFixed(2)}，均值 ${stats['3%以上'].avgProfit}`,
+              fill: '#666',
+              fontSize: 12,
+              lineHeight: 20,
+              whiteSpace: 'pre-line', // 支持换行
+              textAlign: 'center'
+            }
+          }
+        ],
         xAxis: {
           name: '持仓时间（小时）',
           type: 'value',
