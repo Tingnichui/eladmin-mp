@@ -119,10 +119,15 @@ export default {
             name: '收益点',
             type: 'scatter',
             data: chartData,
-            symbolSize: 8,
+            symbolSize: function(value, param) {
+              return 8 + Math.min(param.data.profit / 2, 20)
+            },
             itemStyle: {
               color: function(params) {
-                return params.value[1] >= 0 ? '#67C23A' : '#F56C6C'
+                // 最大收益假设为 10，映射到颜色深浅（0 到 1）
+                const intensity = Math.min(params.data.profit / 10, 1)
+                // 绿色从浅到深
+                return `rgba(103, 194, 58, ${0.3 + 0.7 * intensity})` // 最低透明度 0.3，最高 1
               }
             }
           }
