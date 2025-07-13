@@ -26,6 +26,18 @@ public class UtilsTests {
     }
 
     @Test
+    void getPrice() {
+        BigDecimal avgPrice = binanceUtil.getPrice("BTCUSDT");
+        System.err.println(avgPrice);
+    }
+
+    @Test
+    void getAvgPrice() {
+        BigDecimal avgPrice = binanceUtil.getAvgPrice("BTCUSDT");
+        System.err.println(avgPrice);
+    }
+
+    @Test
     void order() {
         BinanceOrderApiDto apiDto = new BinanceOrderApiDto();
         apiDto.setSymbol("BNBUSDT");

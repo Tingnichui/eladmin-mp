@@ -51,6 +51,18 @@ public class BinanceUtil {
         return this.doRequest("/api/v3/myTrades", params, true);
     }
 
+    public BigDecimal getPrice(String symbol) {
+        HttpRequest request = HttpUtil.createGet(apiHost + "/api/v3/ticker/price?symbol=" + symbol);
+        request.setProxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort)));
+        return JSON.parseObject(request.execute().body()).getBigDecimal("price");
+    }
+
+    public BigDecimal getAvgPrice(String symbol) {
+        HttpRequest request = HttpUtil.createGet(apiHost + "/api/v3/avgPrice?symbol=" + symbol);
+        request.setProxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort)));
+        return JSON.parseObject(request.execute().body()).getBigDecimal("price");
+    }
+
     public JSONObject order(BinanceOrderApiDto apiDto) {
         Map<String, Object> map = apiDto.toMap();
         JSONObject resultJson = null;
