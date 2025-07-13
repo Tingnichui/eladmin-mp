@@ -39,6 +39,7 @@ public class TradingviewNotifyController {
         if (!secret.equals(paramsJson.getString("secret"))) {
             return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         }
+        paramsStr = paramsStr.replace(secret, "");
         dingdingUtil.sendMsg("【TradingView-交易通知】" + paramsStr);
         return new ResponseEntity<>(HttpStatus.OK);
     }
