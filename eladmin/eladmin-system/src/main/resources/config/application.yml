@@ -59,3 +59,9 @@ binance:
   api_host: https://api.binance.com
   api_key: ENC(/NSmS8NbAtwuObe0GqhmVvYtUbEsMnqo0QEBVnoux7O7/wFcRowVZEimaJN4DX3qjQJWElPZvHZKWJxM1XZCdzk/HqQmNAHzNStUhvEcrGnAPd77m0rIc8dcYHsMAg7EH7L3j1uqF1KRG/pnyFxR/w==)
   api_secret: ENC(5VHhaaSuD8EFkhsmOVBmnhW+s8vV6z2WO23zzEku53B/wgJUMQRQBzfEcdRSxXw6cE4Pacplvi4901l9qcF2FuerLS1NMJ7RbC9NyLWZVP6MaV2dGihLBscHZRZ35f/nX/4Wz7Wgu9D+ZmLzkacbKg==)
+
+aliyun:
+  dingding:
+    notify:
+      webhook: ENC(dttWSAgpAR4TYtxeWtnj4bSfGN2RhcrAFEeRjjrVWWTDFBXHIoPSEWoPFpq/Db3Uimz5zgiWfqTtcKD2gyijXQSovOxqIeGBEDKAGShQSV6YB2fDL3AnR71zV6HYr0nMSpPcQv5AKUNzp10CWrlCvz+M3HoK/Mz87uevLRKrHbM/w6Ed/2iiHWnVs81wo9dEVXNmq1btwN40EN1ySRaEQw==)
+      secret: ENC(ekuTOF9Cv/8B+B72Oayj1Lyx/4IiWX6xMPBkEjD6ijhHmFXMQQjOF++tnX6MXwNrkaN0LwNRme1Y1+XE30Ytt0GkXdHGlzLz7WloNYCYI76372NqAsfFJfcVbj7k2YIWos0ylQ+KDsd0Y9snuPvJZw==)
