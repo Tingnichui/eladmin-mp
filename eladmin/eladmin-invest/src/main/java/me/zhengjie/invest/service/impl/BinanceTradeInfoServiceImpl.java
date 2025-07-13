@@ -15,10 +15,6 @@
 */
 package me.zhengjie.invest.service.impl;
 
-import cn.hutool.core.net.URLEncodeUtil;
-import cn.hutool.crypto.digest.HMac;
-import cn.hutool.crypto.digest.HmacAlgorithm;
-import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -32,13 +28,11 @@ import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.mapper.BinanceTradeInfoMapper;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
+import me.zhengjie.invest.util.BinanceUtil;
 import me.zhengjie.utils.FileUtil;
 import me.zhengjie.utils.PageResult;
 import me.zhengjie.utils.PageUtil;
-import me.zhengjie.utils.StringUtils;
 import me.zhengjie.utils.enums.OrderDirectionEnum;
-import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,9 +40,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -62,6 +53,8 @@ import java.util.stream.Collectors;
 public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMapper, BinanceTradeInfo> implements BinanceTradeInfoService {
 
     private final BinanceTradeInfoMapper binanceTradeInfoMapper;
+
+    private final BinanceUtil binanceUtil;
 
     @Override
     public PageResult<BinanceTradeInfo> queryAll(BinanceTradeInfoQueryCriteria criteria, Page<Object> page) {
@@ -114,50 +107,11 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         FileUtil.downloadExcel(list, response);
     }
 
-    @Value("${proxy.host}")
-    private String proxyHost;
-    @Value("${proxy.port}")
-    private Integer proxyPort;
-    @Value("${binance.api_host}")
-    private String apiHost;
-    @Value("${binance.api_key}")
-    private String apiKey;
-    @Value("${binance.api_secret}")
-    private String apiSecret;
-
     @Override
     public void syncTradeInfo(String symbol) {
-        String url = "/api/v3/myTrades";
-
-        Map<String, Object> params = new HashMap<>();
-        params.put("symbol", symbol);
-//        params.put("startTime", startTime.getTime());
-        params.put("timestamp", System.currentTimeMillis());
-
-        String queryString = params.entrySet().stream()
-                .filter(entry -> StringUtils.isNotBlank(entry.getValue().toString()))
-                .map(entry -> entry.getKey() + "=" + URLEncodeUtil.encode(entry.getValue().toString()))
-                .collect(Collectors.joining("&"));
-
-        String signature = new HMac(HmacAlgorithm.HmacSHA256, apiSecret.getBytes(StandardCharsets.UTF_8)).digestHex(queryString);
-        params.put("signature", signature);
-
-        String finalQuery = params.entrySet().stream()
-                .map(entry -> entry.getKey() + "=" + URLEncodeUtil.encode(entry.getValue().toString()))
-                .collect(Collectors.joining("&"));
-
-        String fullUrl = apiHost + url + "?" + finalQuery;
-
-        String body = HttpUtil.createGet(fullUrl)
-                .header("X-MBX-APIKEY", apiKey)
-                .setProxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort)))
-                .execute().body();
-
-        // 打印响应结果
-        System.out.println("Response: " + body);
+        String body = binanceUtil.getMyTrades(symbol);
 
         List<BinanceTradeInfo> javaList = JSON.parseArray(body).toJavaList(BinanceTradeInfo.class);
-        System.err.println(javaList);
 
         // 查询已经在库中的数据
         List<Long> haveInDbOrderIdList = this.list(
