@@ -27,13 +27,13 @@ public class UtilsTests {
 
     @Test
     void getPrice() {
-        BigDecimal avgPrice = binanceUtil.getPrice("BTCUSDT");
-        System.err.println(avgPrice);
+        BigDecimal price = binanceUtil.getPrice(BinanceEnum.SYMBOL.BTCUSDT);
+        System.err.println(price);
     }
 
     @Test
     void getAvgPrice() {
-        BigDecimal avgPrice = binanceUtil.getAvgPrice("BTCUSDT");
+        BigDecimal avgPrice = binanceUtil.getAvgPrice(BinanceEnum.SYMBOL.BTCUSDT);
         System.err.println(avgPrice);
     }
 

@@ -10,6 +10,16 @@ public class BinanceEnum {
 
     @Getter
     @AllArgsConstructor
+    public enum SYMBOL {
+
+        BTCUSDT("BTC现货"),
+        BNBUSDT("BNC现货"),
+        ;
+        private final String desc;
+    }
+
+    @Getter
+    @AllArgsConstructor
     public enum SIDE {
 
         BUY("买入"),

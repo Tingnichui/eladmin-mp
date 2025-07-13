@@ -51,13 +51,13 @@ public class BinanceUtil {
         return this.doRequest("/api/v3/myTrades", params, true);
     }
 
-    public BigDecimal getPrice(String symbol) {
+    public BigDecimal getPrice(BinanceEnum.SYMBOL symbol) {
         HttpRequest request = HttpUtil.createGet(apiHost + "/api/v3/ticker/price?symbol=" + symbol);
         request.setProxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort)));
         return JSON.parseObject(request.execute().body()).getBigDecimal("price");
     }
 
-    public BigDecimal getAvgPrice(String symbol) {
+    public BigDecimal getAvgPrice(BinanceEnum.SYMBOL symbol) {
         HttpRequest request = HttpUtil.createGet(apiHost + "/api/v3/avgPrice?symbol=" + symbol);
         request.setProxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort)));
         return JSON.parseObject(request.execute().body()).getBigDecimal("price");
