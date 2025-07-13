@@ -23,10 +23,10 @@ import java.util.Map;
 public class DingdingUtil {
 
     @Value("${aliyun.dingding.notify.webhook:}")
-    public String webhook = "";
+    public String webhook;
 
     @Value("${aliyun.dingding.notify.secret:}")
-    public String secret = "";
+    public String secret;
 
 
     public void sendMsg(String content) {
