@@ -8,6 +8,7 @@ import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import me.zhengjie.annotation.AnonymousAccess;
 import me.zhengjie.annotation.Log;
+import me.zhengjie.invest.domain.vo.TradingViewNotify;
 import me.zhengjie.utils.DingdingUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -34,13 +35,11 @@ public class TradingviewNotifyController {
     @PostMapping("/trade")
     @Log("tradingview交易通知")
     @AnonymousAccess
-    public ResponseEntity<Object> createBinanceTradeInfo(@RequestBody String paramsStr){
-        JSONObject paramsJson = JSON.parseObject(paramsStr);
-        if (!secret.equals(paramsJson.getString("secret"))) {
+    public ResponseEntity<Object> createBinanceTradeInfo(@RequestBody TradingViewNotify tradingViewNotify){
+        if (!secret.equals(tradingViewNotify.getSecret())) {
             return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         }
-        paramsStr = paramsStr.replace(secret, "");
-        dingdingUtil.sendMsg("【TradingView-交易通知】" + paramsStr);
+        dingdingUtil.sendMsg("【TradingView-交易通知】" + tradingViewNotify);
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
