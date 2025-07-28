@@ -14,6 +14,12 @@ public class TradingViewNotify {
     @NotBlank
     private String secret;
 
+
+    /**
+     * 仓位编号
+     */
+    private String posId;
+
     /**
      * 交易时间
      */
@@ -40,13 +46,18 @@ public class TradingViewNotify {
     private String tradeDirection;
 
     /**
-     * 开仓价格
+     * 操作类型
      */
-    private BigDecimal openPrice;
+    private String operateType;
+
+    /**
+     * 操作价格
+     */
+    private BigDecimal price;
 
     @Override
     public String toString() {
-        return tradeTime + "，" + symbol + " 在 " + period + " K线，出现 " + tradingStrategy + " 策略的 " + tradeDirection + " 信号，开仓价格为： " + openPrice;
+        return tradeTime + "，" + symbol + " 在 " + period + " K线，出现 " + tradingStrategy + " 策略的 " + tradeDirection + " 信号，操作价格为： " + price + "，操作类型为" + operateType;
     }
 
     public static void main(String[] args) {
@@ -57,7 +68,7 @@ public class TradingViewNotify {
         object.setPeriod("15MIN");
         object.setTradingStrategy("MACD");
         object.setTradeDirection("BUY");
-        object.setOpenPrice(new BigDecimal("120000.01"));
+        object.setPrice(new BigDecimal("120000.01"));
         System.err.println(JSON.toJSONString(object));
         System.err.println(object);
     }
