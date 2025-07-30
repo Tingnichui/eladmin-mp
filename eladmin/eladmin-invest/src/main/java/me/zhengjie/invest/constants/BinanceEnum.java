@@ -79,5 +79,17 @@ public class BinanceEnum {
     }
 
 
+    @Getter
+    @AllArgsConstructor
+    public enum KLINES_INTERVAL {
+
+        MINUTE_15("15m", 15, "15分钟"),
+        ;
+        private final String value;
+        private final int period;
+        private final String desc;
+    }
+
+
 
 }

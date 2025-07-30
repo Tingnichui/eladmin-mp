@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="me.zhengjie.invest.mapper.InvestKlinesRecordMapper">
+    <resultMap id="BaseResultMap" type="me.zhengjie.invest.domain.InvestKlinesRecord">
+        <id column="id" property="id"/>
+        <result column="symbol" property="symbol"/>
+        <result column="period" property="period"/>
+        <result column="open_time" property="openTime"/>
+        <result column="close_time" property="closeTime"/>
+        <result column="open_price" property="openPrice"/>
+        <result column="close_price" property="closePrice"/>
+        <result column="high_price" property="highPrice"/>
+        <result column="low_price" property="lowPrice"/>
+        <result column="volume" property="volume"/>
+        <result column="turnover" property="turnover"/>
+        <result column="trade_count" property="tradeCount"/>
+        <result column="buy_volume" property="buyVolume"/>
+        <result column="buy_turnover" property="buyTurnover"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, symbol, period, open_time, close_time, open_price, close_price, high_price, low_price, volume, turnover, trade_count, buy_volume, buy_turnover
+    </sql>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List"/>
+        from invest_klines_record
+        <where>
+            <if test="criteria.symbol != null">
+                and symbol = #{criteria.symbol}
+            </if>
+            <if test="criteria.period != null">
+                and period = #{criteria.period}
+            </if>
+            <if test="criteria.openTime != null and criteria.openTime.size() > 0">
+                AND open_time BETWEEN #{criteria.openTime[0]} AND #{criteria.openTime[1]}
+            </if>
+            <if test="criteria.closeTime != null and criteria.closeTime.size() > 0">
+                AND close_time BETWEEN #{criteria.closeTime[0]} AND #{criteria.closeTime[1]}
+            </if>
+        </where>
+        order by id desc
+    </select>
+</mapper>

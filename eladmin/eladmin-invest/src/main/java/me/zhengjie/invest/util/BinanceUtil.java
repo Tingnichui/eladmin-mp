@@ -1,5 +1,7 @@
 package me.zhengjie.invest.util;
 
+import cn.hutool.core.date.DateUnit;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.net.URLEncodeUtil;
 import cn.hutool.crypto.digest.HMac;
 import cn.hutool.crypto.digest.HmacAlgorithm;
@@ -9,6 +11,7 @@ import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import me.zhengjie.invest.constants.BinanceEnum;
+import me.zhengjie.invest.domain.InvestKlinesRecord;
 import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
 import me.zhengjie.utils.DingdingUtil;
 import me.zhengjie.utils.StringUtils;
@@ -22,8 +25,9 @@ import java.math.BigDecimal;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
+import java.sql.Timestamp;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Component
@@ -63,6 +67,39 @@ public class BinanceUtil {
         return JSON.parseObject(request.execute().body()).getBigDecimal("price");
     }
 
+    public List<InvestKlinesRecord> getKlines(BinanceEnum.SYMBOL symbol, BinanceEnum.KLINES_INTERVAL interval,Date startTime,Date endTime) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("symbol", symbol);
+        params.put("interval", interval.getValue());
+        params.put("startTime", startTime.getTime());
+        params.put("endTime", endTime.getTime());
+        params.put("limit", 1000);
+         List<List> rawKlinesList = JSON.parseArray(this.doRequest("/api/v3/klines", params, true)).toJavaList(List.class);
+
+        List<InvestKlinesRecord> investKlinesRecordList = new ArrayList<>();
+        for (List item : rawKlinesList) {
+
+            InvestKlinesRecord record = new InvestKlinesRecord();
+            record.setSymbol(symbol.toString());
+            record.setOpenTime(new Timestamp((Long) item.get(0)));// 开盘时间
+            record.setOpenPrice(new BigDecimal((String) item.get(1)));// 开盘价
+            record.setHighPrice(new BigDecimal((String) item.get(2)));// 最高价
+            record.setLowPrice(new BigDecimal((String) item.get(3)));// 最低价
+            record.setClosePrice(new BigDecimal((String) item.get(4)));// 收盘价(当前K线未结束的即为最新价)
+            record.setVolume(new BigDecimal((String) item.get(5)));// 成交量
+            record.setCloseTime(new Timestamp((Long) item.get(6)));// 收盘时间
+            record.setTurnover(new BigDecimal((String) item.get(7)));// 成交额
+            record.setTradeCount((Integer) item.get(8));// 成交笔数
+            record.setBuyVolume(new BigDecimal((String) item.get(9)));// 主动买入成交量
+            record.setBuyTurnover(new BigDecimal((String) item.get(10)));// 主动买入成交额
+            record.setPeriod(interval.getPeriod());
+            investKlinesRecordList.add(record);
+        }
+
+        return investKlinesRecordList;
+
+    }
+
     public JSONObject order(BinanceOrderApiDto apiDto) {
         Map<String, Object> map = apiDto.toMap();
         JSONObject resultJson = null;
@@ -88,15 +125,18 @@ public class BinanceUtil {
                         Map.Entry::getValue
                 ));
 
-        // 增加时间戳
-        params.put("timestamp", System.currentTimeMillis());
+        // post请求才需要加时间戳进行加签
+        if (!getFlag) {
+            // 增加时间戳
+            params.put("timestamp", System.currentTimeMillis());
 
-        // 加签
-        String queryString = params.entrySet().stream()
-                .map(entry -> entry.getKey() + "=" + URLEncodeUtil.encode(entry.getValue().toString()))
-                .collect(Collectors.joining("&"));
-        String signature = new HMac(HmacAlgorithm.HmacSHA256, apiSecret.getBytes(StandardCharsets.UTF_8)).digestHex(queryString);
-        params.put("signature", signature);
+            // 加签
+            String queryString = params.entrySet().stream()
+                    .map(entry -> entry.getKey() + "=" + URLEncodeUtil.encode(entry.getValue().toString()))
+                    .collect(Collectors.joining("&"));
+            String signature = new HMac(HmacAlgorithm.HmacSHA256, apiSecret.getBytes(StandardCharsets.UTF_8)).digestHex(queryString);
+            params.put("signature", signature);
+        }
 
         // 拼接完整参数
         String finalQuery = params.entrySet().stream()
