@@ -90,6 +90,7 @@ public class TradingviewNotifyController {
                         BinanceTradeStatsInfoVO stats = binanceTradeInfoService.stats(criteria);
                         // 当前开仓价格大于剩余未平仓均价 并且 当前未平仓价格已经大于1000u，不调用接口进行操作
                         if (apiDto.getPrice().compareTo(stats.getTotalWaitAvgSellPrice()) > 0 && stats.getTotalWaitSellAmount().compareTo(new BigDecimal("1000")) > 0) {
+                            dingdingUtil.sendMsg("剩余未平仓已大于1000u");
                             return;
                         }
                         apiDto.setSide(BinanceEnum.SIDE.BUY);
@@ -102,7 +103,7 @@ public class TradingviewNotifyController {
                         break;
                     case "STOP_LOSS":
                         // 止损暂时不做
-                        break;
+                        return;
                 }
                 // 调用接口成功之后标识
                 redisUtils.set(redisKey, "1", 30, TimeUnit.DAYS);
