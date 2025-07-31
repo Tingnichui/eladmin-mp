@@ -5,6 +5,7 @@ import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.InvestKlinesRecord;
 import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
@@ -50,12 +51,23 @@ public class UtilsTests {
 
     @Test
     void getKlines() {
+        BinanceEnum.SYMBOL symbol = BinanceEnum.SYMBOL.BTCUSDT;
+        BinanceEnum.KLINES_INTERVAL interval = BinanceEnum.KLINES_INTERVAL.MINUTE_15;
+        InvestKlinesRecord lastOneInDb = investKlinesRecordService.getOne(
+                Wrappers.lambdaQuery(InvestKlinesRecord.class)
+                        .eq(InvestKlinesRecord::getSymbol, symbol)
+                        .eq(InvestKlinesRecord::getPeriod, interval.getPeriod())
+                        .orderByDesc(InvestKlinesRecord::getCloseTime)
+                        .last("limit 1")
+        );
+
+
+        Date startTime = DateUtil.offsetSecond(lastOneInDb.getCloseTime(), -1);
         Date now = new Date();
-        DateTime startTime = DateUtil.parse("2017-8-11", DatePattern.NORM_DATE_PATTERN);
         while (now.after(startTime)) {
             DateTime endTime = DateUtil.offsetDay(startTime, 10).offset(DateField.SECOND, -1);
-            List<InvestKlinesRecord> klines = binanceUtil.getKlines(BinanceEnum.SYMBOL.BTCUSDT, BinanceEnum.KLINES_INTERVAL.MINUTE_15, startTime, endTime);
-            investKlinesRecordService.saveBatch(klines);
+            List<InvestKlinesRecord> klines = binanceUtil.getKlines(symbol, interval, startTime, endTime);
+//            investKlinesRecordService.saveBatch(klines);
             startTime = endTime;
         }
     }

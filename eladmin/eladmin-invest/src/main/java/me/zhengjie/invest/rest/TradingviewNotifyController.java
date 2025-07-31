@@ -94,16 +94,26 @@ public class TradingviewNotifyController {
                             return;
                         }
                         apiDto.setSide(BinanceEnum.SIDE.BUY);
-                        binanceUtil.order(apiDto);
                         break;
                     case "TAKE_PROFIT":
                         // 止盈
                         apiDto.setSide(BinanceEnum.SIDE.SELL);
-                        binanceUtil.order(apiDto);
                         break;
                     case "STOP_LOSS":
                         // 止损暂时不做
                         return;
+                }
+
+                // 调用接口最多2次
+                int maxRetries  = 2;
+                for (int i = 0; i < maxRetries ; i++) {
+                    try {
+                        binanceUtil.order(apiDto);
+                        break;
+                    } catch (Exception e) {
+                        Thread.sleep(200);
+                        log.error("下单失败，第 {} 次尝试", i + 1, e);
+                    }
                 }
                 // 调用接口成功之后标识
                 redisUtils.set(redisKey, "1", 30, TimeUnit.DAYS);
