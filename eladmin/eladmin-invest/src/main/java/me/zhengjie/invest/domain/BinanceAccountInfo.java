@@ -24,6 +24,7 @@ import java.io.Serializable;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import me.zhengjie.annotation.DecryptField;
 import me.zhengjie.annotation.EncryptField;
 
 import javax.validation.constraints.NotBlank;
@@ -50,10 +51,14 @@ public class BinanceAccountInfo implements Serializable {
     private Integer uid;
 
     @NotBlank
+    @DecryptField
+    @EncryptField
     @ApiModelProperty(value = "手机号，加密")
     private String phoneNumber;
 
     @NotBlank
+    @DecryptField
+    @EncryptField
     @ApiModelProperty(value = "邮箱，加密")
     private String email;
 

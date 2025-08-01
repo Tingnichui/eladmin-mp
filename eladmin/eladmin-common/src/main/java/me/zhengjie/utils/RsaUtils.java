@@ -93,9 +93,7 @@ public class RsaUtils {
      * @throws Exception /
      */
     public static String encryptByPrivateKey(String privateKeyText, String text) throws Exception {
-        PKCS8EncodedKeySpec pkcs8EncodedKeySpec = new PKCS8EncodedKeySpec(Base64.decodeBase64(privateKeyText));
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        PrivateKey privateKey = keyFactory.generatePrivate(pkcs8EncodedKeySpec);
+        PrivateKey privateKey = getPrivateKey(privateKeyText);
         Cipher cipher = Cipher.getInstance("RSA");
         cipher.init(Cipher.ENCRYPT_MODE, privateKey);
         byte[] result = doLongerCipherFinal(Cipher.ENCRYPT_MODE, cipher, text.getBytes());
@@ -111,13 +109,24 @@ public class RsaUtils {
      * @throws Exception /
      */
     public static String decryptByPrivateKey(String privateKeyText, String text) throws Exception {
-        PKCS8EncodedKeySpec pkcs8EncodedKeySpec5 = new PKCS8EncodedKeySpec(Base64.decodeBase64(privateKeyText));
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        PrivateKey privateKey = keyFactory.generatePrivate(pkcs8EncodedKeySpec5);
+        PrivateKey privateKey = getPrivateKey(privateKeyText);
         Cipher cipher = Cipher.getInstance("RSA");
         cipher.init(Cipher.DECRYPT_MODE, privateKey);
         byte[] result = doLongerCipherFinal(Cipher.DECRYPT_MODE, cipher, Base64.decodeBase64(text));
         return new String(result);
+    }
+
+    public static String decryptByPrivateKey(PrivateKey privateKey, String text) throws Exception {
+        Cipher cipher = Cipher.getInstance("RSA");
+        cipher.init(Cipher.DECRYPT_MODE, privateKey);
+        byte[] result = doLongerCipherFinal(Cipher.DECRYPT_MODE, cipher, Base64.decodeBase64(text));
+        return new String(result);
+    }
+
+    public static PrivateKey getPrivateKey(String privateKeyText) throws NoSuchAlgorithmException, InvalidKeySpecException {
+        PKCS8EncodedKeySpec pkcs8EncodedKeySpec5 = new PKCS8EncodedKeySpec(Base64.decodeBase64(privateKeyText));
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+        return keyFactory.generatePrivate(pkcs8EncodedKeySpec5);
     }
 
     /**
