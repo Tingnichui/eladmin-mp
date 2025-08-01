@@ -1,7 +1,5 @@
 package me.zhengjie.invest.util;
 
-import cn.hutool.core.date.DateUnit;
-import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.net.URLEncodeUtil;
 import cn.hutool.crypto.digest.HMac;
 import cn.hutool.crypto.digest.HmacAlgorithm;
@@ -27,7 +25,6 @@ import java.net.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Component
@@ -102,14 +99,9 @@ public class BinanceUtil {
 
     public JSONObject order(BinanceOrderApiDto apiDto) {
         Map<String, Object> map = apiDto.toMap();
-        JSONObject resultJson = null;
-        try {
-            resultJson = JSON.parseObject(this.doRequest("/api/v3/order", map, true, false));
-            if (StringUtils.isBlank(resultJson.getString("orderId"))) {
-                throw new RuntimeException("币安下单未获取到交易订单号");
-            }
-        } catch (Exception e) {
-            dingdingUtil.sendMsg("币安下单出现异常" + e.getMessage());
+        JSONObject resultJson = JSON.parseObject(this.doRequest("/api/v3/order", map, true, false));
+        if (StringUtils.isBlank(resultJson.getString("orderId"))) {
+            throw new RuntimeException("币安下单未获取到交易订单号");
         }
         return resultJson;
     }
