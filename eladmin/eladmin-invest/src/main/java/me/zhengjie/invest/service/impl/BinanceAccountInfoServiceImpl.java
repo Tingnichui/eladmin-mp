@@ -46,13 +46,6 @@ public class BinanceAccountInfoServiceImpl extends ServiceImpl<BinanceAccountInf
 
     private final BinanceAccountInfoMapper binanceAccountInfoMapper;
 
-    @Value("${data.rsa.public_key}")
-    private String rsaPublicKey;
-
-    @Value("${data.rsa.private_key}")
-    private String rsaPrivateKey;
-
-
     @Override
     public PageResult<BinanceAccountInfo> queryAll(BinanceAccountInfoQueryCriteria criteria, Page<Object> page){
         return PageUtil.toPage(binanceAccountInfoMapper.findAll(criteria, page));
@@ -66,36 +59,7 @@ public class BinanceAccountInfoServiceImpl extends ServiceImpl<BinanceAccountInf
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void create(BinanceAccountInfo resources) {
-        this.encryptAccountInfo(resources);
         save(resources);
-    }
-
-    private void encryptAccountInfo(BinanceAccountInfo resources) {
-        try {
-            if (StringUtils.isNotBlank(resources.getApiKey())) {
-                resources.setApiKey(RsaUtils.encryptByPublicKey(rsaPublicKey, resources.getApiKey()));
-            }
-            if (StringUtils.isNotBlank(resources.getApiSecret())) {
-                resources.setApiSecret(RsaUtils.encryptByPublicKey(rsaPublicKey, resources.getApiSecret()));
-            }
-        } catch (Exception e) {
-            log.error("币安账户加密失败", e);
-            throw new BadRequestException("加密失败");
-        }
-    }
-
-    private void decryptAccountInfo(BinanceAccountInfo resources) {
-        try {
-            if (StringUtils.isNotBlank(resources.getApiKey())) {
-                resources.setApiKey(RsaUtils.decryptByPrivateKey(rsaPrivateKey, resources.getApiKey()));
-            }
-            if (StringUtils.isNotBlank(resources.getApiSecret())) {
-                resources.setApiSecret(RsaUtils.decryptByPrivateKey(rsaPrivateKey, resources.getApiSecret()));
-            }
-        } catch (Exception e) {
-            log.error("币安账户加密失败", e);
-            throw new BadRequestException("加密失败");
-        }
     }
 
     @Override
@@ -103,7 +67,6 @@ public class BinanceAccountInfoServiceImpl extends ServiceImpl<BinanceAccountInf
     public void update(BinanceAccountInfo resources) {
         BinanceAccountInfo binanceAccountInfo = getById(resources.getId());
         binanceAccountInfo.copy(resources);
-        this.encryptAccountInfo(binanceAccountInfo);
         saveOrUpdate(binanceAccountInfo);
     }
 

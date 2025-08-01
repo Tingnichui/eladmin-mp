@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream;
 import java.security.*;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 
@@ -76,9 +77,7 @@ public class RsaUtils {
      * @throws Exception /
      */
     public static String decryptByPublicKey(String publicKeyText, String text) throws Exception {
-        X509EncodedKeySpec x509EncodedKeySpec = new X509EncodedKeySpec(Base64.decodeBase64(publicKeyText));
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        PublicKey publicKey = keyFactory.generatePublic(x509EncodedKeySpec);
+        PublicKey publicKey = getPublicKey(publicKeyText);
         Cipher cipher = Cipher.getInstance("RSA");
         cipher.init(Cipher.DECRYPT_MODE, publicKey);
         byte[] result = doLongerCipherFinal(Cipher.DECRYPT_MODE, cipher, Base64.decodeBase64(text));
@@ -129,13 +128,24 @@ public class RsaUtils {
      * @return /
      */
     public static String encryptByPublicKey(String publicKeyText, String text) throws Exception {
-        X509EncodedKeySpec x509EncodedKeySpec2 = new X509EncodedKeySpec(Base64.decodeBase64(publicKeyText));
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        PublicKey publicKey = keyFactory.generatePublic(x509EncodedKeySpec2);
+        PublicKey publicKey = getPublicKey(publicKeyText);
         Cipher cipher = Cipher.getInstance("RSA");
         cipher.init(Cipher.ENCRYPT_MODE, publicKey);
         byte[] result = doLongerCipherFinal(Cipher.ENCRYPT_MODE, cipher, text.getBytes());
         return Base64.encodeBase64String(result);
+    }
+
+    public static String encryptByPublicKey(PublicKey publicKey, String text) throws Exception {
+        Cipher cipher = Cipher.getInstance("RSA");
+        cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+        byte[] result = doLongerCipherFinal(Cipher.ENCRYPT_MODE, cipher, text.getBytes());
+        return Base64.encodeBase64String(result);
+    }
+
+    public static PublicKey getPublicKey(String publicKeyText) throws NoSuchAlgorithmException, InvalidKeySpecException {
+        X509EncodedKeySpec x509EncodedKeySpec2 = new X509EncodedKeySpec(Base64.decodeBase64(publicKeyText));
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+        return keyFactory.generatePublic(x509EncodedKeySpec2);
     }
 
     private static byte[] doLongerCipherFinal(int opMode,Cipher cipher, byte[] source) throws Exception {
