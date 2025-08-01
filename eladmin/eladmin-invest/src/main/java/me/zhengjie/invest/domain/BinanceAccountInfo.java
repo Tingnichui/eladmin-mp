@@ -26,6 +26,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import me.zhengjie.annotation.DecryptField;
 import me.zhengjie.annotation.EncryptField;
+import me.zhengjie.annotation.MaskField;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -66,10 +67,12 @@ public class BinanceAccountInfo implements Serializable {
     @ApiModelProperty(value = "totalInvestment")
     private BigDecimal totalInvestment;
 
+    @MaskField
     @EncryptField
     @ApiModelProperty(value = "apiKey，加密")
     private String apiKey;
 
+    @MaskField
     @EncryptField
     @ApiModelProperty(value = "apiSecret，加密")
     private String apiSecret;

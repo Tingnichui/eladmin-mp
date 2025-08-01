@@ -2,6 +2,7 @@ package me.zhengjie.aspect;
 
 import me.zhengjie.annotation.DecryptField;
 import me.zhengjie.annotation.EncryptField;
+import me.zhengjie.annotation.MaskField;
 import me.zhengjie.utils.PageResult;
 import me.zhengjie.utils.RsaUtils;
 import me.zhengjie.utils.StringUtils;
@@ -70,8 +71,8 @@ public class DecryptFieldAspect {
         if (isJdkClass(target.getClass())) return;
 
         for (Field field : target.getClass().getDeclaredFields()) {
+            field.setAccessible(true);
             if (field.isAnnotationPresent(DecryptField.class)) {
-                field.setAccessible(true);
                 try {
                     Object value = field.get(target);
                     if (value instanceof String && StringUtils.isNotBlank((String) value)) {
@@ -80,6 +81,13 @@ public class DecryptFieldAspect {
                     }
                 } catch (Exception e) {
                     log.error("解密字段失败: " + field.getName(), e);
+                }
+            }
+            if (field.isAnnotationPresent(MaskField.class)) {
+                try {
+                    field.set(target, null);
+                } catch (IllegalAccessException e) {
+                    throw new RuntimeException(e);
                 }
             }
         }
