@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="me.zhengjie.invest.mapper.BinanceAccountInfoMapper">
+    <resultMap id="BaseResultMap" type="me.zhengjie.invest.domain.BinanceAccountInfo">
+        <id column="id" property="id"/>
+        <result column="id_card_name" property="idCardName"/>
+        <result column="uid" property="uid"/>
+        <result column="phone_number" property="phoneNumber"/>
+        <result column="email" property="email"/>
+        <result column="total_investment" property="totalInvestment"/>
+        <result column="api_key" property="apiKey"/>
+        <result column="api_secret" property="apiSecret"/>
+        <result column="remark" property="remark"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, id_card_name, uid, phone_number, email, total_investment, api_key, api_secret, remark
+    </sql>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List"/>
+        from binance_account_info
+        <where>
+            <if test="criteria.idCardName != null">
+                and id_card_name like concat('%',#{criteria.idCardName},'%')
+            </if>
+            <if test="criteria.uid != null">
+                and uid = #{criteria.uid}
+            </if>
+            <if test="criteria.phoneNumber != null">
+                and phone_number like concat('%',#{criteria.phoneNumber},'%')
+            </if>
+            <if test="criteria.email != null">
+                and email like concat('%',#{criteria.email},'%')
+            </if>
+            <if test="criteria.totalInvestment != null and criteria.totalInvestment.size() > 0">
+                AND total_investment BETWEEN #{criteria.totalInvestment[0]} AND #{criteria.totalInvestment[1]}
+            </if>
+        </where>
+        order by id desc
+    </select>
+</mapper>
