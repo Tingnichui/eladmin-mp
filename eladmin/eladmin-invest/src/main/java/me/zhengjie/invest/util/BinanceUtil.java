@@ -52,7 +52,7 @@ public class BinanceUtil {
         Map<String, Object> params = new HashMap<>();
         params.put("symbol", symbol);
 //        params.put("startTime", startTime.getTime());
-        return this.doRequest("/api/v3/myTrades", params, true);
+        return this.doRequest("/api/v3/myTrades", params, true, true);
     }
 
     public BigDecimal getPrice(BinanceEnum.SYMBOL symbol) {
@@ -67,14 +67,14 @@ public class BinanceUtil {
         return JSON.parseObject(request.execute().body()).getBigDecimal("price");
     }
 
-    public List<InvestKlinesRecord> getKlines(BinanceEnum.SYMBOL symbol, BinanceEnum.KLINES_INTERVAL interval,Date startTime,Date endTime) {
+    public List<InvestKlinesRecord> getKlines(BinanceEnum.SYMBOL symbol, BinanceEnum.KLINES_INTERVAL interval, Date startTime, Date endTime) {
         Map<String, Object> params = new HashMap<>();
         params.put("symbol", symbol);
         params.put("interval", interval.getValue());
         params.put("startTime", startTime.getTime());
         params.put("endTime", endTime.getTime());
         params.put("limit", 1000);
-         List<List> rawKlinesList = JSON.parseArray(this.doRequest("/api/v3/klines", params, true)).toJavaList(List.class);
+        List<List> rawKlinesList = JSON.parseArray(this.doRequest("/api/v3/klines", params, false, true)).toJavaList(List.class);
 
         List<InvestKlinesRecord> investKlinesRecordList = new ArrayList<>();
         for (List item : rawKlinesList) {
@@ -104,7 +104,7 @@ public class BinanceUtil {
         Map<String, Object> map = apiDto.toMap();
         JSONObject resultJson = null;
         try {
-            resultJson = JSON.parseObject(this.doRequest("/api/v3/order", map, false));
+            resultJson = JSON.parseObject(this.doRequest("/api/v3/order", map, true, false));
             if (StringUtils.isBlank(resultJson.getString("orderId"))) {
                 throw new RuntimeException("币安下单未获取到交易订单号");
             }
@@ -114,7 +114,7 @@ public class BinanceUtil {
         return resultJson;
     }
 
-    private String doRequest(String url, Map<String, Object> params, Boolean getFlag) {
+    private String doRequest(String url, Map<String, Object> params, Boolean signFlag, Boolean getFlag) {
         log.info("入参：{}", JSON.toJSONString(params));
 
         // 过滤空值
@@ -125,8 +125,8 @@ public class BinanceUtil {
                         Map.Entry::getValue
                 ));
 
-        // post请求才需要加时间戳进行加签
-        if (!getFlag) {
+        // 是否需要加签
+        if (signFlag) {
             // 增加时间戳
             params.put("timestamp", System.currentTimeMillis());
 
