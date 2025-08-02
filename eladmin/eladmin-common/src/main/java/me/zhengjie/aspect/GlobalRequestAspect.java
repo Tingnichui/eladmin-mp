@@ -13,12 +13,10 @@ import java.lang.reflect.Field;
 
 @Aspect
 @Component
-public class EncryptFieldAspect {
-
+public class GlobalRequestAspect {
 
     @Resource
     private DataSecurityUtil dataSecurityUtil;
-
 
     @Before("execution(* me.zhengjie.*.rest..*(..))")
     public void beforeController(JoinPoint joinPoint) {
