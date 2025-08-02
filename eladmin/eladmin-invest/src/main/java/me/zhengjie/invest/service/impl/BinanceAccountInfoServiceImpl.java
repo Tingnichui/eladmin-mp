@@ -160,4 +160,22 @@ public class BinanceAccountInfoServiceImpl extends ServiceImpl<BinanceAccountInf
 
         return filterApiValidAccount(accountInfoList);
     }
+
+    @Override
+    public void changeAutoTradeFlag(Integer id) {
+        BinanceAccountInfo accountInfo = this.getById(id);
+        if (null == accountInfo) {
+            throw new BadRequestException("账户信息不存在");
+        }
+        if (accountInfo.getApiValidFlag() != 1) {
+            throw new BadRequestException("账户API不可用");
+        }
+
+        this.update(
+                Wrappers.lambdaUpdate(BinanceAccountInfo.class)
+                        .eq(BinanceAccountInfo::getId, id)
+                        .set(BinanceAccountInfo::getAutoTradeFlag, 1 ^ accountInfo.getAutoTradeFlag())
+        );
+
+    }
 }

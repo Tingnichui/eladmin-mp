@@ -24,4 +24,12 @@ export function edit(data) {
   })
 }
 
+export function changeAutoTradeFlag(id) {
+  return request({
+    url: 'api/binanceAccountInfo/changeAutoTradeFlag',
+    method: 'put',
+    data: id
+  })
+}
+
 export default { add, edit, del }

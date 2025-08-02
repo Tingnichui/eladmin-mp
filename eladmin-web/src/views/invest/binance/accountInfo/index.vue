@@ -97,7 +97,12 @@
         <el-table-column prop="totalInvestment" label="总投资额" />
         <el-table-column prop="autoTradeFlag" label="自动交易">
           <template slot-scope="scope">
-            {{ dict.label.common_flag[scope.row.autoTradeFlag] }}
+            <el-switch
+              :value="scope.row.autoTradeFlag === 1"
+              active-color="#409EFF"
+              inactive-color="#F56C6C"
+              @change="(val) => changeAutoTradeFlag(scope.row, val)"
+            />
           </template>
         </el-table-column>
         <el-table-column prop="apiValidFlag" label="API可用">
@@ -122,7 +127,7 @@
 </template>
 
 <script>
-import crudBinanceAccountInfo from '@/api/binanceAccountInfo'
+import crudBinanceAccountInfo, { changeAutoTradeFlag } from '@/api/binanceAccountInfo'
 import CRUD, { presenter, header, form, crud } from '@crud/crud'
 import rrOperation from '@crud/RR.operation'
 import crudOperation from '@crud/CRUD.operation'
@@ -176,6 +181,30 @@ export default {
     }
   },
   methods: {
+    // 改变状态
+    changeAutoTradeFlag(data, val) {
+      const newFlag = val ? 1 : 0
+      const oldFlag = data.autoTradeFlag
+      this.$confirm(
+        `此操作将 ${val ? '启动' : '关闭'} 账户[${data.idCardName}]自动交易 ，是否继续？`,
+        '提示',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      ).then(() => {
+        data.autoTradeFlag = newFlag
+        // // 提交更新
+        changeAutoTradeFlag(data.id).then(() => {
+          this.crud.notify(`${val ? '启动' : '关闭'}成功`, CRUD.NOTIFICATION_TYPE.SUCCESS)
+        }).catch(() => {
+          data.autoTradeFlag = oldFlag // 如果接口失败，还原旧状态
+        })
+      }).catch(() => {
+        data.autoTradeFlag = oldFlag // 如果取消操作，还原旧状态
+      })
+    },
     // 钩子：在获取表格数据之前执行，false 则代表不获取数据
     [CRUD.HOOK.beforeRefresh]() {
       return true

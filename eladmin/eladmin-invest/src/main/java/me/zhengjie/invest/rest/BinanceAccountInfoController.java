@@ -78,6 +78,15 @@ public class BinanceAccountInfoController {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
+    @PutMapping("/changeAutoTradeFlag")
+    @Log("修改币安账户")
+    @ApiOperation("修改币安账户")
+    @PreAuthorize("@el.check('binanceAccountInfo:edit')")
+    public ResponseEntity<Object> changeAutoTradeFlag(@RequestBody Integer id){
+        binanceAccountInfoService.changeAutoTradeFlag(id);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
     @DeleteMapping
     @Log("删除币安账户")
     @ApiOperation("删除币安账户")
