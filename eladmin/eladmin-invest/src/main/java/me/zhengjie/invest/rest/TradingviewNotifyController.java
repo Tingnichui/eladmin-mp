@@ -89,7 +89,6 @@ public class TradingviewNotifyController {
                 switch (operateType) {
                     case "OPEN":
                         // 开仓,判断一下仓位，不要在高位买太多
-                        binanceTradeInfoService.syncTradeInfo(symbol);
                         BinanceTradeInfoQueryCriteria criteria = new BinanceTradeInfoQueryCriteria();
                         criteria.setSymbol(symbol);
                         criteria.setTradePairingLogic("FIFO");
