@@ -1,41 +1,32 @@
 package me.zhengjie.aspect;
 
+import lombok.extern.slf4j.Slf4j;
 import me.zhengjie.annotation.DecryptField;
-import me.zhengjie.annotation.EncryptField;
 import me.zhengjie.annotation.MaskField;
+import me.zhengjie.utils.DataSecurityUtil;
 import me.zhengjie.utils.PageResult;
 import me.zhengjie.utils.RsaUtils;
 import me.zhengjie.utils.StringUtils;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Before;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
 import java.lang.reflect.Field;
 import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.util.Collection;
 
+@Slf4j
 @Aspect
 @Component
-public class DecryptFieldAspect {
+public class GlobalResponseAspect {
 
-    private static final Logger log = LoggerFactory.getLogger(DecryptFieldAspect.class);
-    @Value("${data.rsa.private_key}")
-    private String rsaPrivateKeyStr;
-
-    private PrivateKey rsaPrivateKey;
-
-    @PostConstruct
-    public void initKey() throws Exception {
-        rsaPrivateKey = RsaUtils.getPrivateKey(rsaPrivateKeyStr);
-    }
+    @Resource
+    private DataSecurityUtil dataSecurityUtil;
 
     @AfterReturning(pointcut = "execution(* me.zhengjie.*.rest..*(..))", returning = "result")
     public void afterControllerReturn(JoinPoint joinPoint, Object result) {
@@ -44,40 +35,43 @@ public class DecryptFieldAspect {
         // 处理返回值
         if (result instanceof ResponseEntity) {
             Object body = ((ResponseEntity<?>) result).getBody();
-            decrypt(body);
+            handle(body);
         } else {
-            decrypt(result);
+            handle(result);
         }
     }
 
-    private void decrypt(Object target) {
+    private void handle(Object target) {
         if (target == null) return;
 
         // 处理列表
         if (target instanceof Collection<?>) {
             for (Object item : (Collection<?>) target) {
-                decrypt(item);
+                handle(item);
             }
             return;
         }
 
         // 处理分页结果 PageResult<T>
         if (target instanceof PageResult<?>) {
-            decrypt(((PageResult<?>) target).getContent());
+            handle(((PageResult<?>) target).getContent());
             return;
         }
 
         // 跳过 JDK 类型
         if (isJdkClass(target.getClass())) return;
 
+        doHandle(target);
+    }
+
+    private void doHandle(Object target) {
         for (Field field : target.getClass().getDeclaredFields()) {
             field.setAccessible(true);
             if (field.isAnnotationPresent(DecryptField.class)) {
                 try {
                     Object value = field.get(target);
                     if (value instanceof String && StringUtils.isNotBlank((String) value)) {
-                        String decrypted = RsaUtils.decryptByPrivateKey(rsaPrivateKey, (String) value);
-                        field.set(target, decrypted);
+                        field.set(target, dataSecurityUtil.decrypt((String) value));
                     }
                 } catch (Exception e) {
                     log.error("解密字段失败: " + field.getName(), e);
