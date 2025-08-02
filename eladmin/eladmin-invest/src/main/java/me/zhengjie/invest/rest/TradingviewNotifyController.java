@@ -82,8 +82,8 @@ public class TradingviewNotifyController {
         for (BinanceAccountInfo accountInfo : accountInfoList) {
             try {
                 final Integer uid = accountInfo.getUid();
-                final String redisKey = posId + ":" + operateType + ":" + uid;
-                final String openRedisKey = posId + ":OPEN:" + uid;
+                final String redisKey = "AUTO_TRADE:" + posId + ":" + operateType + ":" + uid;
+                final String openRedisKey = "AUTO_TRADE:" + posId + ":OPEN:" + uid;
                 final boolean hasOperate = redisUtils.hasKey(redisKey);
 
                 // 该仓位还未进行操作则调用接口进行相关操作
@@ -140,7 +140,6 @@ public class TradingviewNotifyController {
                 dingdingUtil.sendMsg("调用币安接口出现异常" + e.getMessage());
             }
         }
-
 
 
     }
