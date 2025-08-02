@@ -109,6 +109,17 @@ public class BinanceUtil {
         return resultJson;
     }
 
+    public JSONObject order(BinanceOrderApiDto apiDto, int maxRetries) {
+        for (int i = 0; i < maxRetries ; i++) {
+            try {
+                return this.order(apiDto);
+            } catch (Exception e) {
+                log.error("下单失败，第 {} 次尝试", i + 1, e);
+            }
+        }
+        return null;
+    }
+
     private String doRequest(String url, Map<String, Object> params, Boolean signFlag, Boolean getFlag) {
         log.info("入参：{}", JSON.toJSONString(params));
 

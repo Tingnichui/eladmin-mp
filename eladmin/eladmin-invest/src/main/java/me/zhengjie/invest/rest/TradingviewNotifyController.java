@@ -1,6 +1,7 @@
 package me.zhengjie.invest.rest;
 
 
+import com.alibaba.fastjson.JSONObject;
 import io.swagger.annotations.Api;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -114,16 +115,9 @@ public class TradingviewNotifyController {
 
                 for (BinanceAccountInfo accountInfo : accountInfoList) {
                     BinanceAccountContextHolder.runWith(accountInfo, () -> {
-                        // 调用接口最多2次
-                        int maxRetries  = 2;
-                        for (int i = 0; i < maxRetries ; i++) {
-                            try {
-                                binanceUtil.order(apiDto);
-                                dingdingUtil.sendMsg(accountInfo.getIdCardName() + "-调用接口成功;");
-                                break;
-                            } catch (Exception e) {
-                                log.error("下单失败，第 {} 次尝试", i + 1, e);
-                            }
+                        JSONObject orderRes = binanceUtil.order(apiDto, 3);
+                        if (null != orderRes) {
+                            dingdingUtil.sendMsg(accountInfo.getIdCardName() + "-调用接口成功;");
                         }
                     });
                 }
