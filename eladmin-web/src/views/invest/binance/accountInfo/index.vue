@@ -69,9 +69,9 @@
             <el-radio v-model="form.autoTradeFlag" label="0">否</el-radio>
             <el-radio v-model="form.autoTradeFlag" label="1">是</el-radio>
           </el-form-item>
-          <el-form-item label="API可用" prop="apiValidFlag">
-            <el-input v-model="form.apiValidFlag" style="width: 370px;" />
-          </el-form-item>
+          <!--          <el-form-item label="API可用" prop="apiValidFlag">-->
+          <!--            <el-input v-model="form.apiValidFlag" style="width: 370px;" />-->
+          <!--          </el-form-item>-->
           <el-form-item label="apiKey">
             <el-input v-model="form.apiKey" :rows="3" type="textarea" style="width: 370px;" />
           </el-form-item>

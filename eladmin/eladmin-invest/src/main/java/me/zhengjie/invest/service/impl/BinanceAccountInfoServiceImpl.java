@@ -15,9 +15,12 @@
 */
 package me.zhengjie.invest.service.impl;
 
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
+import me.zhengjie.invest.util.BinanceAccountContextHolder;
+import me.zhengjie.invest.util.BinanceUtil;
 import me.zhengjie.utils.*;
 import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -25,6 +28,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.domain.vo.BinanceAccountInfoQueryCriteria;
 import me.zhengjie.invest.mapper.BinanceAccountInfoMapper;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,6 +49,7 @@ public class BinanceAccountInfoServiceImpl extends ServiceImpl<BinanceAccountInf
 
     private final BinanceAccountInfoMapper binanceAccountInfoMapper;
     private final DataSecurityUtil dataSecurityUtil;
+    private final BinanceUtil binanceUtil;
 
     @Override
     public PageResult<BinanceAccountInfo> queryAll(BinanceAccountInfoQueryCriteria criteria, Page<Object> page){
@@ -59,6 +64,7 @@ public class BinanceAccountInfoServiceImpl extends ServiceImpl<BinanceAccountInf
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void create(BinanceAccountInfo resources) {
+        this.checkApiValid(resources);
         save(resources);
     }
 
@@ -67,7 +73,29 @@ public class BinanceAccountInfoServiceImpl extends ServiceImpl<BinanceAccountInf
     public void update(BinanceAccountInfo resources) {
         BinanceAccountInfo binanceAccountInfo = getById(resources.getId());
         binanceAccountInfo.copy(resources);
+        this.checkApiValid(binanceAccountInfo);
         saveOrUpdate(binanceAccountInfo);
+    }
+
+    private void checkApiValid(BinanceAccountInfo accountInfo) {
+        String apiKey = accountInfo.getApiKey();
+        String apiSecret = accountInfo.getApiSecret();
+        if (StringUtils.isNoneBlank(apiKey, apiSecret)) {
+            try {
+                BinanceAccountInfo tempInfo = new BinanceAccountInfo();
+                tempInfo.setApiKey(dataSecurityUtil.decrypt(apiKey));
+                tempInfo.setApiSecret(dataSecurityUtil.decrypt(apiSecret));
+
+                BinanceAccountContextHolder.runWith(tempInfo, () -> {
+                    JSONObject account = binanceUtil.account();
+                    Integer uid = account.getInteger("uid");
+                    accountInfo.setUid(uid);
+                    accountInfo.setApiValidFlag(1);
+                });
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     @Override

@@ -96,6 +96,10 @@ public class BinanceUtil {
 
     }
 
+    public JSONObject account() {
+        return JSON.parseObject(this.doRequest("/api/v3/account", new HashMap<>(), true, true));
+    }
+
     public JSONObject order(BinanceOrderApiDto apiDto) {
         Map<String, Object> map = apiDto.toMap();
         JSONObject resultJson = JSON.parseObject(this.doRequest("/api/v3/order", map, true, false));
