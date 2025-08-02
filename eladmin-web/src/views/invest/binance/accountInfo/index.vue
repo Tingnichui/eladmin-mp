@@ -8,16 +8,40 @@
         <el-input v-model="query.idCardName" clearable placeholder="实名姓名" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
         <label class="el-form-item-label">用户编号</label>
         <el-input v-model="query.uid" clearable placeholder="用户编号" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
-        <label class="el-form-item-label">手机号码</label>
-        <el-input v-model="query.phoneNumber" clearable placeholder="手机号码" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
-        <label class="el-form-item-label">邮箱</label>
-        <el-input v-model="query.email" clearable placeholder="邮箱" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
-        <date-range-picker
-          v-model="query.totalInvestment"
-          start-placeholder="totalInvestmentStart"
-          end-placeholder="totalInvestmentStart"
-          class="date-item"
-        />
+        <label class="el-form-item-label">自动交易</label>
+        <el-select
+          v-model="query.autoTradeFlag"
+          clearable
+          size="small"
+          placeholder="自动交易"
+          class="filter-item"
+          style="width: 185px"
+          @change="crud.toQuery"
+        >
+          <el-option
+            v-for="item in dict.common_flag"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
+        <label class="el-form-item-label">API可用</label>
+        <el-select
+          v-model="query.apiValidFlag"
+          clearable
+          size="small"
+          placeholder="API可用"
+          class="filter-item"
+          style="width: 185px"
+          @change="crud.toQuery"
+        >
+          <el-option
+            v-for="item in dict.common_flag"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
         <rrOperation :crud="crud" />
       </div>
       <!--如果想在工具栏加入更多按钮，可以使用插槽方式， slot = 'left' or 'right'-->
@@ -39,6 +63,14 @@
           </el-form-item>
           <el-form-item label="总投资额" prop="totalInvestment">
             <el-input v-model="form.totalInvestment" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="自动交易" prop="autoTradeFlag">
+            <!--            <el-input v-model="form.autoTradeFlag" style="width: 370px;" />-->
+            <el-radio v-model="form.autoTradeFlag" label="0">否</el-radio>
+            <el-radio v-model="form.autoTradeFlag" label="1">是</el-radio>
+          </el-form-item>
+          <el-form-item label="API可用" prop="apiValidFlag">
+            <el-input v-model="form.apiValidFlag" style="width: 370px;" />
           </el-form-item>
           <el-form-item label="apiKey">
             <el-input v-model="form.apiKey" :rows="3" type="textarea" style="width: 370px;" />
@@ -63,6 +95,16 @@
         <el-table-column prop="phoneNumber" label="手机号码" />
         <el-table-column prop="email" label="邮箱" />
         <el-table-column prop="totalInvestment" label="总投资额" />
+        <el-table-column prop="autoTradeFlag" label="自动交易">
+          <template slot-scope="scope">
+            {{ dict.label.common_flag[scope.row.autoTradeFlag] }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="apiValidFlag" label="API可用">
+          <template slot-scope="scope">
+            {{ dict.label.common_flag[scope.row.apiValidFlag] }}
+          </template>
+        </el-table-column>
         <el-table-column prop="remark" label="备注" />
         <el-table-column v-if="checkPer(['admin','binanceAccountInfo:edit','binanceAccountInfo:del'])" label="操作" width="150px" align="center">
           <template slot-scope="scope">
@@ -87,11 +129,12 @@ import crudOperation from '@crud/CRUD.operation'
 import udOperation from '@crud/UD.operation'
 import pagination from '@crud/Pagination'
 
-const defaultForm = { id: null, idCardName: null, uid: null, phoneNumber: null, email: null, totalInvestment: null, apiKey: null, apiSecret: null, remark: null }
+const defaultForm = { id: null, idCardName: null, uid: null, phoneNumber: null, email: null, totalInvestment: null, apiKey: null, apiSecret: null, remark: null, autoTradeFlag: null, apiValidFlag: null }
 export default {
   name: 'BinanceAccountInfo',
   components: { pagination, crudOperation, rrOperation, udOperation },
   mixins: [presenter(), header(), form(defaultForm), crud()],
+  dicts: ['common_flag'],
   cruds() {
     return CRUD({ title: '币安账户', url: 'api/binanceAccountInfo', idField: 'id', sort: 'id,desc', crudMethod: { ...crudBinanceAccountInfo }})
   },
@@ -114,13 +157,21 @@ export default {
         ],
         totalInvestment: [
           { required: true, message: '总投资额不能为空', trigger: 'blur' }
+        ],
+        autoTradeFlag: [
+          { required: true, message: '自动交易不能为空', trigger: 'blur' }
+        ],
+        apiValidFlag: [
+          { required: true, message: 'API可用不能为空', trigger: 'blur' }
         ]
       },
       queryTypeOptions: [
         { key: 'idCardName', display_name: '实名姓名' },
         { key: 'uid', display_name: '用户编号' },
         { key: 'phoneNumber', display_name: '手机号码' },
-        { key: 'email', display_name: '邮箱' }
+        { key: 'email', display_name: '邮箱' },
+        { key: 'autoTradeFlag', display_name: '自动交易' },
+        { key: 'apiValidFlag', display_name: 'API可用' }
       ]
     }
   },
@@ -128,6 +179,9 @@ export default {
     // 钩子：在获取表格数据之前执行，false 则代表不获取数据
     [CRUD.HOOK.beforeRefresh]() {
       return true
+    },
+    [CRUD.HOOK.beforeToEdit](crud, form) {
+      form.autoTradeFlag = String(form.autoTradeFlag)
     }
   }
 }

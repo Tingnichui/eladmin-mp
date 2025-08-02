@@ -80,6 +80,14 @@ public class BinanceAccountInfo implements Serializable {
     @ApiModelProperty(value = "备注")
     private String remark;
 
+    @NotNull
+    @ApiModelProperty(value = "是否自动交易；0否 1是")
+    private Integer autoTradeFlag;
+
+    @NotNull
+    @ApiModelProperty(value = "API是否可用：0否 1是")
+    private Integer apiValidFlag;
+
     public void copy(BinanceAccountInfo source){
         BeanUtil.copyProperties(source,this, CopyOptions.create().setIgnoreNullValue(true));
     }

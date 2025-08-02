@@ -7,11 +7,14 @@ import lombok.extern.slf4j.Slf4j;
 import me.zhengjie.annotation.AnonymousAccess;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.invest.constants.BinanceEnum;
+import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.domain.vo.TradingViewNotify;
+import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
+import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceUtil;
 import me.zhengjie.utils.DingdingUtil;
 import me.zhengjie.utils.RedisUtils;
@@ -26,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -46,6 +50,8 @@ public class TradingviewNotifyController {
     private BinanceUtil binanceUtil;
     @Resource
     private BinanceTradeInfoService binanceTradeInfoService;
+    @Resource
+    private BinanceAccountInfoService binanceAccountInfoService;
 
     @PostMapping("/trade")
     @Log("tradingview交易通知")
@@ -104,20 +110,27 @@ public class TradingviewNotifyController {
                         return;
                 }
 
-                // 调用接口最多2次
-                int maxRetries  = 2;
-                for (int i = 0; i < maxRetries ; i++) {
-                    try {
-                        binanceUtil.order(apiDto);
-                        break;
-                    } catch (Exception e) {
-                        Thread.sleep(200);
-                        log.error("下单失败，第 {} 次尝试", i + 1, e);
-                    }
+                // 查询所有自动交易的账号
+                List<BinanceAccountInfo> accountInfoList = binanceAccountInfoService.listAutoTradeAccount();
+
+                for (BinanceAccountInfo accountInfo : accountInfoList) {
+                    BinanceAccountContextHolder.runWith(accountInfo, () -> {
+                        // 调用接口最多2次
+                        int maxRetries  = 2;
+                        for (int i = 0; i < maxRetries ; i++) {
+                            try {
+                                binanceUtil.order(apiDto);
+                                dingdingUtil.sendMsg(accountInfo.getIdCardName() + "-调用接口成功;");
+                                break;
+                            } catch (Exception e) {
+                                log.error("下单失败，第 {} 次尝试", i + 1, e);
+                            }
+                        }
+                    });
                 }
+
                 // 调用接口成功之后标识
                 redisUtils.set(redisKey, "1", 30, TimeUnit.DAYS);
-                dingdingUtil.sendMsg(posId + "已成功调用接口操作");
             }
         } catch (Exception e) {
             log.error("调用币安接口出现异常", e);

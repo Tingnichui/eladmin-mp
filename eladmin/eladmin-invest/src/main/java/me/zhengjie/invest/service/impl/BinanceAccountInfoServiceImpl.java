@@ -15,6 +15,7 @@
 */
 package me.zhengjie.invest.service.impl;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.utils.*;
@@ -95,7 +96,15 @@ public class BinanceAccountInfoServiceImpl extends ServiceImpl<BinanceAccountInf
 
     @Override
     public List<BinanceAccountInfo> listUseApiAccount() {
-        List<BinanceAccountInfo> accountInfoList = this.list();
+        // 查询所有API正常的账号
+        List<BinanceAccountInfo> accountInfoList = this.list(
+                Wrappers.lambdaQuery(BinanceAccountInfo.class)
+                        .eq(BinanceAccountInfo::getApiValidFlag, 1)
+        );
+        return filterApiValidAccount(accountInfoList);
+    }
+
+    private List<BinanceAccountInfo> filterApiValidAccount(List<BinanceAccountInfo> accountInfoList) {
         return accountInfoList.stream()
                 .filter(v -> StringUtils.isNoneBlank(v.getApiKey(), v.getApiSecret()))
                 .map(v -> {
@@ -110,5 +119,17 @@ public class BinanceAccountInfoServiceImpl extends ServiceImpl<BinanceAccountInf
                 })
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<BinanceAccountInfo> listAutoTradeAccount() {
+        // 查询所有自动交易且API正常的账号
+        List<BinanceAccountInfo> accountInfoList = this.list(
+                Wrappers.lambdaQuery(BinanceAccountInfo.class)
+                        .eq(BinanceAccountInfo::getAutoTradeFlag, 1)
+                        .eq(BinanceAccountInfo::getApiValidFlag, 1)
+        );
+
+        return filterApiValidAccount(accountInfoList);
     }
 }

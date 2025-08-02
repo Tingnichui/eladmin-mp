@@ -30,4 +30,6 @@ public class BinanceAccountInfoQueryCriteria{
     private String phoneNumber;
     private String email;
     private List<BigDecimal> totalInvestment;
+    private Integer autoTradeFlag;
+    private Integer apiValidFlag;
 }

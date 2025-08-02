@@ -18,4 +18,13 @@ public class BinanceAccountContextHolder {
         CONTEXT.remove();
     }
 
+    public static void runWith(BinanceAccountInfo info, Runnable runnable) {
+        try {
+            set(info);
+            runnable.run();
+        } finally {
+            clear();
+        }
+    }
+
 }

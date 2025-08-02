@@ -11,10 +11,12 @@
         <result column="api_key" property="apiKey"/>
         <result column="api_secret" property="apiSecret"/>
         <result column="remark" property="remark"/>
+        <result column="auto_trade_flag" property="autoTradeFlag"/>
+        <result column="api_valid_flag" property="apiValidFlag"/>
     </resultMap>
 
     <sql id="Base_Column_List">
-        id, id_card_name, uid, phone_number, email, total_investment, api_key, api_secret, remark
+        id, id_card_name, uid, phone_number, email, total_investment, api_key, api_secret, remark, auto_trade_flag ,api_valid_flag
     </sql>
 
     <select id="findAll" resultMap="BaseResultMap">
@@ -27,6 +29,12 @@
             </if>
             <if test="criteria.uid != null">
                 and uid = #{criteria.uid}
+            </if>
+            <if test="criteria.autoTradeFlag != null">
+                and auto_trade_flag = #{criteria.autoTradeFlag}
+            </if>
+            <if test="criteria.apiValidFlag != null">
+                and api_valid_flag = #{criteria.apiValidFlag}
             </if>
             <if test="criteria.phoneNumber != null">
                 and phone_number like concat('%',#{criteria.phoneNumber},'%')
