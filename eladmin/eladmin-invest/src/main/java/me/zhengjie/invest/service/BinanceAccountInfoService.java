@@ -72,4 +72,7 @@ public interface BinanceAccountInfoService extends IService<BinanceAccountInfo> 
     * @throws IOException /
     */
     void download(List<BinanceAccountInfo> all, HttpServletResponse response) throws IOException;
+
+    List<BinanceAccountInfo> listUseApiAccount();
+
 }

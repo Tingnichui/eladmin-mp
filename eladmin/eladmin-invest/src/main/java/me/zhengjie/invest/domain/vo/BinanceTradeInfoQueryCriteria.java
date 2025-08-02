@@ -16,18 +16,13 @@
 package me.zhengjie.invest.domain.vo;
 
 import lombok.Data;
-import me.zhengjie.utils.enums.OrderDirectionEnum;
-
 import java.sql.Timestamp;
 import java.math.BigDecimal;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 /**
 * @author genghui
-* @date 2025-07-05
+* @date 2025-08-02
 **/
 @Data
 public class BinanceTradeInfoQueryCriteria{
@@ -37,6 +32,7 @@ public class BinanceTradeInfoQueryCriteria{
     private Integer isBuyer;
     private Integer isMaker;
     private Integer isBestMatch;
+    private Integer uid;
     private List<BigDecimal> price;
     private List<BigDecimal> qty;
     private List<BigDecimal> commission;
@@ -44,7 +40,7 @@ public class BinanceTradeInfoQueryCriteria{
     private List<BigDecimal> quoteQty;
 
     /**
-     * 鎾悎閫昏緫
+     * 撮合逻辑
      */
     private String tradePairingLogic;
 
@@ -57,14 +53,14 @@ public class BinanceTradeInfoQueryCriteria{
 
     public void setOrderColumn(String orderColumn) {
         if (!ALLOWED_COLUMNS.contains(orderColumn)) {
-            throw new IllegalArgumentException("闈炴硶鎺掑簭瀛楁: " + orderColumn);
+            throw new IllegalArgumentException("非法排序字段: " + orderColumn);
         }
         this.orderColumn = orderColumn;
     }
 
     public void setOrderDirection(String orderDirection) {
         if (null == OrderDirectionEnum.getByValue(orderDirection)) {
-            throw new IllegalArgumentException("闈炴硶鎺掑簭鏂瑰悜: " + orderDirection);
+            throw new IllegalArgumentException("非法排序方向: " + orderDirection);
         }
         this.orderDirection = orderDirection;
     }

@@ -14,17 +14,18 @@
         <result column="is_buyer" property="isBuyer"/>
         <result column="is_maker" property="isMaker"/>
         <result column="is_best_match" property="isBestMatch"/>
+        <result column="uid" property="uid"/>
     </resultMap>
 
     <sql id="Base_Column_List">
-        id, symbol, price, qty, commission, time, order_id, quote_qty, commission_asset, is_buyer, is_maker, is_best_match
+        id, symbol, price, qty, commission, time, order_id, quote_qty, commission_asset, is_buyer, is_maker, is_best_match, uid
     </sql>
 
     <select id="findAll" resultMap="BaseResultMap">
         select
         <include refid="Base_Column_List"/>
         from binance_trade_info
-        where time > '2025-01-01'
+        <where>
             <if test="criteria.symbol != null">
                 and symbol = #{criteria.symbol}
             </if>
@@ -42,6 +43,9 @@
             </if>
             <if test="criteria.isBestMatch != null">
                 and is_best_match = #{criteria.isBestMatch}
+            </if>
+            <if test="criteria.uid != null">
+                and uid = #{criteria.uid}
             </if>
             <if test="criteria.price != null and criteria.price.size() > 0">
                 AND price BETWEEN #{criteria.price[0]} AND #{criteria.price[1]}

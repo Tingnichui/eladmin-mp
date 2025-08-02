@@ -31,7 +31,7 @@ import javax.validation.constraints.NotNull;
 /**
 * @description /
 * @author genghui
-* @date 2025-07-05
+* @date 2025-08-02
 **/
 @Data
 @TableName("binance_trade_info")
@@ -84,6 +84,10 @@ public class BinanceTradeInfo implements Serializable {
     @NotNull
     @ApiModelProperty(value = "是否为最佳匹配")
     private Integer isBestMatch;
+
+    @NotNull
+    @ApiModelProperty(value = "用户编号")
+    private Integer uid;
 
     public void copy(BinanceTradeInfo source){
         BeanUtil.copyProperties(source,this, CopyOptions.create().setIgnoreNullValue(true));
