@@ -22,12 +22,15 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.invest.constants.TradePairingLogicEnum;
+import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.mapper.BinanceTradeInfoMapper;
+import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
+import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceUtil;
 import me.zhengjie.utils.FileUtil;
 import me.zhengjie.utils.PageResult;
@@ -53,7 +56,7 @@ import java.util.stream.Collectors;
 public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMapper, BinanceTradeInfo> implements BinanceTradeInfoService {
 
     private final BinanceTradeInfoMapper binanceTradeInfoMapper;
-
+    private final BinanceAccountInfoService binanceAccountInfoService;
     private final BinanceUtil binanceUtil;
 
     @Override
@@ -109,21 +112,31 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
     @Override
     public void syncTradeInfo(String symbol) {
-        String body = binanceUtil.getMyTrades(symbol);
+        // 查询所有账号
+        List<BinanceAccountInfo> accountInfoList = binanceAccountInfoService.listUseApiAccount();
+        for (BinanceAccountInfo accountInfo : accountInfoList) {
+            // 设置账号信息
+            BinanceAccountContextHolder.set(accountInfo);
+            // 调用接口获取最近的订单信息
+            List<BinanceTradeInfo> orderInfoList = binanceUtil.getMyTrades(symbol);
+            // 查询已经在库中的订单
+            Set<Long> existOrderIdSet = this.list(
+                    Wrappers.lambdaQuery(BinanceTradeInfo.class)
+                            .select(BinanceTradeInfo::getOrderId)
+                            .in(BinanceTradeInfo::getOrderId, orderInfoList.stream().map(BinanceTradeInfo::getOrderId).collect(Collectors.toSet()))
+            ).stream().map(BinanceTradeInfo::getOrderId).collect(Collectors.toSet());
 
-        List<BinanceTradeInfo> javaList = JSON.parseArray(body).toJavaList(BinanceTradeInfo.class);
+            // 过滤掉已存在的订单
+            List<BinanceTradeInfo> newOrders = orderInfoList.stream()
+                    .filter(order -> !existOrderIdSet.contains(order.getOrderId()))
+                    .peek(order -> order.setUid(accountInfo.getUid()))
+                    .collect(Collectors.toList());
 
-        // 查询已经在库中的数据
-        List<Long> haveInDbOrderIdList = this.list(
-                Wrappers.lambdaQuery(BinanceTradeInfo.class)
-                        .select(BinanceTradeInfo::getOrderId)
-                        .in(BinanceTradeInfo::getOrderId, javaList.stream().map(BinanceTradeInfo::getOrderId).collect(Collectors.toList()))
-        ).stream().map(BinanceTradeInfo::getOrderId).collect(Collectors.toList());
+            // 保存新订单
+            this.saveOrUpdateBatch(newOrders);
 
-        javaList.removeIf(v -> haveInDbOrderIdList.contains(v.getOrderId()));
-
-        for (BinanceTradeInfo binanceTradeInfo : javaList) {
-            this.saveOrUpdate(binanceTradeInfo);
+            // 清除账号信息
+            BinanceAccountContextHolder.clear();
         }
 
     }

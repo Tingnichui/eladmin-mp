@@ -28,12 +28,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.io.IOException;
+import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletResponse;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 
 /**
 * @description 服务实现
@@ -45,6 +43,7 @@ import java.util.LinkedHashMap;
 public class BinanceAccountInfoServiceImpl extends ServiceImpl<BinanceAccountInfoMapper, BinanceAccountInfo> implements BinanceAccountInfoService {
 
     private final BinanceAccountInfoMapper binanceAccountInfoMapper;
+    private final DataSecurityUtil dataSecurityUtil;
 
     @Override
     public PageResult<BinanceAccountInfo> queryAll(BinanceAccountInfoQueryCriteria criteria, Page<Object> page){
@@ -92,5 +91,24 @@ public class BinanceAccountInfoServiceImpl extends ServiceImpl<BinanceAccountInf
             list.add(map);
         }
         FileUtil.downloadExcel(list, response);
+    }
+
+    @Override
+    public List<BinanceAccountInfo> listUseApiAccount() {
+        List<BinanceAccountInfo> accountInfoList = this.list();
+        return accountInfoList.stream()
+                .filter(v -> StringUtils.isNoneBlank(v.getApiKey(), v.getApiSecret()))
+                .map(v -> {
+                    try {
+                        v.setApiKey(dataSecurityUtil.decrypt(v.getApiKey()));
+                        v.setApiSecret(dataSecurityUtil.decrypt(v.getApiSecret()));
+                        return v;
+                    } catch (Exception e) {
+                        log.error(v.getIdCardName() +"，解密出现异常", e);
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 }

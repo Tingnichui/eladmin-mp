@@ -25,7 +25,7 @@
         select
         <include refid="Base_Column_List"/>
         from binance_trade_info
-        <where>
+        where time > '2025-01-01'
             <if test="criteria.symbol != null">
                 and symbol = #{criteria.symbol}
             </if>

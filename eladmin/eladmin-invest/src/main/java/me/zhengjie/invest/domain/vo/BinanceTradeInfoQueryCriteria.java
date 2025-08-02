@@ -16,8 +16,12 @@
 package me.zhengjie.invest.domain.vo;
 
 import lombok.Data;
+import me.zhengjie.utils.enums.OrderDirectionEnum;
+
 import java.sql.Timestamp;
 import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -40,7 +44,7 @@ public class BinanceTradeInfoQueryCriteria{
     private List<BigDecimal> quoteQty;
 
     /**
-     * 撮合逻辑
+     * 鎾悎閫昏緫
      */
     private String tradePairingLogic;
 
@@ -53,14 +57,14 @@ public class BinanceTradeInfoQueryCriteria{
 
     public void setOrderColumn(String orderColumn) {
         if (!ALLOWED_COLUMNS.contains(orderColumn)) {
-            throw new IllegalArgumentException("非法排序字段: " + orderColumn);
+            throw new IllegalArgumentException("闈炴硶鎺掑簭瀛楁: " + orderColumn);
         }
         this.orderColumn = orderColumn;
     }
 
     public void setOrderDirection(String orderDirection) {
         if (null == OrderDirectionEnum.getByValue(orderDirection)) {
-            throw new IllegalArgumentException("非法排序方向: " + orderDirection);
+            throw new IllegalArgumentException("闈炴硶鎺掑簭鏂瑰悜: " + orderDirection);
         }
         this.orderDirection = orderDirection;
     }
