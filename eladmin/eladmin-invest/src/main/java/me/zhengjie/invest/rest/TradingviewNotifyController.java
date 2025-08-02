@@ -70,65 +70,70 @@ public class TradingviewNotifyController {
     }
 
     private void doTrade(TradingViewNotify tradingViewNotify) {
-        // 调用接口进行交易
-        try {
-            final String posId = tradingViewNotify.getPosId();
-            final String operateType = tradingViewNotify.getOperateType();
-            final String redisKey = posId + "_" + operateType;
-            final boolean hasOperate = redisUtils.hasKey(redisKey);
+        final String posId = tradingViewNotify.getPosId();
+        final String operateType = tradingViewNotify.getOperateType();
 
+        if (StringUtils.isBlank(posId)) {
+            return;
+        }
 
-            // 仓位编号不为空，并且还未进行此类操作
-            if (StringUtils.isNotBlank(posId) && !hasOperate) {
-                final String symbol = tradingViewNotify.getSymbol();
-                BinanceOrderApiDto apiDto = new BinanceOrderApiDto();
-                apiDto.setSymbol(symbol);
-                apiDto.setType(BinanceEnum.TYPE.LIMIT);
-                apiDto.setTimeInForce(BinanceEnum.TIME_IN_FORCE.GTC);
-                apiDto.setQuantity(new BigDecimal("0.001"));
-                apiDto.setPrice(tradingViewNotify.getPrice());
-                switch (operateType) {
-                    case "OPEN":
-                        // 开仓,判断一下仓位，不要在高位买太多
-                        BinanceTradeInfoQueryCriteria criteria = new BinanceTradeInfoQueryCriteria();
-                        criteria.setSymbol(symbol);
-                        criteria.setTradePairingLogic("FIFO");
-                        BinanceTradeStatsInfoVO stats = binanceTradeInfoService.stats(criteria);
-                        // 当前开仓价格大于剩余未平仓均价 并且 当前未平仓价格已经大于1000u，不调用接口进行操作
-                        if (apiDto.getPrice().compareTo(stats.getTotalWaitAvgSellPrice()) > 0 && stats.getTotalWaitSellAmount().compareTo(new BigDecimal("1000")) > 0) {
-                            dingdingUtil.sendMsg("剩余未平仓已大于1000u");
+        // 查询所有自动交易的账号 遍历账号进行交易操作
+        List<BinanceAccountInfo> accountInfoList = binanceAccountInfoService.listAutoTradeAccount();
+        for (BinanceAccountInfo accountInfo : accountInfoList) {
+            try {
+                final Integer uid = accountInfo.getUid();
+                final String redisKey = posId + ":" + operateType + ":" + uid;
+                final boolean hasOperate = redisUtils.hasKey(redisKey);
+
+                // 该仓位还未进行操作则调用接口进行相关操作
+                if (!hasOperate) {
+                    final String symbol = tradingViewNotify.getSymbol();
+                    BinanceOrderApiDto apiDto = new BinanceOrderApiDto();
+                    apiDto.setSymbol(symbol);
+                    apiDto.setType(BinanceEnum.TYPE.LIMIT);
+                    apiDto.setTimeInForce(BinanceEnum.TIME_IN_FORCE.GTC);
+                    apiDto.setQuantity(new BigDecimal("0.001"));
+                    apiDto.setPrice(tradingViewNotify.getPrice());
+                    switch (operateType) {
+                        case "OPEN":
+                            // 开仓,判断一下仓位，不要在高位买太多
+                            BinanceTradeInfoQueryCriteria criteria = new BinanceTradeInfoQueryCriteria();
+                            criteria.setSymbol(symbol);
+                            criteria.setTradePairingLogic("FIFO");
+                            BinanceTradeStatsInfoVO stats = binanceTradeInfoService.stats(criteria);
+                            // 当前开仓价格大于剩余未平仓均价 并且 当前未平仓价格已经大于1000u，不调用接口进行操作
+                            if (apiDto.getPrice().compareTo(stats.getTotalWaitAvgSellPrice()) > 0 && stats.getTotalWaitSellAmount().compareTo(new BigDecimal("1000")) > 0) {
+                                dingdingUtil.sendMsg("剩余未平仓已大于1000u");
+                                return;
+                            }
+                            apiDto.setSide(BinanceEnum.SIDE.BUY);
+                            break;
+                        case "TAKE_PROFIT":
+                            // 止盈
+                            apiDto.setSide(BinanceEnum.SIDE.SELL);
+                            break;
+                        case "STOP_LOSS":
+                            // 止损暂时不做
                             return;
-                        }
-                        apiDto.setSide(BinanceEnum.SIDE.BUY);
-                        break;
-                    case "TAKE_PROFIT":
-                        // 止盈
-                        apiDto.setSide(BinanceEnum.SIDE.SELL);
-                        break;
-                    case "STOP_LOSS":
-                        // 止损暂时不做
-                        return;
-                }
+                    }
 
-                // 查询所有自动交易的账号
-                List<BinanceAccountInfo> accountInfoList = binanceAccountInfoService.listAutoTradeAccount();
-
-                for (BinanceAccountInfo accountInfo : accountInfoList) {
                     BinanceAccountContextHolder.runWith(accountInfo, () -> {
                         JSONObject orderRes = binanceUtil.order(apiDto, 3);
                         if (null != orderRes) {
                             dingdingUtil.sendMsg(accountInfo.getIdCardName() + "-调用接口成功;");
+                            // 调用接口成功之后标识
+                            redisUtils.set(redisKey, "1", 30, TimeUnit.DAYS);
                         }
                     });
                 }
-
-                // 调用接口成功之后标识
-                redisUtils.set(redisKey, "1", 30, TimeUnit.DAYS);
+            } catch (Exception e) {
+                log.error("调用币安接口出现异常", e);
+                dingdingUtil.sendMsg("调用币安接口出现异常" + e.getMessage());
             }
-        } catch (Exception e) {
-            log.error("调用币安接口出现异常", e);
-            dingdingUtil.sendMsg("调用币安接口出现异常" + e.getMessage());
         }
+
+
+
     }
 
 
