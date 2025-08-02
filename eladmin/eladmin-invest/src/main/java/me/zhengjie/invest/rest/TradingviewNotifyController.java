@@ -83,6 +83,7 @@ public class TradingviewNotifyController {
             try {
                 final Integer uid = accountInfo.getUid();
                 final String redisKey = posId + ":" + operateType + ":" + uid;
+                final String openRedisKey = posId + ":OPEN:" + uid;
                 final boolean hasOperate = redisUtils.hasKey(redisKey);
 
                 // 该仓位还未进行操作则调用接口进行相关操作
@@ -109,10 +110,18 @@ public class TradingviewNotifyController {
                             apiDto.setSide(BinanceEnum.SIDE.BUY);
                             break;
                         case "TAKE_PROFIT":
+                            // 先判断是否成功开仓了
+                            if (!redisUtils.hasKey(openRedisKey)) {
+                                return;
+                            }
                             // 止盈
                             apiDto.setSide(BinanceEnum.SIDE.SELL);
                             break;
                         case "STOP_LOSS":
+                            // 先判断是否成功开仓了
+                            if (!redisUtils.hasKey(openRedisKey)) {
+                                return;
+                            }
                             // 止损暂时不做
                             return;
                     }
