@@ -9,6 +9,8 @@ import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import me.zhengjie.invest.constants.BinanceEnum;
+import me.zhengjie.invest.domain.BinanceAccountInfo;
+import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.domain.InvestKlinesRecord;
 import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
 import me.zhengjie.utils.DingdingUtil;
@@ -38,18 +40,15 @@ public class BinanceUtil {
     private Integer proxyPort;
     @Value("${binance.api_host}")
     private String apiHost;
-    @Value("${binance.api_key}")
-    private String apiKey;
-    @Value("${binance.api_secret}")
-    private String apiSecret;
     @Resource
     private DingdingUtil dingdingUtil;
 
-    public String getMyTrades(String symbol) {
+    public List<BinanceTradeInfo> getMyTrades(String symbol) {
         Map<String, Object> params = new HashMap<>();
         params.put("symbol", symbol);
 //        params.put("startTime", startTime.getTime());
-        return this.doRequest("/api/v3/myTrades", params, true, true);
+        return JSON.parseArray(this.doRequest("/api/v3/myTrades", params, true, true))
+                .toJavaList(BinanceTradeInfo.class);
     }
 
     public BigDecimal getPrice(BinanceEnum.SYMBOL symbol) {
@@ -108,6 +107,16 @@ public class BinanceUtil {
 
     private String doRequest(String url, Map<String, Object> params, Boolean signFlag, Boolean getFlag) {
         log.info("入参：{}", JSON.toJSONString(params));
+
+        BinanceAccountInfo binanceAccountInfo = BinanceAccountContextHolder.get();
+        if (null == binanceAccountInfo) {
+            throw new RuntimeException("币安账户信息为空");
+        }
+        final String apiKey = binanceAccountInfo.getApiKey();
+        final String apiSecret = binanceAccountInfo.getApiSecret();
+        if (StringUtils.isAnyBlank(apiKey, apiSecret)) {
+            throw new RuntimeException(binanceAccountInfo.getIdCardName() + "-币安账户API配置为空");
+        }
 
         // 过滤空值
         params = params.entrySet().stream()
