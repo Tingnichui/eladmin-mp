@@ -30,8 +30,8 @@ spring:
        master:
          #      url: jdbc:log4jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:eladmin}?serverTimezone=Asia/Shanghai&characterEncoding=utf8&useSSL=false
          url: ENC(wHbZ7KR1dlonF61rKLoPYD/mJRUyr+t8N6iWRNg3floCdF2VNZE2Q+8IpC91M1VyS1ForiIzDfu5p5ntyI5BRJT+6X+szpLGp/GV9gO63OU5nzAVcpYJ0ISG8oAyTQawTPl/Tz42K1LHmeh2QRuNd0W57gQpCtaVKYBLeLooz86ooqOeGG3r5EIDx7gcOdrJJ4Ewd8oCMJCe87WCvIgERB2MrIqyd09DZBayBevOC4M=)
-         username: ${DB_USER:ENC(9w7cKcQLIn7fidkAddmFoKc1qxO2o52z6NXVL+xm2+hZHTSgNF4Z+i0MvBxM0aMR)}
-         password: ${DB_PWD:ENC(HR5Uk+mC7JLrlImx6VDVM60SpeRIkt1VDtz2KLQTDvwOpT+JP0U+l4JCqHu8ZfRl38Mgk7Ff8fp6WPS37k+UdA==)}
+         username: ${DB_USER:ENC(DjA8275i2+1Xf6mr0GoZICzZM3pHiQL142F7JAHXxIlAbDkW201umO+2QlnZ6IQH)}
+         password: ${DB_PWD:ENC(Kn3Ylhnh6Rs+sZdjJzNAb5kVOt2zCjPSK6+Iz4eAnac6qaHBh/210soRzyHbFkYrfwAcVl+cmfS1cbIkKYAawQ==)}
          driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
          type: com.alibaba.druid.pool.DruidDataSource
        media_crawler:
