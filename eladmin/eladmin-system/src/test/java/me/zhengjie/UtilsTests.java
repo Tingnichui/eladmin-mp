@@ -53,8 +53,11 @@ public class UtilsTests {
     void getKlines() {
         BinanceEnum.SYMBOL symbol = BinanceEnum.SYMBOL.BTCUSDT;
         BinanceEnum.KLINES_INTERVAL interval = BinanceEnum.KLINES_INTERVAL.MINUTE_15;
-        final long defaultStartTime = DateUtil.parse("2017-08-16", DatePattern.NORM_DATE_PATTERN).getTime();
-        investKlinesRecordService.syncKlinesRecord(symbol, interval, defaultStartTime);
+        final long startTime = 1504713600000L;
+        List<InvestKlinesRecord> klines = binanceUtil.getKlines(symbol, interval, startTime, null);
+        for (InvestKlinesRecord kline : klines) {
+            System.err.println(DateUtil.format(new Date(kline.getOpenTime()), DatePattern.NORM_DATETIME_PATTERN));
+        }
     }
 
     @Test
