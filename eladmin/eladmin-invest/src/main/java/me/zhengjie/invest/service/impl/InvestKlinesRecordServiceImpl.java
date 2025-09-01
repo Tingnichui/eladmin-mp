@@ -15,7 +15,11 @@
 */
 package me.zhengjie.invest.service.impl;
 
+import cn.hutool.core.date.DateUtil;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.InvestKlinesRecord;
+import me.zhengjie.invest.util.BinanceUtil;
 import me.zhengjie.utils.FileUtil;
 import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -26,12 +30,11 @@ import me.zhengjie.invest.mapper.InvestKlinesRecordMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import me.zhengjie.utils.PageUtil;
-import java.util.List;
-import java.util.Map;
+
+import java.util.*;
 import java.io.IOException;
 import javax.servlet.http.HttpServletResponse;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
+
 import me.zhengjie.utils.PageResult;
 
 /**
@@ -44,6 +47,7 @@ import me.zhengjie.utils.PageResult;
 public class InvestKlinesRecordServiceImpl extends ServiceImpl<InvestKlinesRecordMapper, InvestKlinesRecord> implements InvestKlinesRecordService {
 
     private final InvestKlinesRecordMapper investKlinesRecordMapper;
+    private final BinanceUtil binanceUtil;
 
     @Override
     public PageResult<InvestKlinesRecord> queryAll(InvestKlinesRecordQueryCriteria criteria, Page<Object> page){
@@ -97,4 +101,35 @@ public class InvestKlinesRecordServiceImpl extends ServiceImpl<InvestKlinesRecor
         }
         FileUtil.downloadExcel(list, response);
     }
+
+    @Override
+    public void syncKlinesRecord(BinanceEnum.SYMBOL symbol, BinanceEnum.KLINES_INTERVAL interval, long defaultStartTime) {
+        // 获取数据库中最新的K线
+        InvestKlinesRecord lastOneInDb = this.getOne(
+                Wrappers.lambdaQuery(InvestKlinesRecord.class)
+                        .eq(InvestKlinesRecord::getSymbol, symbol)
+                        .eq(InvestKlinesRecord::getPeriod, interval.getPeriod())
+                        .orderByDesc(InvestKlinesRecord::getOpenTime)
+                        .last("limit 1")
+        );
+
+        // 查询K线时间范围 库中有数据就按照库中数据
+        long startTime = defaultStartTime;
+        if (null != lastOneInDb) {
+            startTime = lastOneInDb.getOpenTime();
+            // 因为不确定当前库中最新K线是否已经收盘，所以删除之后在查询
+            investKlinesRecordMapper.deleteById(lastOneInDb.getId());
+        }
+
+        long now = System.currentTimeMillis();
+        while (now > startTime) {
+            long endTime = DateUtil.offsetDay(new Date(startTime), 10).getTime() - 1;
+            List<InvestKlinesRecord> klines = binanceUtil.getKlines(symbol, interval, startTime, endTime);
+            this.saveBatch(klines);
+            startTime = endTime;
+        }
+
+    }
+
+
 }

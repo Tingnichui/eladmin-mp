@@ -52,11 +52,11 @@ public class InvestKlinesRecord implements Serializable {
 
     @NotNull
     @ApiModelProperty(value = "开盘时间")
-    private Timestamp openTime;
+    private Long openTime;
 
     @NotNull
     @ApiModelProperty(value = "收盘时间")
-    private Timestamp closeTime;
+    private Long closeTime;
 
     @NotNull
     @ApiModelProperty(value = "开盘价")
