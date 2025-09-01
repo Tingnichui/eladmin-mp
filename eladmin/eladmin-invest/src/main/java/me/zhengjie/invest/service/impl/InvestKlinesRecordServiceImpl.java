@@ -27,6 +27,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import me.zhengjie.invest.service.InvestKlinesRecordService;
 import me.zhengjie.invest.domain.vo.InvestKlinesRecordQueryCriteria;
 import me.zhengjie.invest.mapper.InvestKlinesRecordMapper;
+import me.zhengjie.utils.RedisUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import me.zhengjie.utils.PageUtil;
@@ -48,6 +49,7 @@ public class InvestKlinesRecordServiceImpl extends ServiceImpl<InvestKlinesRecor
 
     private final InvestKlinesRecordMapper investKlinesRecordMapper;
     private final BinanceUtil binanceUtil;
+    private final RedisUtils redisUtils;
 
     @Override
     public PageResult<InvestKlinesRecord> queryAll(InvestKlinesRecordQueryCriteria criteria, Page<Object> page){
@@ -104,29 +106,39 @@ public class InvestKlinesRecordServiceImpl extends ServiceImpl<InvestKlinesRecor
 
     @Override
     public void syncKlinesRecord(BinanceEnum.SYMBOL symbol, BinanceEnum.KLINES_INTERVAL interval, long defaultStartTime) {
-        // 获取数据库中最新的K线
-        InvestKlinesRecord lastOneInDb = this.getOne(
-                Wrappers.lambdaQuery(InvestKlinesRecord.class)
-                        .eq(InvestKlinesRecord::getSymbol, symbol)
-                        .eq(InvestKlinesRecord::getPeriod, interval.getPeriod())
-                        .orderByDesc(InvestKlinesRecord::getOpenTime)
-                        .last("limit 1")
-        );
 
-        // 查询K线时间范围 库中有数据就按照库中数据
-        long startTime = defaultStartTime;
-        if (null != lastOneInDb) {
-            startTime = lastOneInDb.getOpenTime();
-            // 因为不确定当前库中最新K线是否已经收盘，所以删除之后在查询
-            investKlinesRecordMapper.deleteById(lastOneInDb.getId());
-        }
-
+        final String lockKey = String.format("SYNC_KLINES:%s:%s", symbol, interval);
         long now = System.currentTimeMillis();
-        while (now > startTime) {
-            long endTime = DateUtil.offsetDay(new Date(startTime), 10).getTime() - 1;
-            List<InvestKlinesRecord> klines = binanceUtil.getKlines(symbol, interval, startTime, endTime);
-            this.saveBatch(klines);
-            startTime = endTime;
+
+        boolean lock = redisUtils.setIfAbsent(lockKey, now);
+        try {
+            if (lock) {
+                // 获取数据库中最新的K线
+                InvestKlinesRecord lastOneInDb = this.getOne(
+                        Wrappers.lambdaQuery(InvestKlinesRecord.class)
+                                .eq(InvestKlinesRecord::getSymbol, symbol)
+                                .eq(InvestKlinesRecord::getPeriod, interval.getPeriod())
+                                .orderByDesc(InvestKlinesRecord::getOpenTime)
+                                .last("limit 1")
+                );
+
+                // 查询K线时间范围 库中有数据就按照库中数据
+                long startTime = defaultStartTime;
+                if (null != lastOneInDb) {
+                    startTime = lastOneInDb.getOpenTime();
+                    // 因为不确定当前库中最新K线是否已经收盘，所以删除之后在查询
+                    investKlinesRecordMapper.deleteById(lastOneInDb.getId());
+                }
+
+                while (now > startTime) {
+                    long endTime = DateUtil.offsetDay(new Date(startTime), 10).getTime() - 1;
+                    List<InvestKlinesRecord> klines = binanceUtil.getKlines(symbol, interval, startTime, endTime);
+                    this.saveBatch(klines);
+                    startTime = endTime;
+                }
+            }
+        } finally {
+            redisUtils.del(lockKey);
         }
 
     }
