@@ -70,12 +70,16 @@ public class BinanceUtil {
      * @param endTime 结束时间，毫秒时间戳
      * @return 返回   开始时间 <= 开盘时间 的数据
      */
-    public List<InvestKlinesRecord> getKlines(BinanceEnum.SYMBOL symbol, BinanceEnum.KLINES_INTERVAL interval, long startTime, long endTime) {
+    public List<InvestKlinesRecord> getKlines(BinanceEnum.SYMBOL symbol, BinanceEnum.KLINES_INTERVAL interval, Long startTime, Long endTime) {
         Map<String, Object> params = new HashMap<>();
         params.put("symbol", symbol);
         params.put("interval", interval.getValue());
-        params.put("startTime", startTime);
-        params.put("endTime", endTime);
+        if (null != startTime) {
+            params.put("startTime", startTime);
+        }
+        if (null != endTime) {
+            params.put("endTime", endTime);
+        }
         params.put("limit", 1000);
         List<List> rawKlinesList = JSON.parseArray(this.doRequest("/api/v3/klines", params, false, true)).toJavaList(List.class);
 

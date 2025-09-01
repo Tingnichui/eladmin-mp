@@ -28,6 +28,7 @@ import me.zhengjie.invest.service.InvestKlinesRecordService;
 import me.zhengjie.invest.domain.vo.InvestKlinesRecordQueryCriteria;
 import me.zhengjie.invest.mapper.InvestKlinesRecordMapper;
 import me.zhengjie.utils.RedisUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import me.zhengjie.utils.PageUtil;
@@ -130,11 +131,13 @@ public class InvestKlinesRecordServiceImpl extends ServiceImpl<InvestKlinesRecor
                     investKlinesRecordMapper.deleteById(lastOneInDb.getId());
                 }
 
-                while (now > startTime) {
-                    long endTime = DateUtil.offsetDay(new Date(startTime), 10).getTime() - 1;
-                    List<InvestKlinesRecord> klines = binanceUtil.getKlines(symbol, interval, startTime, endTime);
+                while (true) {
+                    List<InvestKlinesRecord> klines = binanceUtil.getKlines(symbol, interval, startTime, null);
+                    if (CollectionUtils.isEmpty(klines)) {
+                        break;
+                    }
                     this.saveBatch(klines);
-                    startTime = endTime;
+                    startTime = klines.get(klines.size() - 1).getCloseTime();
                 }
             }
         } finally {
