@@ -17,9 +17,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class UtilsTests {
@@ -66,7 +69,7 @@ public class UtilsTests {
         BinanceEnum.SYMBOL symbol = BinanceEnum.SYMBOL.BTCUSDT;
         List<BinanceFundingRate> list = new ArrayList<>();
 
-        long startTime = DateUtil.parse("2024-01-01 00:00:00", DatePattern.NORM_DATETIME_PATTERN).getTime();
+        long startTime = DateUtil.parse("2020-01-01 00:00:00", DatePattern.NORM_DATETIME_PATTERN).getTime();
         long endTime = DateUtil.parse("2025-01-01 00:00:00", DatePattern.NORM_DATETIME_PATTERN).getTime() - 1;
         while (true) {
             List<BinanceFundingRate> fundingRateList = binanceFuturesUtil.getFundingRate(symbol, startTime, endTime);
@@ -77,10 +80,20 @@ public class UtilsTests {
             startTime = fundingRateList.get(fundingRateList.size() - 1).getFundingTime().getTime() + 1;
         }
 
-        BigDecimal totalFundingRate = list.stream()
-                .map(item -> new BigDecimal(item.getFundingRate()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        System.err.println(totalFundingRate);
+        Map<Integer, BigDecimal> totalFundingRateByYear = list.stream()
+                .collect(Collectors.groupingBy(
+                        item -> item.getFundingTime().toInstant()
+                                .atZone(ZoneId.systemDefault())
+                                .getYear(), // 按年份分组
+                        Collectors.mapping(
+                                item -> new BigDecimal(item.getFundingRate()),
+                                Collectors.reducing(BigDecimal.ZERO, BigDecimal::add) // 累加
+                        )
+                ));
+
+        totalFundingRateByYear.forEach((year, total) ->
+                System.err.println(year + " 年总资金费率：" + total)
+        );
 
     }
 
