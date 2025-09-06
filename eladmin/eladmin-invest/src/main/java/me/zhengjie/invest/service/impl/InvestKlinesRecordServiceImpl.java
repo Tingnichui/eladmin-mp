@@ -15,11 +15,10 @@
 */
 package me.zhengjie.invest.service.impl;
 
-import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.InvestKlinesRecord;
-import me.zhengjie.invest.util.BinanceUtil;
+import me.zhengjie.invest.util.BinanceSpotUtil;
 import me.zhengjie.utils.FileUtil;
 import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -49,7 +48,7 @@ import me.zhengjie.utils.PageResult;
 public class InvestKlinesRecordServiceImpl extends ServiceImpl<InvestKlinesRecordMapper, InvestKlinesRecord> implements InvestKlinesRecordService {
 
     private final InvestKlinesRecordMapper investKlinesRecordMapper;
-    private final BinanceUtil binanceUtil;
+    private final BinanceSpotUtil binanceSpotUtil;
     private final RedisUtils redisUtils;
 
     @Override
@@ -132,7 +131,7 @@ public class InvestKlinesRecordServiceImpl extends ServiceImpl<InvestKlinesRecor
                 }
 
                 while (true) {
-                    List<InvestKlinesRecord> klines = binanceUtil.getKlines(symbol, interval, startTime, null);
+                    List<InvestKlinesRecord> klines = binanceSpotUtil.getKlines(symbol, interval, startTime, null);
                     if (CollectionUtils.isEmpty(klines)) {
                         break;
                     }

@@ -62,7 +62,10 @@ data:
 
 # 币安密钥
 binance:
-  api_host: https://api.binance.com
+  spot:
+    api_host: https://api.binance.com
+  futures:
+    api_host: https://fapi.binance.com
 
 tradingview:
   notify:

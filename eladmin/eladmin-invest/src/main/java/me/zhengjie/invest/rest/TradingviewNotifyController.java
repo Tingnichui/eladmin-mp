@@ -16,7 +16,7 @@ import me.zhengjie.invest.domain.vo.TradingViewNotify;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
-import me.zhengjie.invest.util.BinanceUtil;
+import me.zhengjie.invest.util.BinanceSpotUtil;
 import me.zhengjie.utils.DingdingUtil;
 import me.zhengjie.utils.RedisUtils;
 import me.zhengjie.utils.StringUtils;
@@ -48,7 +48,7 @@ public class TradingviewNotifyController {
     @Resource
     private RedisUtils redisUtils;
     @Resource
-    private BinanceUtil binanceUtil;
+    private BinanceSpotUtil binanceSpotUtil;
     @Resource
     private BinanceTradeInfoService binanceTradeInfoService;
     @Resource
@@ -127,7 +127,7 @@ public class TradingviewNotifyController {
                     }
 
                     BinanceAccountContextHolder.runWith(accountInfo, () -> {
-                        JSONObject orderRes = binanceUtil.order(apiDto, 3);
+                        JSONObject orderRes = binanceSpotUtil.order(apiDto, 3);
                         if (null != orderRes) {
                             dingdingUtil.sendMsg(accountInfo.getIdCardName() + "-调用接口成功;");
                             // 调用接口成功之后标识

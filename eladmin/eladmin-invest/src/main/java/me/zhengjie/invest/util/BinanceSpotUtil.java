@@ -25,20 +25,19 @@ import java.math.BigDecimal;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.nio.charset.StandardCharsets;
-import java.sql.Timestamp;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
-public class BinanceUtil {
+public class BinanceSpotUtil {
 
-    private static final Logger log = LoggerFactory.getLogger(BinanceUtil.class);
+    private static final Logger log = LoggerFactory.getLogger(BinanceSpotUtil.class);
 
     @Value("${proxy.host}")
     private String proxyHost;
     @Value("${proxy.port}")
     private Integer proxyPort;
-    @Value("${binance.api_host}")
+    @Value("${binance.spot.api_host}")
     private String apiHost;
     @Resource
     private DingdingUtil dingdingUtil;

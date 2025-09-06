@@ -15,7 +15,6 @@
 */
 package me.zhengjie.invest.service.impl;
 
-import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -31,7 +30,7 @@ import me.zhengjie.invest.mapper.BinanceTradeInfoMapper;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
-import me.zhengjie.invest.util.BinanceUtil;
+import me.zhengjie.invest.util.BinanceSpotUtil;
 import me.zhengjie.utils.FileUtil;
 import me.zhengjie.utils.PageResult;
 import me.zhengjie.utils.PageUtil;
@@ -57,7 +56,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
     private final BinanceTradeInfoMapper binanceTradeInfoMapper;
     private final BinanceAccountInfoService binanceAccountInfoService;
-    private final BinanceUtil binanceUtil;
+    private final BinanceSpotUtil binanceSpotUtil;
 
     @Override
     public PageResult<BinanceTradeInfo> queryAll(BinanceTradeInfoQueryCriteria criteria, Page<Object> page) {
@@ -118,7 +117,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             // 设置账号信息
             BinanceAccountContextHolder.set(accountInfo);
             // 调用接口获取最近的订单信息
-            List<BinanceTradeInfo> orderInfoList = binanceUtil.getMyTrades(symbol);
+            List<BinanceTradeInfo> orderInfoList = binanceSpotUtil.getMyTrades(symbol);
             // 查询已经在库中的订单
             Set<Long> existOrderIdSet = this.list(
                     Wrappers.lambdaQuery(BinanceTradeInfo.class)
