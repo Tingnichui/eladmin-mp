@@ -63,12 +63,23 @@ public class BinanceUtil {
         return JSON.parseObject(request.execute().body()).getBigDecimal("price");
     }
 
-    public List<InvestKlinesRecord> getKlines(BinanceEnum.SYMBOL symbol, BinanceEnum.KLINES_INTERVAL interval, Date startTime, Date endTime) {
+    /**
+     * @param symbol 交易对
+     * @param interval 周期，单位分钟
+     * @param startTime 开始时间，毫秒时间戳
+     * @param endTime 结束时间，毫秒时间戳
+     * @return 返回   开始时间 <= 开盘时间 的数据
+     */
+    public List<InvestKlinesRecord> getKlines(BinanceEnum.SYMBOL symbol, BinanceEnum.KLINES_INTERVAL interval, Long startTime, Long endTime) {
         Map<String, Object> params = new HashMap<>();
         params.put("symbol", symbol);
         params.put("interval", interval.getValue());
-        params.put("startTime", startTime.getTime());
-        params.put("endTime", endTime.getTime());
+        if (null != startTime) {
+            params.put("startTime", startTime);
+        }
+        if (null != endTime) {
+            params.put("endTime", endTime);
+        }
         params.put("limit", 1000);
         List<List> rawKlinesList = JSON.parseArray(this.doRequest("/api/v3/klines", params, false, true)).toJavaList(List.class);
 
@@ -77,13 +88,13 @@ public class BinanceUtil {
 
             InvestKlinesRecord record = new InvestKlinesRecord();
             record.setSymbol(symbol.toString());
-            record.setOpenTime(new Timestamp((Long) item.get(0)));// 开盘时间
+            record.setOpenTime((Long) item.get(0));// 开盘时间
             record.setOpenPrice(new BigDecimal((String) item.get(1)));// 开盘价
             record.setHighPrice(new BigDecimal((String) item.get(2)));// 最高价
             record.setLowPrice(new BigDecimal((String) item.get(3)));// 最低价
             record.setClosePrice(new BigDecimal((String) item.get(4)));// 收盘价(当前K线未结束的即为最新价)
             record.setVolume(new BigDecimal((String) item.get(5)));// 成交量
-            record.setCloseTime(new Timestamp((Long) item.get(6)));// 收盘时间
+            record.setCloseTime((Long) item.get(6));// 收盘时间
             record.setTurnover(new BigDecimal((String) item.get(7)));// 成交额
             record.setTradeCount((Integer) item.get(8));// 成交笔数
             record.setBuyVolume(new BigDecimal((String) item.get(9)));// 主动买入成交量
@@ -123,16 +134,6 @@ public class BinanceUtil {
     private String doRequest(String url, Map<String, Object> params, Boolean signFlag, Boolean getFlag) {
         log.info("入参：{}", JSON.toJSONString(params));
 
-        BinanceAccountInfo binanceAccountInfo = BinanceAccountContextHolder.get();
-        if (null == binanceAccountInfo) {
-            throw new RuntimeException("币安账户信息为空");
-        }
-        final String apiKey = binanceAccountInfo.getApiKey();
-        final String apiSecret = binanceAccountInfo.getApiSecret();
-        if (StringUtils.isAnyBlank(apiKey, apiSecret)) {
-            throw new RuntimeException(binanceAccountInfo.getIdCardName() + "-币安账户API配置为空");
-        }
-
         // 过滤空值
         params = params.entrySet().stream()
                 .filter(entry -> null != entry.getValue() && StringUtils.isNotBlank(entry.getValue().toString()))
@@ -142,7 +143,19 @@ public class BinanceUtil {
                 ));
 
         // 是否需要加签
+        Map<String, String> headerMap = new HashMap<>();
         if (signFlag) {
+            BinanceAccountInfo binanceAccountInfo = BinanceAccountContextHolder.get();
+            if (null == binanceAccountInfo) {
+                throw new RuntimeException("币安账户信息为空");
+            }
+            final String apiKey = binanceAccountInfo.getApiKey();
+            final String apiSecret = binanceAccountInfo.getApiSecret();
+            if (StringUtils.isAnyBlank(apiKey, apiSecret)) {
+                throw new RuntimeException(binanceAccountInfo.getIdCardName() + "-币安账户API配置为空");
+            }
+            headerMap.put("X-MBX-APIKEY", apiKey);
+
             // 增加时间戳
             params.put("timestamp", System.currentTimeMillis());
 
@@ -162,7 +175,7 @@ public class BinanceUtil {
 
         // 发送请求
         HttpRequest request = getFlag ? HttpUtil.createGet(fullUrl) : HttpUtil.createPost(fullUrl);
-        request.header("X-MBX-APIKEY", apiKey);
+        headerMap.forEach(request::header);
         request.setProxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort)));
         HttpResponse response = request.execute();
         String body = response.body();

@@ -53,22 +53,10 @@ public class UtilsTests {
     void getKlines() {
         BinanceEnum.SYMBOL symbol = BinanceEnum.SYMBOL.BTCUSDT;
         BinanceEnum.KLINES_INTERVAL interval = BinanceEnum.KLINES_INTERVAL.MINUTE_15;
-        InvestKlinesRecord lastOneInDb = investKlinesRecordService.getOne(
-                Wrappers.lambdaQuery(InvestKlinesRecord.class)
-                        .eq(InvestKlinesRecord::getSymbol, symbol)
-                        .eq(InvestKlinesRecord::getPeriod, interval.getPeriod())
-                        .orderByDesc(InvestKlinesRecord::getCloseTime)
-                        .last("limit 1")
-        );
-
-
-        Date startTime = DateUtil.offsetSecond(lastOneInDb.getCloseTime(), -1);
-        Date now = new Date();
-        while (now.after(startTime)) {
-            DateTime endTime = DateUtil.offsetDay(startTime, 10).offset(DateField.SECOND, -1);
-            List<InvestKlinesRecord> klines = binanceUtil.getKlines(symbol, interval, startTime, endTime);
-//            investKlinesRecordService.saveBatch(klines);
-            startTime = endTime;
+        final long startTime = 1504713600000L;
+        List<InvestKlinesRecord> klines = binanceUtil.getKlines(symbol, interval, startTime, null);
+        for (InvestKlinesRecord kline : klines) {
+            System.err.println(DateUtil.format(new Date(kline.getOpenTime()), DatePattern.NORM_DATETIME_PATTERN));
         }
     }
 

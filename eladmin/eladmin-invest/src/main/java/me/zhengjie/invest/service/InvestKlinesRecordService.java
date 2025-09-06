@@ -15,6 +15,7 @@
 */
 package me.zhengjie.invest.service;
 
+import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.InvestKlinesRecord;
 import me.zhengjie.invest.domain.vo.InvestKlinesRecordQueryCriteria;
 import java.util.Map;
@@ -72,4 +73,7 @@ public interface InvestKlinesRecordService extends IService<InvestKlinesRecord> 
     * @throws IOException /
     */
     void download(List<InvestKlinesRecord> all, HttpServletResponse response) throws IOException;
+
+    void syncKlinesRecord(BinanceEnum.SYMBOL symbol, BinanceEnum.KLINES_INTERVAL interval, long defaultStartTime);
+
 }
