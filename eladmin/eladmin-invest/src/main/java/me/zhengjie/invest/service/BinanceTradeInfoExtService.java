@@ -72,4 +72,7 @@ public interface BinanceTradeInfoExtService extends IService<BinanceTradeInfoExt
     * @throws IOException /
     */
     void download(List<BinanceTradeInfoExt> all, HttpServletResponse response) throws IOException;
+
+    void changeHedgedFlag(Long orderId);
+
 }

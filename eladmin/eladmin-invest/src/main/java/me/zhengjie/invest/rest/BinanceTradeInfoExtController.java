@@ -15,22 +15,24 @@
 */
 package me.zhengjie.invest.rest;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import lombok.RequiredArgsConstructor;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.invest.domain.BinanceTradeInfoExt;
-import me.zhengjie.invest.service.BinanceTradeInfoExtService;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoExtQueryCriteria;
-import lombok.RequiredArgsConstructor;
-import java.util.List;
+import me.zhengjie.invest.service.BinanceTradeInfoExtService;
+import me.zhengjie.utils.PageResult;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import io.swagger.annotations.*;
-import java.io.IOException;
+
 import javax.servlet.http.HttpServletResponse;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import me.zhengjie.utils.PageResult;
+import java.io.IOException;
+import java.util.List;
 
 /**
 * @author genghui
@@ -85,5 +87,14 @@ public class BinanceTradeInfoExtController {
     public ResponseEntity<Object> deleteBinanceTradeInfoExt(@RequestBody List<Integer> ids) {
         binanceTradeInfoExtService.deleteAll(ids);
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @PutMapping("/changeHedgedFlag")
+    @Log("修改币安账户")
+    @ApiOperation("修改币安账户")
+    @PreAuthorize("@el.check('binanceTradeInfoExt:edit')")
+    public ResponseEntity<Object> changeHedgedFlag(@RequestBody Long orderId){
+        binanceTradeInfoExtService.changeHedgedFlag(orderId);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }

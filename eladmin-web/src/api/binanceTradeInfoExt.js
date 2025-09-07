@@ -24,4 +24,12 @@ export function edit(data) {
   })
 }
 
-export default { add, edit, del }
+export function changeHedgedFlag(orderId) {
+  return request({
+    url: 'api/binanceTradeInfoExt/changeHedgedFlag',
+    method: 'put',
+    data: orderId
+  })
+}
+
+export default { add, edit, del, changeHedgedFlag }

@@ -261,6 +261,16 @@
         </el-table-column>
         <el-table-column prop="orderId" label="订单 ID" />
         <el-table-column prop="time" label="成交时间" />
+        <el-table-column prop="hedgedFlag" label="锁仓">
+          <template slot-scope="scope">
+            <el-switch
+              :value="scope.row.hedgedFlag === 1"
+              active-color="#409EFF"
+              inactive-color="#F56C6C"
+              @change="(val) => changeHedgedFlag(scope.row, val)"
+            />
+          </template>
+        </el-table-column>
         <el-table-column v-if="checkPer(['admin','binanceTradeInfo:edit','binanceTradeInfo:del'])" label="操作" width="150px" align="center">
           <template slot-scope="scope">
             <udOperation
@@ -392,6 +402,7 @@ import DateRangePicker from '@/components/DateRangePicker/index.vue'
 import { formatDuration } from '../../../../utils/dateUtil'
 import TradeProfitRateScatter from '@/views/invest/binance/tradeInfo/TradeProfitRateScatter.vue'
 import { listAllAccount } from '@/api/binanceAccountInfo'
+import { changeHedgedFlag } from '@/api/binanceTradeInfoExt'
 
 const defaultForm = { id: null, symbol: null, price: null, qty: null, commission: null, time: null, orderId: null, quoteQty: null, commissionAsset: null, isBuyer: null, isMaker: null, isBestMatch: null }
 export default {
@@ -485,6 +496,29 @@ export default {
     refreshAccountList() {
       listAllAccount().then(data => {
         this.accountList = data.content
+      })
+    },
+    changeHedgedFlag(data, val) {
+      const newFlag = val ? 1 : 0
+      const oldFlag = data.autoTradeFlag
+      this.$confirm(
+        `此操作将 ${val ? '标记' : '取消'} 该交易锁仓状态 ，是否继续？`,
+        '提示',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      ).then(() => {
+        data.hedgedFlag = newFlag
+        // // 提交更新
+        changeHedgedFlag(data.orderId).then(() => {
+          this.crud.notify(`${val ? '标记' : '取消'}成功`, CRUD.NOTIFICATION_TYPE.SUCCESS)
+        }).catch(() => {
+          data.autoTradeFlag = oldFlag // 如果接口失败，还原旧状态
+        })
+      }).catch(() => {
+        data.autoTradeFlag = oldFlag // 如果取消操作，还原旧状态
       })
     }
   }

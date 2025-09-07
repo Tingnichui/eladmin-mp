@@ -93,6 +93,9 @@ public class BinanceTradeInfo implements Serializable {
     @TableField(exist = false)
     private String idCardName;
 
+    @TableField(exist = false)
+    private Integer hedgedFlag = 0;
+
     public void copy(BinanceTradeInfo source){
         BeanUtil.copyProperties(source,this, CopyOptions.create().setIgnoreNullValue(true));
     }
