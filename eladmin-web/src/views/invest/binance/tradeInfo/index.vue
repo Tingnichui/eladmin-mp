@@ -266,7 +266,7 @@
             <el-switch
               :value="scope.row.hedgedFlag === 1"
               active-color="#409EFF"
-              inactive-color="#F56C6C"
+              inactive-color="#E0E0E0"
               @change="(val) => changeHedgedFlag(scope.row, val)"
             />
           </template>
