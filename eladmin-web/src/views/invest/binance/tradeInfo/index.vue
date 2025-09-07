@@ -368,6 +368,15 @@
           <el-descriptions-item label="未平仓总额">
             {{ formatDecimal(statsInfo.totalWaitSellAmount) }}
           </el-descriptions-item>
+          <el-descriptions-item label="锁仓均价">
+            {{ formatDecimal(statsInfo.hedgedAvgPrice) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="锁仓数量">
+            {{ formatDecimal(statsInfo.hedgedQty) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="锁仓总额">
+            {{ formatDecimal(statsInfo.hedgedAmount) }}
+          </el-descriptions-item>
           <el-descriptions-item label="最短持仓">
             {{ formatDuration(statsInfo.minHoldTimeMs) }}
           </el-descriptions-item>

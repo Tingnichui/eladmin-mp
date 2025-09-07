@@ -15,6 +15,7 @@
 */
 package me.zhengjie.invest.domain;
 
+import cn.hutool.core.util.NumberUtil;
 import com.baomidou.mybatisplus.annotation.TableField;
 import lombok.Data;
 import cn.hutool.core.bean.BeanUtil;
@@ -95,6 +96,10 @@ public class BinanceTradeInfo implements Serializable {
 
     @TableField(exist = false)
     private Integer hedgedFlag = 0;
+
+    public BigDecimal getAmount() {
+        return NumberUtil.mul(this.price, this.qty);
+    }
 
     public void copy(BinanceTradeInfo source){
         BeanUtil.copyProperties(source,this, CopyOptions.create().setIgnoreNullValue(true));
