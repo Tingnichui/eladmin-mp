@@ -19,44 +19,43 @@
     </#if>
 
     <select id="findAll" resultMap="BaseResultMap">
-        select
+        SELECT
         <include refid="Base_Column_List"/>
-        from ${tableName}
+        FROM ${tableName} t1
         <#if queryColumns??>
-        <where>
+        WHERE 1 = 1
         <#list queryColumns as column>
             <if test="criteria.${column.changeColumnName} != null">
             <#if column.queryType = '='>
-                and ${column.columnName} = ${symbol}{criteria.${column.changeColumnName}}
+                AND t1.${column.columnName} = ${symbol}{criteria.${column.changeColumnName}}
             </#if>
             <#if column.queryType = 'Like'>
-                and ${column.columnName} like concat('%',${symbol}{criteria.${column.changeColumnName}},'%')
+                AND t1.${column.columnName} LIKE CONCAT('%',${symbol}{criteria.${column.changeColumnName}},'%')
             </#if>
             <#if column.queryType = '!='>
-                and ${column.columnName} != ${symbol}{criteria.${column.changeColumnName}}
+                AND t1.${column.columnName} != ${symbol}{criteria.${column.changeColumnName}}
             </#if>
             <#if column.queryType = 'NotNull'>
-                and ${column.columnName} is not null
+                AND t1.${column.columnName} IS NOT NULL
             </#if>
             <#if column.queryType = '>='>
-                and ${column.columnName} &gt;= ${symbol}{criteria.${column.changeColumnName}}
+                AND t1.${column.columnName} &gt;= ${symbol}{criteria.${column.changeColumnName}}
             </#if>
             <#if column.queryType = '<='>
-                and ${column.columnName} &lt;= ${symbol}{criteria.${column.changeColumnName}}
+                AND t1.${column.columnName} &lt;= ${symbol}{criteria.${column.changeColumnName}}
             </#if>
             </if>
         </#list>
         <#if betweens??>
             <#list betweens as column>
             <if test="criteria.${column.changeColumnName} != null and criteria.${column.changeColumnName}.size() > 0">
-                AND ${column.columnName} BETWEEN ${symbol}{criteria.${column.changeColumnName}[0]} AND ${symbol}{criteria.${column.changeColumnName}[1]}
+                AND t1.${column.columnName} BETWEEN ${symbol}{criteria.${column.changeColumnName}[0]} AND ${symbol}{criteria.${column.changeColumnName}[1]}
             </if>
             </#list>
         </#if>
-        </where>
         </#if>
         <#if pkIdName != 'none'>
-        order by ${pkIdName} desc
+        ORDER BY t1.${pkIdName} DESC
         </#if>
     </select>
 </mapper>
