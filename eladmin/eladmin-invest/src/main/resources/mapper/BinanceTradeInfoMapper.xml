@@ -15,6 +15,7 @@
         <result column="is_maker" property="isMaker"/>
         <result column="is_best_match" property="isBestMatch"/>
         <result column="uid" property="uid"/>
+        <result column="id_card_name" property="idCardName"/>
     </resultMap>
 
     <sql id="Base_Column_List">
@@ -23,47 +24,49 @@
 
     <select id="findAll" resultMap="BaseResultMap">
         select
-        <include refid="Base_Column_List"/>
-        from binance_trade_info
-        where time > '2025-01-01'
+            t1.*,
+            t2.id_card_name
+        from binance_trade_info t1
+        left join binance_account_info t2 on t2.uid = t1.uid
+        where t1.time > '2025-01-01'
             <if test="criteria.symbol != null">
-                and symbol = #{criteria.symbol}
+                and t1.symbol = #{criteria.symbol}
             </if>
             <if test="criteria.orderId != null">
-                and order_id = #{criteria.orderId}
+                and t1.order_id = #{criteria.orderId}
             </if>
             <if test="criteria.commissionAsset != null">
-                and commission_asset = #{criteria.commissionAsset}
+                and t1.commission_asset = #{criteria.commissionAsset}
             </if>
             <if test="criteria.isBuyer != null">
-                and is_buyer = #{criteria.isBuyer}
+                and t1.is_buyer = #{criteria.isBuyer}
             </if>
             <if test="criteria.isMaker != null">
-                and is_maker = #{criteria.isMaker}
+                and t1.is_maker = #{criteria.isMaker}
             </if>
             <if test="criteria.isBestMatch != null">
-                and is_best_match = #{criteria.isBestMatch}
+                and t1.is_best_match = #{criteria.isBestMatch}
             </if>
             <if test="criteria.uid != null">
-                and uid = #{criteria.uid}
+                and t1.uid = #{criteria.uid}
             </if>
             <if test="criteria.price != null and criteria.price.size() > 0">
-                AND price BETWEEN #{criteria.price[0]} AND #{criteria.price[1]}
+                AND t1.price BETWEEN #{criteria.price[0]} AND #{criteria.price[1]}
             </if>
             <if test="criteria.qty != null and criteria.qty.size() > 0">
-                AND qty BETWEEN #{criteria.qty[0]} AND #{criteria.qty[1]}
+                AND t1.qty BETWEEN #{criteria.qty[0]} AND #{criteria.qty[1]}
             </if>
             <if test="criteria.commission != null and criteria.commission.size() > 0">
-                AND commission BETWEEN #{criteria.commission[0]} AND #{criteria.commission[1]}
+                AND t1.commission BETWEEN #{criteria.commission[0]} AND #{criteria.commission[1]}
             </if>
             <if test="criteria.time != null and criteria.time.size() > 0">
-                AND time BETWEEN #{criteria.time[0]} AND #{criteria.time[1]}
+                AND t1.time BETWEEN #{criteria.time[0]} AND #{criteria.time[1]}
             </if>
             <if test="criteria.quoteQty != null and criteria.quoteQty.size() > 0">
-                AND quote_qty BETWEEN #{criteria.quoteQty[0]} AND #{criteria.quoteQty[1]}
+                AND t1.quote_qty BETWEEN #{criteria.quoteQty[0]} AND #{criteria.quoteQty[1]}
             </if>
         <if test="criteria.orderColumn != null and criteria.orderColumn != ''">
-            ORDER BY ${criteria.orderColumn} ${criteria.orderDirection}
+            ORDER BY t1.${criteria.orderColumn} ${criteria.orderDirection}
         </if>
 
     </select>

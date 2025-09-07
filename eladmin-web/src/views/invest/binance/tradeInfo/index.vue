@@ -4,6 +4,24 @@
     <div class="head-container">
       <div v-if="crud.props.searchToggle">
         <!-- 搜索 -->
+        <label class="el-form-item-label">账户</label>
+        <el-select
+          v-model="query.uid"
+          clearable
+          filterable
+          size="small"
+          placeholder="账户"
+          class="filter-item"
+          style="width: 185px"
+          @change="crud.toQuery"
+        >
+          <el-option
+            v-for="item in accountList"
+            :key="item.id"
+            :label="item.idCardName"
+            :value="item.uid"
+          />
+        </el-select>
         <label class="el-form-item-label">交易对</label>
         <el-select
           v-model="query.symbol"
@@ -211,6 +229,7 @@
       <!--表格渲染-->
       <el-table ref="table" v-loading="crud.loading" :data="crud.data" size="small" style="width: 100%;" @selection-change="crud.selectionChangeHandler">
         <el-table-column type="selection" width="55" />
+        <el-table-column prop="idCardName" label="账户" />
         <el-table-column prop="symbol" label="交易对">
           <template slot-scope="scope">
             {{ dict.label.invest_binance_symbol[scope.row.symbol] }}
@@ -257,6 +276,24 @@
       <el-dialog :visible.sync="showStats" append-to-body title="交易汇总" width="60%" class="stats-dialog">
         <!-- 搜索 -->
         <div class="head-container">
+          <label class="el-form-item-label">账户</label>
+          <el-select
+            v-model="statsQuery.uid"
+            clearable
+            filterable
+            size="small"
+            placeholder="账户"
+            class="filter-item"
+            style="width: 185px"
+            @change="doStats"
+          >
+            <el-option
+              v-for="item in accountList"
+              :key="item.id"
+              :label="item.idCardName"
+              :value="item.uid"
+            />
+          </el-select>
           <label class="el-form-item-label">交易对</label>
           <el-select
             v-model="statsQuery.symbol"
@@ -354,6 +391,7 @@ import pagination from '@crud/Pagination'
 import DateRangePicker from '@/components/DateRangePicker/index.vue'
 import { formatDuration } from '../../../../utils/dateUtil'
 import TradeProfitRateScatter from '@/views/invest/binance/tradeInfo/TradeProfitRateScatter.vue'
+import { listAllAccount } from '@/api/binanceAccountInfo'
 
 const defaultForm = { id: null, symbol: null, price: null, qty: null, commission: null, time: null, orderId: null, quoteQty: null, commissionAsset: null, isBuyer: null, isMaker: null, isBestMatch: null }
 export default {
@@ -368,6 +406,7 @@ export default {
     return {
       showStats: false,
       statsInfo: {},
+      accountList: [],
       statsQuery: {
         symbol: 'BTCUSDT',
         tradePairingLogic: 'FIFO'
@@ -422,6 +461,9 @@ export default {
       ]
     }
   },
+  mounted() {
+    this.refreshAccountList()
+  },
   methods: {
     formatDuration,
     // 钩子：在获取表格数据之前执行，false 则代表不获取数据
@@ -439,6 +481,11 @@ export default {
     },
     formatPercent(val) {
       return val != null ? (val * 100).toFixed(2) + '%' : '--'
+    },
+    refreshAccountList() {
+      listAllAccount().then(data => {
+        this.accountList = data.content
+      })
     }
   }
 }

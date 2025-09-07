@@ -15,6 +15,7 @@
 */
 package me.zhengjie.invest.domain;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import lombok.Data;
 import cn.hutool.core.bean.BeanUtil;
 import io.swagger.annotations.ApiModelProperty;
@@ -88,6 +89,9 @@ public class BinanceTradeInfo implements Serializable {
     @NotNull
     @ApiModelProperty(value = "用户编号")
     private Integer uid;
+
+    @TableField(exist = false)
+    private String idCardName;
 
     public void copy(BinanceTradeInfo source){
         BeanUtil.copyProperties(source,this, CopyOptions.create().setIgnoreNullValue(true));

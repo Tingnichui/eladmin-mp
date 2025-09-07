@@ -32,4 +32,15 @@ export function changeAutoTradeFlag(id) {
   })
 }
 
+export function listAllAccount(params) {
+  return request({
+    url: 'api/binanceAccountInfo',
+    method: 'get',
+    params: {
+      size: -1,
+      ...params
+    }
+  })
+}
+
 export default { add, edit, del }
