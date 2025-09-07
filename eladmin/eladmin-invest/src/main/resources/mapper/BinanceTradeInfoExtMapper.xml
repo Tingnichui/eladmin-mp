@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="me.zhengjie.invest.mapper.BinanceTradeInfoExtMapper">
+    <resultMap id="BaseResultMap" type="me.zhengjie.invest.domain.BinanceTradeInfoExt">
+        <id column="id" property="id"/>
+        <result column="order_id" property="orderId"/>
+        <result column="pos_id" property="posId"/>
+        <result column="hedged_flag" property="hedgedFlag"/>
+        <result column="remark" property="remark"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, order_id, pos_id, hedged_flag, remark
+    </sql>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM binance_trade_info_ext t1
+        WHERE 1 = 1
+            <if test="criteria.hedgedFlag != null">
+                AND t1.hedged_flag = #{criteria.hedgedFlag}
+            </if>
+            <if test="criteria.remark != null">
+                AND t1.remark LIKE CONCAT('%',#{criteria.remark},'%')
+            </if>
+        ORDER BY t1.id DESC
+    </select>
+</mapper>

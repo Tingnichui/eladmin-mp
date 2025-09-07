@@ -13,22 +13,14 @@
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
 */
-package ${package}.domain;
+package me.zhengjie.invest.domain;
 
 import lombok.Data;
 import cn.hutool.core.bean.BeanUtil;
 import io.swagger.annotations.ApiModelProperty;
 import cn.hutool.core.bean.copier.CopyOptions;
-<#if hasTimestamp>
-import java.sql.Timestamp;
-</#if>
-<#if hasBigDecimal>
-import java.math.BigDecimal;
-</#if>
 import java.io.Serializable;
-<#if auto>
 import com.baomidou.mybatisplus.annotation.IdType;
-</#if>
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
@@ -37,35 +29,31 @@ import javax.validation.constraints.NotNull;
 
 /**
 * @description /
-* @author ${author}
-* @date ${date}
+* @author genghui
+* @date 2025-09-07
 **/
 @Data
-@TableName("${tableName}")
-public class ${className} implements Serializable {
-<#if columns??>
-    <#list columns as column>
+@TableName("binance_trade_info_ext")
+public class BinanceTradeInfoExt implements Serializable {
 
-    <#if column.columnKey = 'PRI'>
-    @TableId(value = "${column.columnName}"<#if auto>, type = IdType.AUTO</#if>)
-    </#if>
-    <#if column.istNotNull && column.columnKey != 'PRI'>
-        <#if column.columnType = 'String'>
-    @NotBlank
-        <#else>
+    @TableId(value = "id", type = IdType.AUTO)
+    @ApiModelProperty(value = "id")
+    private Integer id;
+
     @NotNull
-        </#if>
-    </#if>
-    <#if column.remark != ''>
-    @ApiModelProperty(value = "${column.remark}")
-    <#else>
-    @ApiModelProperty(value = "${column.changeColumnName}")
-    </#if>
-    private ${column.columnType} ${column.changeColumnName};
-    </#list>
-</#if>
+    @ApiModelProperty(value = "订单 ID")
+    private Long orderId;
 
-    public void copy(${className} source){
+    @ApiModelProperty(value = "仓位编号")
+    private String posId;
+
+    @ApiModelProperty(value = "是否锁仓；0未锁仓 1锁仓")
+    private Integer hedgedFlag;
+
+    @ApiModelProperty(value = "备注")
+    private String remark;
+
+    public void copy(BinanceTradeInfoExt source){
         BeanUtil.copyProperties(source,this, CopyOptions.create().setIgnoreNullValue(true));
     }
 }
