@@ -110,16 +110,17 @@ public class BinanceSpotUtil {
         return JSON.parseObject(this.doRequest("/api/v3/account", new HashMap<>(), true, true));
     }
 
-    public JSONObject order(BinanceOrderApiDto apiDto) {
+    public Long order(BinanceOrderApiDto apiDto) {
         Map<String, Object> map = apiDto.toMap();
         JSONObject resultJson = JSON.parseObject(this.doRequest("/api/v3/order", map, true, false));
-        if (StringUtils.isBlank(resultJson.getString("orderId"))) {
+        String orderIdStr = resultJson.getString("orderId");
+        if (StringUtils.isBlank(orderIdStr)) {
             throw new RuntimeException("币安下单未获取到交易订单号");
         }
-        return resultJson;
+        return Long.parseLong(orderIdStr);
     }
 
-    public JSONObject order(BinanceOrderApiDto apiDto, int maxRetries) {
+    public Long order(BinanceOrderApiDto apiDto, int maxRetries) {
         for (int i = 0; i < maxRetries ; i++) {
             try {
                 return this.order(apiDto);

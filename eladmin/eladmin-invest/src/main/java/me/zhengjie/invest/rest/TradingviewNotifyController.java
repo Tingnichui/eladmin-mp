@@ -9,11 +9,13 @@ import me.zhengjie.annotation.AnonymousAccess;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
+import me.zhengjie.invest.domain.BinanceTradeInfoExt;
 import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.domain.vo.TradingViewNotify;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
+import me.zhengjie.invest.service.BinanceTradeInfoExtService;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceSpotUtil;
@@ -51,6 +53,8 @@ public class TradingviewNotifyController {
     private BinanceSpotUtil binanceSpotUtil;
     @Resource
     private BinanceTradeInfoService binanceTradeInfoService;
+    @Resource
+    private BinanceTradeInfoExtService binanceTradeInfoExtService;
     @Resource
     private BinanceAccountInfoService binanceAccountInfoService;
 
@@ -127,11 +131,16 @@ public class TradingviewNotifyController {
                     }
 
                     BinanceAccountContextHolder.runWith(accountInfo, () -> {
-                        JSONObject orderRes = binanceSpotUtil.order(apiDto, 3);
-                        if (null != orderRes) {
+                        Long orderId = binanceSpotUtil.order(apiDto, 3);
+                        if (null != orderId) {
                             dingdingUtil.sendMsg(accountInfo.getIdCardName() + "-调用接口成功;");
                             // 调用接口成功之后标识
                             redisUtils.set(redisKey, "1", 30, TimeUnit.DAYS);
+                            // 记录到扩展信息表
+                            BinanceTradeInfoExt tradeInfoExt = new BinanceTradeInfoExt();
+                            tradeInfoExt.setOrderId(orderId);
+                            tradeInfoExt.setPosId(posId);
+                            binanceTradeInfoExtService.save(tradeInfoExt);
                         }
                     });
                 }
