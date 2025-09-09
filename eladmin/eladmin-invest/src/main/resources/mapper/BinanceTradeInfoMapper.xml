@@ -33,7 +33,14 @@
         left join binance_trade_info_ext t3 on t3.order_id = t1.order_id
         where t1.time > '2025-01-01'
             <if test="criteria.hedgedFlag != null">
-                and t3.hedged_flag = #{criteria.hedgedFlag}
+                <choose>
+                    <when test="criteria.hedgedFlag == 0">
+                        and (t3.hedged_flag = 0 or t3.hedged_flag IS NULL)
+                    </when>
+                    <otherwise>
+                        and t3.hedged_flag = #{criteria.hedgedFlag}
+                    </otherwise>
+                </choose>
             </if>
             <if test="criteria.symbol != null">
                 and t1.symbol = #{criteria.symbol}
