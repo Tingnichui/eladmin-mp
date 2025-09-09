@@ -162,6 +162,8 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             criteria.setHedgedFlag(null);
         }
 
+        // 未锁仓的撮合交易
+        criteria.setHedgedFlag(0);
 
         List<BinanceTradeInfo> buyTradeList, sellTradeList;
 
