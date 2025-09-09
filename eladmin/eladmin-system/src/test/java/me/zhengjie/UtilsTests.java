@@ -2,13 +2,12 @@ package me.zhengjie;
 
 import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateUtil;
-import com.alibaba.fastjson.JSONObject;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.InvestKlinesRecord;
 import me.zhengjie.invest.domain.dto.BinanceFundingRate;
 import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
 import me.zhengjie.invest.service.InvestKlinesRecordService;
-import me.zhengjie.invest.util.BinanceFuturesUtil;
+import me.zhengjie.invest.util.BinanceUsdFuturesUtil;
 import me.zhengjie.invest.util.BinanceSpotUtil;
 import me.zhengjie.utils.DingdingUtil;
 import org.apache.commons.collections4.CollectionUtils;
@@ -32,7 +31,7 @@ public class UtilsTests {
     @Resource
     private BinanceSpotUtil binanceSpotUtil;
     @Resource
-    private BinanceFuturesUtil binanceFuturesUtil;
+    private BinanceUsdFuturesUtil binanceUsdFuturesUtil;
     @Resource
     private InvestKlinesRecordService investKlinesRecordService;
 
@@ -72,7 +71,7 @@ public class UtilsTests {
         long startTime = DateUtil.parse("2020-01-01 00:00:00", DatePattern.NORM_DATETIME_PATTERN).getTime();
         long endTime = DateUtil.parse("2025-01-01 00:00:00", DatePattern.NORM_DATETIME_PATTERN).getTime() - 1;
         while (true) {
-            List<BinanceFundingRate> fundingRateList = binanceFuturesUtil.getFundingRate(symbol, startTime, endTime);
+            List<BinanceFundingRate> fundingRateList = binanceUsdFuturesUtil.getFundingRate(symbol, startTime, endTime);
             if (CollectionUtils.isEmpty(fundingRateList)) {
                 break;
             }
@@ -106,7 +105,7 @@ public class UtilsTests {
         apiDto.setTimeInForce(BinanceEnum.TIME_IN_FORCE.GTC);
         apiDto.setQuantity(new BigDecimal("0.1"));
         apiDto.setPrice(new BigDecimal("501.1"));
-        JSONObject resultJson = binanceSpotUtil.order(apiDto);
+        Long resultJson = binanceSpotUtil.order(apiDto);
         System.err.println(resultJson);
     }
 }

@@ -26,10 +26,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 币安U本位合约
+ */
 @Component
-public class BinanceFuturesUtil {
+public class BinanceUsdFuturesUtil {
 
-    private static final Logger log = LoggerFactory.getLogger(BinanceFuturesUtil.class);
+    private static final Logger log = LoggerFactory.getLogger(BinanceUsdFuturesUtil.class);
 
     @Value("${proxy.host}")
     private String proxyHost;
