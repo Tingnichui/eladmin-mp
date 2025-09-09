@@ -141,6 +141,23 @@
         <!--        />-->
         <label class="el-form-item-label">成交时间</label>
         <date-range-picker v-model="query.time" class="date-item" @change="crud.toQuery" />
+        <label class="el-form-item-label">是否锁仓</label>
+        <el-select
+          v-model="query.hedgedFlag"
+          clearable
+          size="small"
+          placeholder="是否锁仓"
+          class="filter-item"
+          style="width: 185px"
+          @change="crud.toQuery"
+        >
+          <el-option
+            v-for="item in dict.invest_binance_hedged_flag"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
 
         <!--        <date-range-picker-->
         <!--          v-model="query.quoteQty"-->
@@ -276,6 +293,7 @@
         <el-table-column prop="hedgedFlag" label="锁仓">
           <template slot-scope="scope">
             <el-switch
+              v-show="scope.row.isBuyer"
               :value="scope.row.hedgedFlag === 1"
               active-color="#409EFF"
               inactive-color="#E0E0E0"
@@ -430,7 +448,7 @@ export default {
   name: 'BinanceTradeInfo',
   components: { TradeProfitRateScatter, DateRangePicker, pagination, crudOperation, rrOperation, udOperation },
   mixins: [presenter(), header(), form(defaultForm), crud()],
-  dicts: ['invest_binance_trade_pairing_logic', 'invest_binance_symbol', 'invest_binance_commission_asset', 'invest_binance_is_buyer', 'invest_binance_is_maker', 'invest_binance_is_best_match'],
+  dicts: ['invest_binance_trade_pairing_logic', 'invest_binance_symbol', 'invest_binance_commission_asset', 'invest_binance_is_buyer', 'invest_binance_is_maker', 'invest_binance_is_best_match', 'invest_binance_hedged_flag'],
   cruds() {
     return CRUD({ title: '币安交易', url: 'api/binanceTradeInfo', idField: 'id', sort: 'id,desc', crudMethod: { ...crudBinanceTradeInfo }})
   },
