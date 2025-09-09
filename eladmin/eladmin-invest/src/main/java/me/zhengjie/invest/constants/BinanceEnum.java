@@ -14,6 +14,7 @@ public class BinanceEnum {
 
         BTCUSDT("BTC现货"),
         BNBUSDT("BNC现货"),
+        BTCUSD_PERP("BTC合约"),
         ;
         private final String desc;
     }

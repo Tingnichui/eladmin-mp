@@ -64,8 +64,10 @@ data:
 binance:
   spot:
     api_host: https://api.binance.com
-  futures:
+  usd_futures:
     api_host: https://fapi.binance.com
+  coin_futures:
+    api_host: https://dapi.binance.com
 
 tradingview:
   notify:

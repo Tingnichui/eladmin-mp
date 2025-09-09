@@ -10,14 +10,12 @@ import com.alibaba.fastjson.JSON;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.dto.BinanceFundingRate;
-import me.zhengjie.utils.DingdingUtil;
 import me.zhengjie.utils.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.Resource;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.nio.charset.StandardCharsets;
@@ -30,18 +28,16 @@ import java.util.stream.Collectors;
  * 币安U本位合约
  */
 @Component
-public class BinanceUsdFuturesUtil {
+public class BinanceCoinFuturesUtil {
 
-    private static final Logger log = LoggerFactory.getLogger(BinanceUsdFuturesUtil.class);
+    private static final Logger log = LoggerFactory.getLogger(BinanceCoinFuturesUtil.class);
 
     @Value("${proxy.host}")
     private String proxyHost;
     @Value("${proxy.port}")
     private Integer proxyPort;
-    @Value("${binance.usd_futures.api_host}")
+    @Value("${binance.coin_futures.api_host}")
     private String apiHost;
-    @Resource
-    private DingdingUtil dingdingUtil;
 
     /**
      * @param symbol    交易对
@@ -60,7 +56,7 @@ public class BinanceUsdFuturesUtil {
             params.put("endTime", endTime);
         }
         params.put("limit", 1000);
-        return JSON.parseArray(this.doRequest("/fapi/v1/fundingRate", params, false, true), BinanceFundingRate.class);
+        return JSON.parseArray(this.doRequest("/dapi/v1/fundingRate", params, false, true), BinanceFundingRate.class);
 
     }
 
