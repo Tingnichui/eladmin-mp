@@ -38,6 +38,8 @@ public class BinanceTradeInfoQueryCriteria{
     private Integer isBestMatch;
     private Integer uid;
     private Integer hedgedFlag;
+    private BigDecimal minPrice;
+    private BigDecimal maxPrice;
     private List<BigDecimal> price;
     private List<BigDecimal> qty;
     private List<BigDecimal> commission;

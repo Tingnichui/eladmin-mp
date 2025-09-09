@@ -66,6 +66,12 @@
             <if test="criteria.price != null and criteria.price.size() > 0">
                 AND t1.price BETWEEN #{criteria.price[0]} AND #{criteria.price[1]}
             </if>
+            <if test="criteria.minPrice != null">
+                AND t1.price >= #{criteria.minPrice}
+            </if>
+            <if test="criteria.maxPrice != null">
+                AND t1.price &lt;= #{criteria.maxPrice}
+            </if>
             <if test="criteria.qty != null and criteria.qty.size() > 0">
                 AND t1.qty BETWEEN #{criteria.qty[0]} AND #{criteria.qty[1]}
             </if>

@@ -109,12 +109,24 @@
             :value="item.value"
           />
         </el-select>
-        <!--        <date-range-picker-->
-        <!--          v-model="query.price"-->
-        <!--          start-placeholder="priceStart"-->
-        <!--          end-placeholder="priceStart"-->
-        <!--          class="date-item"-->
-        <!--        />-->
+        <label class="el-form-item-label">成交价格</label>
+        <el-input-number
+          v-model="query.minPrice"
+          :min="0"
+          :step="100"
+          placeholder="最低价"
+          class="filter-item"
+          controls-position="right"
+        />
+        -
+        <el-input-number
+          v-model="query.maxPrice"
+          :min="0"
+          :step="100"
+          placeholder="最高价"
+          class="filter-item"
+          controls-position="right"
+        />
         <!--        <date-range-picker-->
         <!--          v-model="query.qty"-->
         <!--          start-placeholder="qtyStart"-->
