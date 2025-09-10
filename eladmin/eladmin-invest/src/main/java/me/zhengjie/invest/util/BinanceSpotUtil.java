@@ -190,4 +190,19 @@ public class BinanceSpotUtil {
     }
 
 
+    public List<JSONObject> listUserOrderHistory(Long startTimestamp, Long endTimestamp) {
+        Map<String, Object> params = new HashMap<>();
+        if (null != startTimestamp) {
+            params.put("startTimestamp", startTimestamp);
+        }
+        if (null != endTimestamp) {
+            params.put("endTimestamp", endTimestamp);
+        }
+        String resStr = this.doRequest("/sapi/v1/c2c/orderMatch/listUserOrderHistory", params, true, true);
+        JSONObject resJson = JSON.parseObject(resStr);
+        if (!resJson.getString("code").equals("000000")) {
+            throw new RuntimeException("币安接口调用失败" + resJson.getString("message"));
+        }
+        return resJson.getJSONArray("data").toJavaList(JSONObject.class);
+    }
 }

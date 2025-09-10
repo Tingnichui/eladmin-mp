@@ -1,46 +1,46 @@
 /*
-*  Copyright 2019-2023 Zheng Jie
-*
-*  Licensed under the Apache License, Version 2.0 (the "License");
-*  you may not use this file except in compliance with the License.
-*  You may obtain a copy of the License at
-*
-*  http://www.apache.org/licenses/LICENSE-2.0
-*
-*  Unless required by applicable law or agreed to in writing, software
-*  distributed under the License is distributed on an "AS IS" BASIS,
-*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-*  See the License for the specific language governing permissions and
-*  limitations under the License.
-*/
+ *  Copyright 2019-2023 Zheng Jie
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 package me.zhengjie.invest.service.impl;
 
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.RequiredArgsConstructor;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
+import me.zhengjie.invest.domain.vo.BinanceAccountInfoQueryCriteria;
+import me.zhengjie.invest.mapper.BinanceAccountInfoMapper;
+import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceSpotUtil;
 import me.zhengjie.utils.*;
-import lombok.RequiredArgsConstructor;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import me.zhengjie.invest.service.BinanceAccountInfoService;
-import me.zhengjie.invest.domain.vo.BinanceAccountInfoQueryCriteria;
-import me.zhengjie.invest.mapper.BinanceAccountInfoMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
-import java.io.IOException;
-import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
-* @description 服务实现
-* @author genghui
-* @date 2025-08-02
-**/
+ * @author genghui
+ * @description 服务实现
+ * @date 2025-08-02
+ **/
 @Service
 @RequiredArgsConstructor
 public class BinanceAccountInfoServiceImpl extends ServiceImpl<BinanceAccountInfoMapper, BinanceAccountInfo> implements BinanceAccountInfoService {
@@ -50,12 +50,12 @@ public class BinanceAccountInfoServiceImpl extends ServiceImpl<BinanceAccountInf
     private final BinanceSpotUtil binanceSpotUtil;
 
     @Override
-    public PageResult<BinanceAccountInfo> queryAll(BinanceAccountInfoQueryCriteria criteria, Page<Object> page){
+    public PageResult<BinanceAccountInfo> queryAll(BinanceAccountInfoQueryCriteria criteria, Page<Object> page) {
         return PageUtil.toPage(binanceAccountInfoMapper.findAll(criteria, page));
     }
 
     @Override
-    public List<BinanceAccountInfo> queryAll(BinanceAccountInfoQueryCriteria criteria){
+    public List<BinanceAccountInfo> queryAll(BinanceAccountInfoQueryCriteria criteria) {
         return binanceAccountInfoMapper.findAll(criteria);
     }
 
@@ -106,12 +106,12 @@ public class BinanceAccountInfoServiceImpl extends ServiceImpl<BinanceAccountInf
     public void download(List<BinanceAccountInfo> all, HttpServletResponse response) throws IOException {
         List<Map<String, Object>> list = new ArrayList<>();
         for (BinanceAccountInfo binanceAccountInfo : all) {
-            Map<String,Object> map = new LinkedHashMap<>();
+            Map<String, Object> map = new LinkedHashMap<>();
             map.put("身份证姓名", binanceAccountInfo.getIdCardName());
             map.put("用户编号", binanceAccountInfo.getUid());
             map.put("手机号，加密", binanceAccountInfo.getPhoneNumber());
             map.put("邮箱，加密", binanceAccountInfo.getEmail());
-            map.put(" totalInvestment",  binanceAccountInfo.getTotalInvestment());
+            map.put(" totalInvestment", binanceAccountInfo.getTotalInvestment());
             map.put("apiKey，加密", binanceAccountInfo.getApiKey());
             map.put("apiSecret，加密", binanceAccountInfo.getApiSecret());
             map.put("备注", binanceAccountInfo.getRemark());
@@ -130,21 +130,32 @@ public class BinanceAccountInfoServiceImpl extends ServiceImpl<BinanceAccountInf
         return filterApiValidAccount(accountInfoList);
     }
 
+    @Override
+    public BinanceAccountInfo getAccountByIdCardName(String idCardName) {
+        BinanceAccountInfo accountInfo = this.getOne(Wrappers.lambdaQuery(BinanceAccountInfo.class).eq(BinanceAccountInfo::getIdCardName, "耿辉"));
+        return this.decryptApiInfo(accountInfo);
+    }
+
     private List<BinanceAccountInfo> filterApiValidAccount(List<BinanceAccountInfo> accountInfoList) {
         return accountInfoList.stream()
                 .filter(v -> StringUtils.isNoneBlank(v.getApiKey(), v.getApiSecret()))
-                .map(v -> {
-                    try {
-                        v.setApiKey(dataSecurityUtil.decrypt(v.getApiKey()));
-                        v.setApiSecret(dataSecurityUtil.decrypt(v.getApiSecret()));
-                        return v;
-                    } catch (Exception e) {
-                        log.error(v.getIdCardName() +"，解密出现异常", e);
-                        return null;
-                    }
-                })
+                .map(this::decryptApiInfo)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
+    }
+
+    private BinanceAccountInfo decryptApiInfo(BinanceAccountInfo accountInfo) {
+        if (null == accountInfo) {
+            return null;
+        }
+        try {
+            accountInfo.setApiKey(dataSecurityUtil.decrypt(accountInfo.getApiKey()));
+            accountInfo.setApiSecret(dataSecurityUtil.decrypt(accountInfo.getApiSecret()));
+            return accountInfo;
+        } catch (Exception e) {
+            log.error(accountInfo.getIdCardName() + "，解密出现异常", e);
+            return null;
+        }
     }
 
     @Override

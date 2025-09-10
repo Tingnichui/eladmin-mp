@@ -75,6 +75,8 @@ public interface BinanceAccountInfoService extends IService<BinanceAccountInfo> 
 
     List<BinanceAccountInfo> listUseApiAccount();
 
+    BinanceAccountInfo getAccountByIdCardName(String idCardName);
+
     List<BinanceAccountInfo> listAutoTradeAccount();
 
     void changeAutoTradeFlag(Integer id);
