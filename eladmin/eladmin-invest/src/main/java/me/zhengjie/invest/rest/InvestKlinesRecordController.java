@@ -16,11 +16,16 @@
 package me.zhengjie.invest.rest;
 
 import me.zhengjie.annotation.Log;
+import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.InvestKlinesRecord;
 import me.zhengjie.invest.service.InvestKlinesRecordService;
 import me.zhengjie.invest.domain.vo.InvestKlinesRecordQueryCriteria;
 import lombok.RequiredArgsConstructor;
+
+import java.math.BigDecimal;
 import java.util.List;
+
+import me.zhengjie.invest.util.BinanceSpotUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -43,6 +48,17 @@ import me.zhengjie.utils.PageResult;
 public class InvestKlinesRecordController {
 
     private final InvestKlinesRecordService investKlinesRecordService;
+    private final BinanceSpotUtil binanceSpotUtil;
+
+
+    @Log("查询当前价格")
+    @ApiOperation("查询当前价格")
+    @GetMapping(value = "/price")
+    @PreAuthorize("@el.check('investKlinesRecord:list')")
+    public ResponseEntity<BigDecimal> price(InvestKlinesRecordQueryCriteria criteria) throws IOException {
+        BigDecimal price = binanceSpotUtil.getPrice(BinanceEnum.SYMBOL.valueOf(criteria.getSymbol()));
+        return new ResponseEntity<>(price,HttpStatus.OK);
+    }
 
     @Log("导出数据")
     @ApiOperation("导出数据")

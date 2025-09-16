@@ -51,9 +51,12 @@ public class BinanceSpotUtil {
     }
 
     public BigDecimal getPrice(BinanceEnum.SYMBOL symbol) {
-        HttpRequest request = HttpUtil.createGet(apiHost + "/api/v3/ticker/price?symbol=" + symbol);
-        request.setProxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort)));
-        return JSON.parseObject(request.execute().body()).getBigDecimal("price");
+        Map<String, Object> params = new HashMap<>();
+        params.put("symbol", symbol);
+
+        String resStr = this.doRequest("/api/v3/ticker/price", params, false, true);
+        JSONObject resJson = JSON.parseObject(resStr);
+        return resJson.getBigDecimal("price");
     }
 
     public BigDecimal getAvgPrice(BinanceEnum.SYMBOL symbol) {

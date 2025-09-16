@@ -21,6 +21,7 @@
 import echarts from 'echarts'
 require('echarts/theme/macarons') // echarts theme
 import { debounce } from '@/utils'
+import { price } from '@/api/investKlinesRecord'
 
 export default {
   props: {
@@ -39,12 +40,17 @@ export default {
     rowData: {
       type: Array,
       default: () => [] // 避免未定义时出错
+    },
+    symbol: {
+      type: String,
+      default: () => '' // 避免未定义时出错
     }
   },
   data() {
     return {
       chart: null,
-      priceInterval: 200
+      priceInterval: 200,
+      currentPrice: ''
     }
   },
   watch: {
@@ -79,7 +85,12 @@ export default {
     groupTradesByPrice(trades) {
       if (!trades || trades.length === 0) return []
 
-      const maxPrice = Math.max(...trades.map(t => t.price))
+      // 获取当前价格
+      price(this.symbol).then(res => {
+        this.currentPrice = res
+      })
+
+      const maxPrice = Math.ceil(Math.max(...trades.map(t => t.price)) / 1000) * 1000
       const bucketsMap = {}
 
       trades.forEach(trade => {
@@ -102,7 +113,7 @@ export default {
       })).sort((a, b) => {
         const aUpper = parseInt(a.range.split('-')[1])
         const bUpper = parseInt(b.range.split('-')[1])
-        return bUpper - aUpper
+        return aUpper - bUpper
       })
     },
     updateChart() {
@@ -147,16 +158,21 @@ export default {
         series: [
           {
             type: 'bar',
-            data: buckets.map(item => ({
-              value: item.totalQty,
-              range: item.range,
-              totalQty: item.totalQty,
-              avgPrice: item.avgPrice
-            })),
+            data: buckets.map(item => {
+              const [lower, upper] = item.range.split('-').map(Number)
+              const isCurrent = this.currentPrice ? this.currentPrice >= lower && this.currentPrice <= upper : false
+              return {
+                value: item.totalQty,
+                range: item.range,
+                totalQty: item.totalQty,
+                avgPrice: item.avgPrice,
+                itemStyle: { color: isCurrent ? '#FF3D00' : '#409EFF' } // 当前区间红色
+              }
+            }),
             label: {
               show: true,
               position: 'right',
-              formatter: d => `均价 ${d.data.avgPrice}`
+              formatter: d => `${d.data.avgPrice}`
             },
             itemStyle: {
               color: '#409EFF'

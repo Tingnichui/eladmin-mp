@@ -418,7 +418,7 @@
           </el-descriptions-item>
         </el-descriptions>
         <div>
-          <trade-position-distribution-bar :row-data="statsInfo.waitSellTradeInfoList" height="400px" style="margin-top: 20px" />
+          <trade-position-distribution-bar :row-data="statsInfo.waitSellTradeInfoList" :symbol="statsQuery.symbol" height="400px" style="margin-top: 20px" />
           <trade-profit-rate-scatter :row-data="statsInfo.matchedTradeInfoList" height="400px" style="margin-top: 20px" />
         </div>
         <template #footer>

@@ -24,4 +24,12 @@ export function edit(data) {
   })
 }
 
+export function price(symbol) {
+  return request({
+    url: 'api/investKlinesRecord/price',
+    method: 'get',
+    params: { symbol }
+  })
+}
+
 export default { add, edit, del }
