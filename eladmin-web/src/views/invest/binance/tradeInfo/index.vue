@@ -418,6 +418,7 @@
           </el-descriptions-item>
         </el-descriptions>
         <div>
+          <trade-position-distribution-bar :row-data="statsInfo.waitSellTradeInfoList" height="400px" style="margin-top: 20px" />
           <trade-profit-rate-scatter :row-data="statsInfo.matchedTradeInfoList" height="400px" style="margin-top: 20px" />
         </div>
         <template #footer>
@@ -442,11 +443,12 @@ import { formatDuration } from '../../../../utils/dateUtil'
 import TradeProfitRateScatter from '@/views/invest/binance/tradeInfo/TradeProfitRateScatter.vue'
 import { listAllAccount } from '@/api/binanceAccountInfo'
 import { changeHedgedFlag } from '@/api/binanceTradeInfoExt'
+import TradePositionDistributionBar from '@/views/invest/binance/tradeInfo/TradePositionDistributionBar.vue'
 
 const defaultForm = { id: null, symbol: null, price: null, qty: null, commission: null, time: null, orderId: null, quoteQty: null, commissionAsset: null, isBuyer: null, isMaker: null, isBestMatch: null }
 export default {
   name: 'BinanceTradeInfo',
-  components: { TradeProfitRateScatter, DateRangePicker, pagination, crudOperation, rrOperation, udOperation },
+  components: { TradePositionDistributionBar, TradeProfitRateScatter, DateRangePicker, pagination, crudOperation, rrOperation, udOperation },
   mixins: [presenter(), header(), form(defaultForm), crud()],
   dicts: ['invest_binance_trade_pairing_logic', 'invest_binance_symbol', 'invest_binance_commission_asset', 'invest_binance_is_buyer', 'invest_binance_is_maker', 'invest_binance_is_best_match', 'invest_binance_hedged_flag'],
   cruds() {
