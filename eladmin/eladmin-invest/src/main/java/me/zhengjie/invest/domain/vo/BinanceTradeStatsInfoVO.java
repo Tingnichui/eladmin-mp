@@ -16,6 +16,7 @@
 package me.zhengjie.invest.domain.vo;
 
 import lombok.Data;
+import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
 
 import java.io.Serializable;
@@ -58,6 +59,9 @@ public class BinanceTradeStatsInfoVO implements Serializable {
     private Long maxHoldTimeMs;
 
     private List<MatchedTradeInfo> matchedTradeInfoList;
+
+    // 剩余未平仓交易
+    private List<BinanceTradeInfo> waitSellTradeInfoList;
 
 
 }

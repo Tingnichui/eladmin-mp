@@ -208,13 +208,13 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             // 按照顺序寻找卖单
             Iterator<BinanceTradeInfo> sellIterator = sellTradeList.iterator();
             while (sellIterator.hasNext()) {
-                // 进入撮合首先判断是否买入还有剩余 已经平仓掉了就直接去除
-                if (buy.getQty().compareTo(BigDecimal.ZERO) <= 0) {
-                    buyIterator.remove();
-                    break;
+                BinanceTradeInfo sell = sellIterator.next();
+                // 卖出是否还有剩余 没有剩余就直接移除
+                if (sell.getQty().compareTo(BigDecimal.ZERO) <= 0) {
+                    sellIterator.remove();
+                    continue;
                 }
 
-                BinanceTradeInfo sell = sellIterator.next();
                 // 可匹配的仓位数量
                 BigDecimal matchQty = buy.getQty().min(sell.getQty());
                 // 撮合交易记录
@@ -236,10 +236,10 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                 // 更新卖出剩余量`
                 sell.setQty(sell.getQty().subtract(matchQty));
 
-                // 卖出是否还有剩余 没有剩余就直接移除
-                if (sell.getQty().compareTo(BigDecimal.ZERO) <= 0) {
-                    sellIterator.remove();
-                    continue;
+                // 判断是否买入还有剩余 已经平仓掉了就直接去除，并且终止撮合
+                if (buy.getQty().compareTo(BigDecimal.ZERO) <= 0) {
+                    buyIterator.remove();
+                    break;
                 }
 
             }
@@ -310,6 +310,10 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         }
 
         statsInfoVO.setMatchedTradeInfoList(matchedList);
+
+        // 剩余待平仓交易
+        buyTradeList.sort(Comparator.comparing(BinanceTradeInfo::getPrice).reversed());
+        statsInfoVO.setWaitSellTradeInfoList(buyTradeList);
 
         return statsInfoVO;
 
