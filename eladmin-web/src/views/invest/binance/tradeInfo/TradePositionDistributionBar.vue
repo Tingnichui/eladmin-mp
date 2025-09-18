@@ -51,7 +51,9 @@ export default {
     return {
       chart: null,
       priceInterval: 1000,
-      currentPrice: ''
+      currentPrice: '',
+      totalWaitAvgSellPrice: '',
+      totalWaitSellQty: ''
     }
   },
   watch: {
@@ -85,6 +87,12 @@ export default {
     },
     groupTradesByPrice(trades) {
       if (!trades || trades.length === 0) return []
+
+      this.totalWaitSellQty = trades.reduce((sum, t) => addAmount(sum, t.qty), 0)
+
+      this.totalWaitAvgSellPrice = trades.reduce((sum, t) => addAmount(sum, mulAmount(t.price, t.qty)), 0)
+
+      this.totalWaitAvgSellPrice = divAmount(this.totalWaitAvgSellPrice, this.totalWaitSellQty, 2)
 
       const maxPrice = Math.ceil(Math.max(...trades.map(t => t.price)) / 1000) * 1000
       const bucketsMap = {}
@@ -179,12 +187,23 @@ export default {
             data: buckets.map(item => {
               const [lower, upper] = item.range.split('-').map(Number)
               const isCurrent = this.currentPrice ? this.currentPrice >= lower && this.currentPrice <= upper : false
+              const isAvgBuyPrice = this.totalWaitAvgSellPrice ? this.totalWaitAvgSellPrice >= lower && this.totalWaitAvgSellPrice <= upper : false
+
+              let color = '#409EFF' // 默认蓝色
+              if (isCurrent) {
+                // 当前价格红色
+                color = '#FF3D00'
+              } else if (isAvgBuyPrice) {
+                // 平均卖价橙色
+                color = '#FFA500'
+              }
+
               return {
                 value: item.totalQty,
                 range: item.range,
                 totalQty: item.totalQty,
                 avgPrice: item.avgPrice,
-                itemStyle: { color: isCurrent ? '#FF3D00' : '#409EFF' } // 当前区间红色
+                itemStyle: { color }
               }
             }),
             label: {
@@ -199,14 +218,40 @@ export default {
         ],
         graphic: [
           {
-            type: 'text',
+            type: 'group', // 用 group 包裹多个 text，实现分行排版
             right: 20,
             top: 50,
-            style: {
-              text: `${this.currentPrice || 0}`,
-              fill: '#FF3D00',
-              font: 'bold 14px Arial'
-            }
+            children: [
+              {
+                type: 'text',
+                style: {
+                  text: `${this.currentPrice || 0}`,
+                  fill: '#FF3D00',
+                  font: 'bold 14px Arial',
+                  align: 'right'
+                }
+              },
+              {
+                type: 'text',
+                top: 20, // 相对于 group 向下偏移
+                style: {
+                  text: `${this.totalWaitSellQty}`,
+                  fill: '#409EFF',
+                  font: 'bold 14px Arial',
+                  align: 'right'
+                }
+              },
+              {
+                type: 'text',
+                top: 40, // 相对于 group 向下偏移
+                style: {
+                  text: `${this.totalWaitAvgSellPrice}`,
+                  fill: '#409EFF',
+                  font: 'bold 14px Arial',
+                  align: 'right'
+                }
+              }
+            ]
           }
         ]
       })
