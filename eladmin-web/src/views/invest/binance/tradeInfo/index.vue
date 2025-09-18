@@ -368,6 +368,14 @@
           </el-select>
           <label class="el-form-item-label">成交时间</label>
           <date-range-picker v-model="statsQuery.time" class="date-item" @change="doStats" />
+          <el-button
+            slot="right"
+            class="filter-item"
+            size="mini"
+            type="success"
+            icon="el-icon-tickets"
+            @click="doStats"
+          >查询</el-button>
         </div>
 
         <el-descriptions :column="3" border class="stats-descriptions">

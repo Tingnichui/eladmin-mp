@@ -5,9 +5,9 @@
       <input
         v-model.number="priceInterval"
         type="range"
-        min="50"
-        max="1000"
-        step="50"
+        min="100"
+        max="2000"
+        step="100"
         style="width: 300px;"
         @input="updateChart"
       >
@@ -22,6 +22,7 @@ import echarts from 'echarts'
 require('echarts/theme/macarons') // echarts theme
 import { debounce } from '@/utils'
 import { price } from '@/api/investKlinesRecord'
+import { addAmount, divAmount, mulAmount } from '@/utils/numberUtil'
 
 export default {
   props: {
@@ -49,7 +50,7 @@ export default {
   data() {
     return {
       chart: null,
-      priceInterval: 200,
+      priceInterval: 1000,
       currentPrice: ''
     }
   },
@@ -85,11 +86,6 @@ export default {
     groupTradesByPrice(trades) {
       if (!trades || trades.length === 0) return []
 
-      // 获取当前价格
-      price(this.symbol).then(res => {
-        this.currentPrice = res
-      })
-
       const maxPrice = Math.ceil(Math.max(...trades.map(t => t.price)) / 1000) * 1000
       const bucketsMap = {}
 
@@ -102,14 +98,14 @@ export default {
         if (!bucketsMap[key]) {
           bucketsMap[key] = { range: key, totalQty: 0, totalAmount: 0 }
         }
-        bucketsMap[key].totalQty += trade.qty
-        bucketsMap[key].totalAmount += trade.price * trade.qty
+        bucketsMap[key].totalQty = addAmount(bucketsMap[key].totalQty, trade.qty)
+        bucketsMap[key].totalAmount = addAmount(bucketsMap[key].totalAmount, mulAmount(trade.price, trade.qty))
       })
 
       return Object.values(bucketsMap).map(bucket => ({
         range: bucket.range,
         totalQty: bucket.totalQty,
-        avgPrice: bucket.totalQty > 0 ? (bucket.totalAmount / bucket.totalQty).toFixed(2) : 0
+        avgPrice: bucket.totalQty > 0 ? divAmount(bucket.totalAmount, bucket.totalQty, 2) : 0
       })).sort((a, b) => {
         const aUpper = parseInt(a.range.split('-')[1])
         const bUpper = parseInt(b.range.split('-')[1])
@@ -119,7 +115,14 @@ export default {
     updateChart() {
       if (!this.chart || !this.rowData.length) return
 
+      // 获取当前价格
+      price(this.symbol).then(res => {
+        this.currentPrice = res
+      })
+
       const buckets = this.groupTradesByPrice(this.rowData)
+
+      console.log(buckets)
 
       this.chart.setOption({
         title: {
