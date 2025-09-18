@@ -143,6 +143,21 @@ export default {
             `
           }
         },
+        toolbox: {
+          feature: {
+            myRefresh: {
+              show: true,
+              title: '刷新图表',
+              icon: 'path://M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448H832c0 176.7-143.3 320-320 320S192 688.7 192 512 335.3 192 512 192v80l128-128-128-128v80z', // 可自定义刷新图标
+              onclick: () => {
+                this.updateChart()
+              }
+            },
+            saveAsImage: { show: true, title: '保存图片' }
+          },
+          right: 10,
+          top: 10
+        },
         grid: {
           left: '10%',
           right: '10%',
