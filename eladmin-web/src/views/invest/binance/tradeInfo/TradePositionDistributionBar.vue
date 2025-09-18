@@ -196,6 +196,18 @@ export default {
               color: '#409EFF'
             }
           }
+        ],
+        graphic: [
+          {
+            type: 'text',
+            right: 20,
+            top: 50,
+            style: {
+              text: `${this.currentPrice || 0}`,
+              fill: '#FF3D00',
+              font: 'bold 14px Arial'
+            }
+          }
         ]
       })
     }
