@@ -20,7 +20,7 @@ public class SyncBinanceTradeInfoServiceTask {
 
     public void sync(String symbols) {
         if (org.apache.commons.lang3.StringUtils.isBlank(symbols)) {
-            throw new RuntimeException("cookie不能为空");
+            throw new RuntimeException("交易对不能为空");
         }
 
         List<String> symbolList = Arrays.stream(symbols.split(",")).filter(StringUtils::isNotBlank).collect(Collectors.toList());

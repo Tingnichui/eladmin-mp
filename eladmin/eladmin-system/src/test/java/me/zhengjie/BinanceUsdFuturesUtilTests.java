@@ -4,6 +4,8 @@ import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateUtil;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.dto.BinanceFundingRate;
+import me.zhengjie.invest.service.BinanceAccountInfoService;
+import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceUsdFuturesUtil;
 import org.apache.commons.collections4.CollectionUtils;
 import org.junit.jupiter.api.Test;
@@ -23,6 +25,17 @@ public class BinanceUsdFuturesUtilTests {
     @Resource
     private BinanceUsdFuturesUtil binanceUsdFuturesUtil;
 
+    @Resource
+    private BinanceAccountInfoService binanceAccountInfoService;
+
+    @Test
+    void userTrades() {
+        BinanceAccountContextHolder.runWith(binanceAccountInfoService.getAccountByIdCardName("耿辉"), () -> {
+            BinanceEnum.SYMBOL symbol = BinanceEnum.SYMBOL.BTCUSDT;
+            binanceUsdFuturesUtil.userTrades(symbol);
+        });
+
+    }
 
     @Test
     void fundingRate() {

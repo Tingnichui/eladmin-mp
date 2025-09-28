@@ -122,4 +122,10 @@ public class BinanceUsdFuturesUtil {
         return body;
     }
 
+    public void userTrades(BinanceEnum.SYMBOL symbol) {
+        Map<String, Object> parmasMap = new HashMap<>();
+        parmasMap.put("symbol", symbol);
+        String string = this.doRequest("/fapi/v1/userTrades", parmasMap, true, true);
+        System.err.println(string);
+    }
 }

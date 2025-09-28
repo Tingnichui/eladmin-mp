@@ -24,6 +24,14 @@ export function edit(data) {
   })
 }
 
+export function sync(symbols) {
+  return request({
+    url: 'api/binanceTradeInfo/sync',
+    method: 'put',
+    data: symbols
+  })
+}
+
 export function stats(params) {
   return request({
     url: 'api/binanceTradeInfo/stats',
@@ -32,4 +40,4 @@ export function stats(params) {
   })
 }
 
-export default { add, edit, del }
+export default { add, edit, del, sync, stats }

@@ -169,14 +169,16 @@
       </div>
       <!--如果想在工具栏加入更多按钮，可以使用插槽方式， slot = 'left' or 'right'-->
       <crudOperation :permission="permission">
-        <el-button
-          slot="right"
-          class="filter-item"
-          size="mini"
-          type="success"
-          icon="el-icon-tickets"
-          @click="showStats = true;doStats()"
-        >汇总</el-button>
+        <el-tooltip slot="right" class="item" effect="dark" content="同步交易记录" placement="top-start">
+          <el-button
+            class="filter-item"
+            size="mini"
+            type="success"
+            icon="el-icon-refresh"
+            :loading="syncLoading"
+            @click="sync"
+          >同步</el-button>
+        </el-tooltip>
       </crudOperation>
       <!--表单组件-->
       <el-dialog :close-on-click-modal="false" :before-close="crud.cancelCU" :visible.sync="crud.status.cu > 0" :title="crud.status.title" width="500px">
@@ -312,151 +314,25 @@
       </el-table>
       <!--分页组件-->
       <pagination />
-
-      <el-dialog :visible.sync="showStats" append-to-body title="交易汇总" width="60%" class="stats-dialog">
-        <!-- 搜索 -->
-        <div class="head-container">
-          <label class="el-form-item-label">账户</label>
-          <el-select
-            v-model="statsQuery.uid"
-            clearable
-            filterable
-            size="small"
-            placeholder="账户"
-            class="filter-item"
-            style="width: 185px"
-            @change="doStats"
-          >
-            <el-option
-              v-for="item in accountList"
-              :key="item.id"
-              :label="item.idCardName"
-              :value="item.uid"
-            />
-          </el-select>
-          <label class="el-form-item-label">交易对</label>
-          <el-select
-            v-model="statsQuery.symbol"
-            size="small"
-            placeholder="投资类型"
-            class="filter-item"
-            style="width: 185px"
-            @change="doStats"
-          >
-            <el-option
-              v-for="item in dict.invest_binance_symbol"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
-            />
-          </el-select>
-          <label class="el-form-item-label">撮合逻辑</label>
-          <el-select
-            v-model="statsQuery.tradePairingLogic"
-            size="small"
-            placeholder="投资类型"
-            class="filter-item"
-            style="width: 185px"
-            @change="doStats"
-          >
-            <el-option
-              v-for="item in dict.invest_binance_trade_pairing_logic"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
-            />
-          </el-select>
-          <label class="el-form-item-label">成交时间</label>
-          <date-range-picker v-model="statsQuery.time" class="date-item" @change="doStats" />
-          <el-button
-            slot="right"
-            class="filter-item"
-            size="mini"
-            type="success"
-            icon="el-icon-tickets"
-            @click="doStats"
-          >查询</el-button>
-        </div>
-
-        <el-descriptions :column="3" border class="stats-descriptions">
-          <el-descriptions-item label="买入均价">
-            {{ formatDecimal(statsInfo.avgBuyPrice) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="卖出均价">
-            {{ formatDecimal(statsInfo.avgSellPrice) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="收益率">
-            {{ formatPercent(statsInfo.profitPct) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="买入总金额">
-            {{ formatDecimal(statsInfo.totalBuyAmount) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="卖出总金额">
-            {{ formatDecimal(statsInfo.totalSellAmount) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="利润">
-            {{ formatDecimal(statsInfo.profit) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="未平仓均价">
-            {{ formatDecimal(statsInfo.totalWaitAvgSellPrice) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="未平仓数量">
-            {{ formatDecimal(statsInfo.totalWaitSellQty) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="未平仓总额">
-            {{ formatDecimal(statsInfo.totalWaitSellAmount) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="锁仓均价">
-            {{ formatDecimal(statsInfo.hedgedAvgPrice) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="锁仓数量">
-            {{ formatDecimal(statsInfo.hedgedQty) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="锁仓总额">
-            {{ formatDecimal(statsInfo.hedgedAmount) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="最短持仓">
-            {{ formatDuration(statsInfo.minHoldTimeMs) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="最长持仓">
-            {{ formatDuration(statsInfo.maxHoldTimeMs) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="平均持仓">
-            {{ formatDuration(statsInfo.avgHoldTimeMs) }}
-          </el-descriptions-item>
-        </el-descriptions>
-        <div>
-          <trade-position-distribution-bar :row-data="statsInfo.waitSellTradeInfoList" :symbol="statsQuery.symbol" height="400px" style="margin-top: 20px" />
-          <trade-profit-rate-scatter :row-data="statsInfo.matchedTradeInfoList" height="400px" style="margin-top: 20px" />
-        </div>
-        <template #footer>
-          <div style="text-align: center;">
-            <el-button type="primary" @click="showStats = false">关闭</el-button>
-          </div>
-        </template>
-      </el-dialog>
     </div>
   </div>
 </template>
 
 <script>
-import crudBinanceTradeInfo, { stats } from '@/api/binanceTradeInfo'
+import crudBinanceTradeInfo from '@/api/binanceTradeInfo'
 import CRUD, { presenter, header, form, crud } from '@crud/crud'
 import rrOperation from '@crud/RR.operation'
 import crudOperation from '@crud/CRUD.operation'
 import udOperation from '@crud/UD.operation'
 import pagination from '@crud/Pagination'
 import DateRangePicker from '@/components/DateRangePicker/index.vue'
-import { formatDuration } from '../../../../utils/dateUtil'
-import TradeProfitRateScatter from '@/views/invest/binance/tradeInfo/TradeProfitRateScatter.vue'
 import { listAllAccount } from '@/api/binanceAccountInfo'
 import { changeHedgedFlag } from '@/api/binanceTradeInfoExt'
-import TradePositionDistributionBar from '@/views/invest/binance/tradeInfo/TradePositionDistributionBar.vue'
 
 const defaultForm = { id: null, symbol: null, price: null, qty: null, commission: null, time: null, orderId: null, quoteQty: null, commissionAsset: null, isBuyer: null, isMaker: null, isBestMatch: null }
 export default {
   name: 'BinanceTradeInfo',
-  components: { TradePositionDistributionBar, TradeProfitRateScatter, DateRangePicker, pagination, crudOperation, rrOperation, udOperation },
+  components: { DateRangePicker, pagination, crudOperation, rrOperation, udOperation },
   mixins: [presenter(), header(), form(defaultForm), crud()],
   dicts: ['invest_binance_trade_pairing_logic', 'invest_binance_symbol', 'invest_binance_commission_asset', 'invest_binance_is_buyer', 'invest_binance_is_maker', 'invest_binance_is_best_match', 'invest_binance_hedged_flag'],
   cruds() {
@@ -464,7 +340,7 @@ export default {
   },
   data() {
     return {
-      showStats: false,
+      syncLoading: false,
       statsInfo: {},
       accountList: [],
       statsQuery: {
@@ -525,22 +401,9 @@ export default {
     this.refreshAccountList()
   },
   methods: {
-    formatDuration,
     // 钩子：在获取表格数据之前执行，false 则代表不获取数据
     [CRUD.HOOK.beforeRefresh]() {
       return true
-    },
-    // 显示汇总
-    doStats() {
-      stats(this.statsQuery).then(res => {
-        this.statsInfo = res
-      })
-    },
-    formatDecimal(val) {
-      return val != null ? Number(val).toFixed(4) : '--'
-    },
-    formatPercent(val) {
-      return val != null ? (val * 100).toFixed(2) + '%' : '--'
     },
     refreshAccountList() {
       listAllAccount().then(data => {
@@ -568,6 +431,16 @@ export default {
         })
       }).catch(() => {
         data.autoTradeFlag = oldFlag // 如果取消操作，还原旧状态
+      })
+    },
+    sync() {
+      this.syncLoading = true
+      crudBinanceTradeInfo.sync(['BTCUSDT', 'BNBUSDT']).then(() => {
+        this.crud.refresh()
+        this.crud.notify('同步成功', CRUD.NOTIFICATION_TYPE.SUCCESS)
+        this.syncLoading = false
+      }).catch(() => {
+        this.syncLoading = false
       })
     }
   }
