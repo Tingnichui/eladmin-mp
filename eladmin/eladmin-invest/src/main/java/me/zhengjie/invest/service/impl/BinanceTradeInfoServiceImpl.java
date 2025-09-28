@@ -21,6 +21,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import me.zhengjie.exception.BadRequestException;
+import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.constants.TradePairingLogicEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
@@ -321,10 +322,12 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
     @Override
     public void syncAll() {
-        List<String> symbols = binanceTradeInfoMapper.listAllSymbol();
-        for (String symbol : symbols) {
-            this.syncTradeInfo(symbol);
+        for (BinanceEnum.SYMBOL symbol : BinanceEnum.SYMBOL.values()) {
+            if (symbol.getType() == 0) {
+                this.syncTradeInfo(symbol.toString());
+            }
         }
+
     }
 
 }

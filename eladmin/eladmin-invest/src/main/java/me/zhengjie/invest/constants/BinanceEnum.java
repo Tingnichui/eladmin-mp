@@ -12,11 +12,16 @@ public class BinanceEnum {
     @AllArgsConstructor
     public enum SYMBOL {
 
-        BTCUSDT("BTC现货"),
-        BNBUSDT("BNC现货"),
-        BTCUSD_PERP("BTC合约"),
+        BTCUSDT("BTC现货", 0),
+        BNBUSDT("BNC现货", 0),
+        BTCUSD_PERP("BTC合约", 1),
         ;
         private final String desc;
+        /**
+         * 0 现货
+         * 1 合约
+         */
+        private final Integer type;
     }
 
     @Getter
