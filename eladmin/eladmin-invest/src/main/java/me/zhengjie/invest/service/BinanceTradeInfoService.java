@@ -80,4 +80,6 @@ public interface BinanceTradeInfoService extends IService<BinanceTradeInfo> {
 
     BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria);
 
+    void syncAll();
+
 }

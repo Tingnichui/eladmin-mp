@@ -104,8 +104,8 @@ public class BinanceTradeInfoController {
     @Log("同步交易")
     @ApiOperation("同步交易")
     @PreAuthorize("@el.check('binanceTradeInfo:sync')")
-    public ResponseEntity<BinanceTradeStatsInfoVO> sync(@RequestBody List<String> symbols){
-        syncBinanceTradeInfoServiceTask.sync(StringUtils.join(symbols, ","));
+    public ResponseEntity<BinanceTradeStatsInfoVO> sync(){
+        binanceTradeInfoService.syncAll();
         return new ResponseEntity<>(HttpStatus.OK);
     }
 

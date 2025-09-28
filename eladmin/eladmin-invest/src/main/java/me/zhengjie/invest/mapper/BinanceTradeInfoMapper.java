@@ -34,4 +34,7 @@ public interface BinanceTradeInfoMapper extends BaseMapper<BinanceTradeInfo> {
     IPage<BinanceTradeInfo> findAll(@Param("criteria") BinanceTradeInfoQueryCriteria criteria, Page<Object> page);
 
     List<BinanceTradeInfo> findAll(@Param("criteria") BinanceTradeInfoQueryCriteria criteria);
+
+    List<String> listAllSymbol();
+
 }

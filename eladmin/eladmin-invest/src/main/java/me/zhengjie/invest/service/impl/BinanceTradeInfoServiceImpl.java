@@ -319,4 +319,12 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
     }
 
+    @Override
+    public void syncAll() {
+        List<String> symbols = binanceTradeInfoMapper.listAllSymbol();
+        for (String symbol : symbols) {
+            this.syncTradeInfo(symbol);
+        }
+    }
+
 }

@@ -89,4 +89,9 @@
         </if>
 
     </select>
+
+    <select id="listAllSymbol" resultType="java.lang.String">
+        select distinct t1.symbol from binance_trade_info t1
+    </select>
+
 </mapper>
