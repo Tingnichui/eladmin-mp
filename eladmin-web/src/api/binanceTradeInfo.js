@@ -24,11 +24,10 @@ export function edit(data) {
   })
 }
 
-export function sync(symbols) {
+export function sync() {
   return request({
     url: 'api/binanceTradeInfo/sync',
-    method: 'put',
-    data: symbols
+    method: 'put'
   })
 }
 

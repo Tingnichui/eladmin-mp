@@ -63,6 +63,14 @@
           icon="el-icon-tickets"
           @click="doStats"
         >查询</el-button>
+        <el-button
+          class="filter-item"
+          size="mini"
+          type="success"
+          icon="el-icon-refresh"
+          :loading="syncLoading"
+          @click="sync"
+        >同步</el-button>
       </div>
       <div>
         <el-descriptions :column="3" border class="stats-descriptions">
@@ -122,12 +130,13 @@
 </template>
 
 <script>
-import { stats } from '@/api/binanceTradeInfo'
+import crudBinanceTradeInfo, { stats } from '@/api/binanceTradeInfo'
 import DateRangePicker from '@/components/DateRangePicker/index.vue'
 import { formatDuration } from '@/utils/dateUtil'
 import TradeProfitRateScatter from '@/views/invest/binance/tradeInfo/TradeProfitRateScatter.vue'
 import { listAllAccount } from '@/api/binanceAccountInfo'
 import TradePositionDistributionBar from '@/views/invest/binance/tradeInfo/TradePositionDistributionBar.vue'
+import CRUD from '@crud/crud'
 
 export default {
   name: 'BinanceTradeInfoStats',
@@ -137,6 +146,7 @@ export default {
     return {
       statsInfo: {},
       accountList: [],
+      syncLoading: false,
       query: {
         symbol: 'BTCUSDT',
         tradePairingLogic: 'FIFO'
@@ -164,6 +174,20 @@ export default {
     refreshAccountList() {
       listAllAccount().then(data => {
         this.accountList = data.content
+      })
+    },
+    sync() {
+      this.syncLoading = true
+      crudBinanceTradeInfo.sync().then(() => {
+        this.doStats()
+        this.$notify({
+          title: '同步成功',
+          type: CRUD.NOTIFICATION_TYPE.SUCCESS,
+          duration: 2500
+        })
+        this.syncLoading = false
+      }).catch(() => {
+        this.syncLoading = false
       })
     }
   }
