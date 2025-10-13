@@ -7,6 +7,8 @@ import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.dto.BinanceFundingRate;
@@ -18,6 +20,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.math.BigDecimal;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.nio.charset.StandardCharsets;
@@ -25,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 币安U本位合约
@@ -127,5 +131,14 @@ public class BinanceUsdFuturesUtil {
         parmasMap.put("symbol", symbol);
         String string = this.doRequest("/fapi/v1/userTrades", parmasMap, true, true);
         System.err.println(string);
+    }
+
+    public JSONObject account() {
+        Map<String, Object> parmasMap = new HashMap<>();
+        parmasMap.put("symbol", "symbol");
+        JSONObject resJson = JSON.parseObject(this.doRequest("/fapi/v2/account", parmasMap, true, true));
+
+        List<JSONObject> positions = resJson.getJSONArray("positions").stream().map(obj -> (JSONObject) obj).collect(Collectors.toList());
+        return positions.stream().filter(v -> v.getString("symbol").equals("BTCUSDT") && v.getString("positionSide").equals("SHORT")).findFirst().orElse(null);
     }
 }

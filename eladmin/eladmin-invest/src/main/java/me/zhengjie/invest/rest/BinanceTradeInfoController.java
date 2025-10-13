@@ -15,26 +15,27 @@
 */
 package me.zhengjie.invest.rest;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import lombok.RequiredArgsConstructor;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
+import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
-import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
-import lombok.RequiredArgsConstructor;
-import java.util.List;
-
 import me.zhengjie.invest.task.SyncBinanceTradeInfoServiceTask;
-import me.zhengjie.utils.StringUtils;
+import me.zhengjie.invest.util.BinanceAccountContextHolder;
+import me.zhengjie.utils.PageResult;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import io.swagger.annotations.*;
-import java.io.IOException;
+
 import javax.servlet.http.HttpServletResponse;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import me.zhengjie.utils.PageResult;
+import java.io.IOException;
+import java.util.List;
 
 /**
 * @author genghui
@@ -106,6 +107,7 @@ public class BinanceTradeInfoController {
     @PreAuthorize("@el.check('binanceTradeInfo:sync')")
     public ResponseEntity<BinanceTradeStatsInfoVO> sync(){
         binanceTradeInfoService.syncAll();
+        binanceTradeInfoService.syncHedge();
         return new ResponseEntity<>(HttpStatus.OK);
     }
 

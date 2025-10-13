@@ -2,6 +2,7 @@ package me.zhengjie;
 
 import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateUtil;
+import com.alibaba.fastjson.JSONObject;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.dto.BinanceFundingRate;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
@@ -35,6 +36,12 @@ public class BinanceUsdFuturesUtilTests {
             binanceUsdFuturesUtil.userTrades(symbol);
         });
 
+    }
+    @Test
+    void account() {
+        BinanceAccountContextHolder.runWith(binanceAccountInfoService.getAccountByIdCardName("耿辉"), () -> {
+            binanceUsdFuturesUtil.account();
+        });
     }
 
     @Test

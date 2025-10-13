@@ -18,8 +18,7 @@ package me.zhengjie.invest.service;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 
-import java.util.Date;
-import java.util.Map;
+import java.math.BigDecimal;
 import java.util.List;
 import java.io.IOException;
 import javax.servlet.http.HttpServletResponse;
@@ -81,5 +80,7 @@ public interface BinanceTradeInfoService extends IService<BinanceTradeInfo> {
     BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria);
 
     void syncAll();
+
+    void syncHedge();
 
 }

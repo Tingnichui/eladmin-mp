@@ -16,6 +16,7 @@
 package me.zhengjie.invest.service.impl;
 
 import cn.hutool.core.util.NumberUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -25,14 +26,17 @@ import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.constants.TradePairingLogicEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
+import me.zhengjie.invest.domain.BinanceTradeInfoExt;
 import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.mapper.BinanceTradeInfoMapper;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
+import me.zhengjie.invest.service.BinanceTradeInfoExtService;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceSpotUtil;
+import me.zhengjie.invest.util.BinanceUsdFuturesUtil;
 import me.zhengjie.utils.FileUtil;
 import me.zhengjie.utils.PageResult;
 import me.zhengjie.utils.PageUtil;
@@ -60,6 +64,8 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
     private final BinanceTradeInfoMapper binanceTradeInfoMapper;
     private final BinanceAccountInfoService binanceAccountInfoService;
     private final BinanceSpotUtil binanceSpotUtil;
+    private final BinanceTradeInfoExtService binanceTradeInfoExtService;
+    private final BinanceUsdFuturesUtil binanceUsdFuturesUtil;
 
     @Override
     public PageResult<BinanceTradeInfo> queryAll(BinanceTradeInfoQueryCriteria criteria, Page<Object> page) {
@@ -327,6 +333,42 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                 this.syncTradeInfo(symbol.toString());
             }
         }
+
+    }
+
+    @Override
+    public void syncHedge() {
+
+        BinanceAccountContextHolder.runWith(binanceAccountInfoService.getAccountByIdCardName("耿辉"), () -> {
+            JSONObject account = binanceUsdFuturesUtil.account();
+            if (null == account) {
+                throw new RuntimeException("获取合约信息失败");
+            }
+            BigDecimal price = account.getBigDecimal("entryPrice");
+            BigDecimal qty = account.getBigDecimal("positionAmt").multiply(new BigDecimal("-1"));
+
+            // 对冲仓位的开仓价格 之下，按照创建时间倒序 价格倒序
+            List<BinanceTradeInfo> binanceTradeInfos = binanceTradeInfoMapper.list4hedge(price);
+
+            // 所有都标记未锁仓
+            binanceTradeInfoExtService.getBaseMapper().update(null,
+                    Wrappers.lambdaUpdate(BinanceTradeInfoExt.class)
+                            .set(BinanceTradeInfoExt::getHedgedFlag, 0)
+            );
+
+            // 匹配标记锁仓
+            for (BinanceTradeInfo tradeInfo : binanceTradeInfos) {
+                if (qty.compareTo(BigDecimal.ZERO) <= 0) {
+                    break; // 已对冲完毕
+                }
+                // 可匹配的仓位数量
+                if (qty.compareTo(tradeInfo.getQty()) >= 0) {
+                    qty = qty.subtract(tradeInfo.getQty());
+                    binanceTradeInfoExtService.changeHedgedFlag(tradeInfo.getOrderId());
+                }
+            }
+
+        });
 
     }
 
