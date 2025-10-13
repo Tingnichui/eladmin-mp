@@ -129,6 +129,11 @@ export default {
       })
 
       const buckets = this.groupTradesByPrice(this.rowData)
+      // 先建立一个 map，range -> avgPrice
+      const rangeAvgPriceMap = {}
+      buckets.forEach(item => {
+        rangeAvgPriceMap[item.range] = item.avgPrice
+      })
 
       console.log(buckets)
 
@@ -183,8 +188,9 @@ export default {
           axisLabel: {
             formatter: (value) => {
               const upper = value.split('-').map(Number)[1]
+              const avgPrice = rangeAvgPriceMap[value]
               // 判断当前价格是否高于该区间
-              if (this.currentPrice && upper <= this.currentPrice) {
+              if (this.currentPrice && upper <= this.currentPrice && avgPrice <= mulAmount(this.currentPrice, 0.995)) {
                 return `{green|${value}}`
               }
               return `{normal|${value}}`
