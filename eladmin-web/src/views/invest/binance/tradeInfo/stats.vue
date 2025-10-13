@@ -69,8 +69,16 @@
           type="success"
           icon="el-icon-refresh"
           :loading="syncLoading"
-          @click="sync"
+          @click="syncSpotTradeInfo"
         >同步</el-button>
+        <el-button
+          class="filter-item"
+          size="mini"
+          type="success"
+          icon="el-icon-refresh"
+          :loading="syncLoading"
+          @click="syncFuturesHedge"
+        >锁仓</el-button>
       </div>
       <div>
         <el-descriptions :column="3" border class="stats-descriptions">
@@ -130,7 +138,7 @@
 </template>
 
 <script>
-import crudBinanceTradeInfo, { stats } from '@/api/binanceTradeInfo'
+import crudBinanceTradeInfo from '@/api/binanceTradeInfo'
 import DateRangePicker from '@/components/DateRangePicker/index.vue'
 import { formatDuration } from '@/utils/dateUtil'
 import TradeProfitRateScatter from '@/views/invest/binance/tradeInfo/TradeProfitRateScatter.vue'
@@ -161,7 +169,7 @@ export default {
     formatDuration,
     // 显示汇总
     doStats() {
-      stats(this.query).then(res => {
+      crudBinanceTradeInfo.stats(this.query).then(res => {
         this.statsInfo = res
       })
     },
@@ -176,9 +184,23 @@ export default {
         this.accountList = data.content
       })
     },
-    sync() {
+    syncSpotTradeInfo() {
       this.syncLoading = true
-      crudBinanceTradeInfo.sync().then(() => {
+      crudBinanceTradeInfo.syncSpotTradeInfo().then(() => {
+        this.doStats()
+        this.$notify({
+          title: '同步成功',
+          type: CRUD.NOTIFICATION_TYPE.SUCCESS,
+          duration: 2500
+        })
+        this.syncLoading = false
+      }).catch(() => {
+        this.syncLoading = false
+      })
+    },
+    syncFuturesHedge() {
+      this.syncLoading = true
+      crudBinanceTradeInfo.syncFuturesHedge().then(() => {
         this.doStats()
         this.$notify({
           title: '同步成功',

@@ -101,12 +101,20 @@ public class BinanceTradeInfoController {
         return new ResponseEntity<>(binanceTradeInfoService.stats(criteria),HttpStatus.OK);
     }
 
-    @PutMapping("/sync")
+    @PutMapping("/syncSpotTradeInfo")
     @Log("同步交易")
     @ApiOperation("同步交易")
     @PreAuthorize("@el.check('binanceTradeInfo:sync')")
     public ResponseEntity<BinanceTradeStatsInfoVO> sync(){
         binanceTradeInfoService.syncAll();
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @PutMapping("/syncFuturesHedge")
+    @Log("同步合约锁仓交易")
+    @ApiOperation("同步交易")
+    @PreAuthorize("@el.check('binanceTradeInfo:sync')")
+    public ResponseEntity<BinanceTradeStatsInfoVO> syncHedge(){
         binanceTradeInfoService.syncHedge();
         return new ResponseEntity<>(HttpStatus.OK);
     }

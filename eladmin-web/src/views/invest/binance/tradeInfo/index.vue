@@ -435,7 +435,7 @@ export default {
     },
     sync() {
       this.syncLoading = true
-      crudBinanceTradeInfo.sync(['BTCUSDT', 'BNBUSDT']).then(() => {
+      crudBinanceTradeInfo.syncSpotTradeInfo().then(() => {
         this.crud.refresh()
         this.crud.notify('同步成功', CRUD.NOTIFICATION_TYPE.SUCCESS)
         this.syncLoading = false
