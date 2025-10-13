@@ -50,7 +50,7 @@ export default {
   data() {
     return {
       chart: null,
-      priceInterval: 1000,
+      priceInterval: 500,
       currentPrice: '',
       totalWaitAvgSellPrice: '',
       totalWaitSellQty: ''
@@ -179,21 +179,36 @@ export default {
         yAxis: {
           name: '价格区间',
           type: 'category',
-          data: buckets.map(item => item.range)
+          data: buckets.map(item => item.range),
+          axisLabel: {
+            formatter: (value) => {
+              const upper = value.split('-').map(Number)[1]
+              // 判断当前价格是否高于该区间
+              if (this.currentPrice && upper <= this.currentPrice) {
+                return `{green|${value}}`
+              }
+              return `{normal|${value}}`
+            },
+            rich: {
+              green: {
+                color: '#00C853', // 红色
+                fontWeight: 'bold'
+              },
+              normal: {
+                color: '#666' // 默认灰色
+              }
+            }
+          }
         },
         series: [
           {
             type: 'bar',
             data: buckets.map(item => {
               const [lower, upper] = item.range.split('-').map(Number)
-              const isCurrent = this.currentPrice ? this.currentPrice >= lower && this.currentPrice <= upper : false
               const isAvgBuyPrice = this.totalWaitAvgSellPrice ? this.totalWaitAvgSellPrice >= lower && this.totalWaitAvgSellPrice <= upper : false
 
               let color = '#409EFF' // 默认蓝色
-              if (isCurrent) {
-                // 当前价格红色
-                color = '#FF3D00'
-              } else if (isAvgBuyPrice) {
+              if (isAvgBuyPrice) {
                 // 平均卖价橙色
                 color = '#FFA500'
               }
