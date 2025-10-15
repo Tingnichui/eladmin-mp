@@ -82,50 +82,12 @@
       </div>
       <div>
         <el-descriptions :column="3" border class="stats-descriptions">
-          <el-descriptions-item label="买入均价">
-            {{ formatDecimal(statsInfo.avgBuyPrice) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="卖出均价">
-            {{ formatDecimal(statsInfo.avgSellPrice) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="收益率">
-            {{ formatPercent(statsInfo.profitPct) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="买入总金额">
-            {{ formatDecimal(statsInfo.totalBuyAmount) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="卖出总金额">
-            {{ formatDecimal(statsInfo.totalSellAmount) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="利润">
-            {{ formatDecimal(statsInfo.profit) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="未平仓均价">
-            {{ formatDecimal(statsInfo.totalWaitAvgSellPrice) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="未平仓数量">
-            {{ formatDecimal(statsInfo.totalWaitSellQty) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="未平仓总额">
-            {{ formatDecimal(statsInfo.totalWaitSellAmount) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="锁仓均价">
-            {{ formatDecimal(statsInfo.hedgedAvgPrice) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="锁仓数量">
-            {{ formatDecimal(statsInfo.hedgedQty) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="锁仓总额">
-            {{ formatDecimal(statsInfo.hedgedAmount) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="最短持仓">
-            {{ formatDuration(statsInfo.minHoldTimeMs) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="最长持仓">
-            {{ formatDuration(statsInfo.maxHoldTimeMs) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="平均持仓">
-            {{ formatDuration(statsInfo.avgHoldTimeMs) }}
+          <el-descriptions-item
+            v-for="(item, index) in statItems"
+            :key="index"
+            :label="item.label"
+          >
+            {{ formatValue(item.key, item.type) }}
           </el-descriptions-item>
         </el-descriptions>
         <div>
@@ -158,7 +120,24 @@ export default {
       query: {
         symbol: 'BTCUSDT',
         tradePairingLogic: 'FIFO'
-      }
+      },
+      statItems: [
+        { label: '买入均价', key: 'avgBuyPrice' },
+        { label: '卖出均价', key: 'avgSellPrice' },
+        { label: '收益率', key: 'profitPct', type: 'percent' },
+        { label: '买入总金额', key: 'totalBuyAmount' },
+        { label: '卖出总金额', key: 'totalSellAmount' },
+        { label: '利润', key: 'profit', type: 'profit' },
+        { label: '未平仓均价', key: 'totalWaitAvgSellPrice' },
+        { label: '未平仓数量', key: 'totalWaitSellQty' },
+        { label: '未平仓总额', key: 'totalWaitSellAmount' },
+        { label: '锁仓均价', key: 'hedgedAvgPrice' },
+        { label: '锁仓数量', key: 'hedgedQty' },
+        { label: '锁仓总额', key: 'hedgedAmount' },
+        { label: '最短持仓', key: 'minHoldTimeMs', type: 'duration' },
+        { label: '最长持仓', key: 'maxHoldTimeMs', type: 'duration' },
+        { label: '平均持仓', key: 'avgHoldTimeMs', type: 'duration' }
+      ]
     }
   },
   mounted() {
@@ -172,6 +151,12 @@ export default {
       crudBinanceTradeInfo.stats(this.query).then(res => {
         this.statsInfo = res
       })
+    },
+    formatValue(key, type) {
+      const value = this.statsInfo[key]
+      if (type === 'percent') return this.formatPercent(value)
+      if (type === 'duration') return this.formatDuration(value)
+      return this.formatDecimal(value)
     },
     formatDecimal(val) {
       return val != null ? Number(val).toFixed(4) : '--'
