@@ -154,6 +154,15 @@ export default {
     formatDuration,
     // 显示汇总
     doStats() {
+      if (this.query.endTime) {
+        const date = new Date(this.query.endTime)
+        this.query.endTime = date.toLocaleString('zh-CN', {
+          timeZone: 'Asia/Shanghai',
+          hour12: false
+        }).replace(/\//g, '-')
+      } else {
+        delete this.query.endTime // 避免传空字符串
+      }
       crudBinanceTradeInfo.stats(this.query).then(res => {
         this.statsInfo = res
       })
