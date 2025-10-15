@@ -53,8 +53,15 @@
             :value="item.value"
           />
         </el-select>
-        <label class="el-form-item-label">成交时间</label>
-        <date-range-picker v-model="query.time" class="date-item" @change="doStats" />
+        <label class="el-form-item-label">截止日期</label>
+        <el-date-picker
+          v-model="query.endTime"
+          align="right"
+          type="date"
+          placeholder="选择日期"
+          class="date-item"
+          @change="doStats"
+        />
         <el-button
           slot="right"
           class="filter-item"
@@ -101,7 +108,6 @@
 
 <script>
 import crudBinanceTradeInfo from '@/api/binanceTradeInfo'
-import DateRangePicker from '@/components/DateRangePicker/index.vue'
 import { formatDuration } from '@/utils/dateUtil'
 import TradeProfitRateScatter from '@/views/invest/binance/tradeInfo/TradeProfitRateScatter.vue'
 import { listAllAccount } from '@/api/binanceAccountInfo'
@@ -110,7 +116,7 @@ import CRUD from '@crud/crud'
 
 export default {
   name: 'BinanceTradeInfoStats',
-  components: { TradePositionDistributionBar, TradeProfitRateScatter, DateRangePicker },
+  components: { TradePositionDistributionBar, TradeProfitRateScatter },
   dicts: ['invest_binance_trade_pairing_logic', 'invest_binance_symbol'],
   data() {
     return {

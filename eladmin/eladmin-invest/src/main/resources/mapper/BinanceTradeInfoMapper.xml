@@ -81,6 +81,9 @@
             <if test="criteria.time != null and criteria.time.size() > 0">
                 AND t1.time BETWEEN #{criteria.time[0]} AND #{criteria.time[1]}
             </if>
+            <if test="criteria.endTime != null">
+                AND t1.time &lt;= #{criteria.endTime}
+            </if>
             <if test="criteria.quoteQty != null and criteria.quoteQty.size() > 0">
                 AND t1.quote_qty BETWEEN #{criteria.quoteQty[0]} AND #{criteria.quoteQty[1]}
             </if>

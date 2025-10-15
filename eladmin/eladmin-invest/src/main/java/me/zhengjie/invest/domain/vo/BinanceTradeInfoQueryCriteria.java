@@ -44,6 +44,7 @@ public class BinanceTradeInfoQueryCriteria{
     private List<BigDecimal> qty;
     private List<BigDecimal> commission;
     private List<Timestamp> time;
+    private Timestamp endTime;
     private List<BigDecimal> quoteQty;
 
     /**
