@@ -11,6 +11,7 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
+import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
 import me.zhengjie.invest.domain.dto.BinanceFundingRate;
 import me.zhengjie.utils.DingdingUtil;
 import me.zhengjie.utils.StringUtils;
@@ -126,7 +127,7 @@ public class BinanceUsdFuturesUtil {
         return body;
     }
 
-    public List<JSONObject> userTrades(BinanceEnum.SYMBOL symbol, Long startTime, Long endTime) {
+    public List<BinanceFuturesTradeInfo> userTrades(BinanceEnum.SYMBOL symbol, Long startTime, Long endTime) {
         Map<String, Object> parmasMap = new HashMap<>();
         parmasMap.put("symbol", symbol);
         parmasMap.put("limit", "1000");
@@ -136,7 +137,7 @@ public class BinanceUsdFuturesUtil {
         if (null != endTime) {
             parmasMap.put("endTime", endTime);
         }
-        return JSON.parseArray(this.doRequest("/fapi/v1/userTrades", parmasMap, true, true)).stream().map(v -> (JSONObject) v).collect(Collectors.toList());
+        return JSON.parseArray(this.doRequest("/fapi/v1/userTrades", parmasMap, true, true)).toJavaList(BinanceFuturesTradeInfo.class);
     }
 
     public JSONObject account() {

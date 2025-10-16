@@ -6,6 +6,7 @@ import cn.hutool.core.date.DateUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import me.zhengjie.invest.constants.BinanceEnum;
+import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
 import me.zhengjie.invest.domain.dto.BinanceFundingRate;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
@@ -41,17 +42,14 @@ public class BinanceUsdFuturesUtilTests {
         BinanceAccountContextHolder.runWith(binanceAccountInfoService.getAccountByIdCardName("耿辉"), () -> {
             BinanceEnum.SYMBOL symbol = BinanceEnum.SYMBOL.BTCUSDT;
             DateTime startTime = DateUtil.parse("2025-07-01", DatePattern.NORM_DATE_PATTERN);
-            List<JSONObject> list = new ArrayList<>();
             while (true) {
                 if (startTime.getTime() > now.getTime()) {
                     break;
                 }
                 DateTime endTime = DateUtil.offsetDay(startTime, 7);
-                List<JSONObject> tradeInfoList = binanceUsdFuturesUtil.userTrades(symbol, startTime.getTime(), endTime.getTime());
-                list.addAll(tradeInfoList);
+                binanceUsdFuturesUtil.userTrades(symbol, startTime.getTime(), endTime.getTime());
                 startTime = endTime;
             }
-            System.err.println(list);
 
         });
 
