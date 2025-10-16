@@ -126,11 +126,17 @@ public class BinanceUsdFuturesUtil {
         return body;
     }
 
-    public void userTrades(BinanceEnum.SYMBOL symbol) {
+    public List<JSONObject> userTrades(BinanceEnum.SYMBOL symbol, Long startTime, Long endTime) {
         Map<String, Object> parmasMap = new HashMap<>();
         parmasMap.put("symbol", symbol);
-        String string = this.doRequest("/fapi/v1/userTrades", parmasMap, true, true);
-        System.err.println(string);
+        parmasMap.put("limit", "1000");
+        if (null != startTime) {
+            parmasMap.put("startTime", startTime);
+        }
+        if (null != endTime) {
+            parmasMap.put("endTime", endTime);
+        }
+        return JSON.parseArray(this.doRequest("/fapi/v1/userTrades", parmasMap, true, true)).stream().map(v -> (JSONObject) v).collect(Collectors.toList());
     }
 
     public JSONObject account() {

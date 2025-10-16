@@ -1,13 +1,16 @@
 package me.zhengjie;
 
 import cn.hutool.core.date.DatePattern;
+import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.dto.BinanceFundingRate;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceUsdFuturesUtil;
+import me.zhengjie.utils.RedisUtils;
 import org.apache.commons.collections4.CollectionUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,6 +19,7 @@ import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -28,19 +32,35 @@ public class BinanceUsdFuturesUtilTests {
 
     @Resource
     private BinanceAccountInfoService binanceAccountInfoService;
+    @Resource
+    private RedisUtils redisUtils;
 
     @Test
     void userTrades() {
+        Date now = new Date();
         BinanceAccountContextHolder.runWith(binanceAccountInfoService.getAccountByIdCardName("耿辉"), () -> {
             BinanceEnum.SYMBOL symbol = BinanceEnum.SYMBOL.BTCUSDT;
-            binanceUsdFuturesUtil.userTrades(symbol);
+            DateTime startTime = DateUtil.parse("2025-07-01", DatePattern.NORM_DATE_PATTERN);
+            List<JSONObject> list = new ArrayList<>();
+            while (true) {
+                if (startTime.getTime() > now.getTime()) {
+                    break;
+                }
+                DateTime endTime = DateUtil.offsetDay(startTime, 7);
+                List<JSONObject> tradeInfoList = binanceUsdFuturesUtil.userTrades(symbol, startTime.getTime(), endTime.getTime());
+                list.addAll(tradeInfoList);
+                startTime = endTime;
+            }
+            System.err.println(list);
+
         });
 
     }
     @Test
     void account() {
         BinanceAccountContextHolder.runWith(binanceAccountInfoService.getAccountByIdCardName("耿辉"), () -> {
-            binanceUsdFuturesUtil.account();
+            JSONObject account = binanceUsdFuturesUtil.account();
+            System.err.println(account);
         });
     }
 
