@@ -5,10 +5,13 @@ import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import me.zhengjie.invest.constants.BinanceEnum;
+import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
 import me.zhengjie.invest.domain.dto.BinanceFundingRate;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
+import me.zhengjie.invest.service.BinanceFuturesTradeInfoService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceUsdFuturesUtil;
 import me.zhengjie.utils.RedisUtils;
@@ -19,10 +22,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -35,19 +36,32 @@ public class BinanceUsdFuturesUtilTests {
     private BinanceAccountInfoService binanceAccountInfoService;
     @Resource
     private RedisUtils redisUtils;
+    @Resource
+    private BinanceFuturesTradeInfoService binanceFuturesTradeInfoService;
 
     @Test
     void userTrades() {
+        Set<Long> orderIdSet = binanceFuturesTradeInfoService.list(Wrappers.lambdaQuery(BinanceFuturesTradeInfo.class).select(BinanceFuturesTradeInfo::getOrderId)).stream().map(BinanceFuturesTradeInfo::getOrderId).collect(Collectors.toSet());
         Date now = new Date();
-        BinanceAccountContextHolder.runWith(binanceAccountInfoService.getAccountByIdCardName("耿辉"), () -> {
+        BinanceAccountInfo accountInfo = binanceAccountInfoService.getAccountByIdCardName("耿辉");
+        BinanceAccountContextHolder.runWith(accountInfo, () -> {
             BinanceEnum.SYMBOL symbol = BinanceEnum.SYMBOL.BTCUSDT;
-            DateTime startTime = DateUtil.parse("2025-07-01", DatePattern.NORM_DATE_PATTERN);
+            Date startTime = DateUtil.parse("2025-10-13", DatePattern.NORM_DATE_PATTERN);
             while (true) {
                 if (startTime.getTime() > now.getTime()) {
                     break;
                 }
-                DateTime endTime = DateUtil.offsetDay(startTime, 7);
-                binanceUsdFuturesUtil.userTrades(symbol, startTime.getTime(), endTime.getTime());
+                Date endTime = DateUtil.offsetDay(startTime, 7);
+                if (endTime.getTime() > now.getTime()) {
+                    endTime = now;
+                }
+                List<BinanceFuturesTradeInfo> binanceFuturesTradeInfos = binanceUsdFuturesUtil.userTrades(symbol, startTime.getTime(), endTime.getTime());
+                binanceFuturesTradeInfos.removeIf(v -> orderIdSet.contains(v.getOrderId()));
+                if (!binanceFuturesTradeInfos.isEmpty()) {
+                    binanceFuturesTradeInfos.forEach(v -> v.setUid(accountInfo.getUid()));
+                    binanceFuturesTradeInfoService.saveBatch(binanceFuturesTradeInfos);
+                    System.err.println(binanceFuturesTradeInfos);
+                }
                 startTime = endTime;
             }
 
