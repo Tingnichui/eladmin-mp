@@ -39,6 +39,6 @@ public interface BinanceTradeInfoMapper extends BaseMapper<BinanceTradeInfo> {
 
     List<String> listAllSymbol();
 
-    List<BinanceTradeInfo> list4hedge(BigDecimal price);
+    List<BinanceTradeInfo> list4hedge(BigDecimal lowPrice, BigDecimal highPrice);
 
 }

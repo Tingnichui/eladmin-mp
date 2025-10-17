@@ -23,9 +23,13 @@ import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
+import me.zhengjie.invest.domain.BinanceTradeInfoExt;
 import me.zhengjie.invest.domain.vo.BinanceFuturesTradeStatsInfoVO;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
+import me.zhengjie.invest.service.BinanceTradeInfoExtService;
+import me.zhengjie.invest.service.BinanceTradeInfoService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
+import me.zhengjie.invest.util.BinanceSpotUtil;
 import me.zhengjie.invest.util.BinanceUsdFuturesUtil;
 import me.zhengjie.utils.FileUtil;
 import lombok.RequiredArgsConstructor;
@@ -59,8 +63,11 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
 
     private final BinanceFuturesTradeInfoMapper binanceFuturesTradeInfoMapper;
     private final BinanceUsdFuturesUtil binanceUsdFuturesUtil;
+    private final BinanceSpotUtil binanceSpotUtil;
     private final BinanceAccountInfoService binanceAccountInfoService;
     private final RedisUtils redisUtils;
+    private final BinanceTradeInfoExtService binanceTradeInfoExtService;
+    private final BinanceTradeInfoService binanceTradeInfoService;
 
     @Override
     public PageResult<BinanceFuturesTradeInfo> queryAll(BinanceFuturesTradeInfoQueryCriteria criteria, Page<Object> page){
@@ -175,6 +182,84 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
 
     @Override
     public BinanceFuturesTradeStatsInfoVO stats() {
+        // 当前仓位
+        Date lastPosCloseTime = this.getLastPosCloseTime();
+        List<BinanceFuturesTradeInfo> sellTradeInfoList = binanceFuturesTradeInfoMapper.selectList(
+                Wrappers.lambdaQuery(BinanceFuturesTradeInfo.class)
+                        .gt(BinanceFuturesTradeInfo::getTime, lastPosCloseTime)
+                        .eq(BinanceFuturesTradeInfo::getBuyer, 0)
+                        .orderByAsc(BinanceFuturesTradeInfo::getTime)
+        );
+
+        List<BinanceFuturesTradeInfo> buyTradeInfoList = binanceFuturesTradeInfoMapper.selectList(
+                Wrappers.lambdaQuery(BinanceFuturesTradeInfo.class)
+                        .gt(BinanceFuturesTradeInfo::getTime, lastPosCloseTime)
+                        .eq(BinanceFuturesTradeInfo::getBuyer, 1)
+                        .orderByAsc(BinanceFuturesTradeInfo::getTime)
+        );
+
+        // 获取当前合约价格
+        BigDecimal currentPrice = binanceSpotUtil.getPrice(BinanceEnum.SYMBOL.BTCUSDT);
+
+        Iterator<BinanceFuturesTradeInfo> sellIterator = sellTradeInfoList.iterator();
+        while (sellIterator.hasNext()) {
+            BinanceFuturesTradeInfo sellInfo = sellIterator.next();
+
+            // 遍历平仓交易
+            Iterator<BinanceFuturesTradeInfo> buyItrator = buyTradeInfoList.iterator();
+            while (buyItrator.hasNext()) {
+                BinanceFuturesTradeInfo buyInfo = buyItrator.next();
+                if (buyInfo.getQty().compareTo(BigDecimal.ZERO) <= 0) {
+                    buyItrator.remove();
+                    continue;
+                }
+                if (buyInfo.getPrice().compareTo(sellInfo.getPrice()) > 0) {
+                    continue;
+                }
+                BigDecimal matchQty = sellInfo.getQty().min(buyInfo.getQty());
+                buyInfo.setQty(buyInfo.getQty().subtract(matchQty));
+                sellInfo.setQty(sellInfo.getQty().subtract(matchQty));
+                if (sellInfo.getQty().compareTo(BigDecimal.ZERO) <= 0) {
+                    sellIterator.remove();
+                    break;
+                }
+            }
+
+        }
+
+        // 所有都标记未锁仓
+        binanceTradeInfoExtService.getBaseMapper().update(null,
+                Wrappers.lambdaUpdate(BinanceTradeInfoExt.class)
+                        .set(BinanceTradeInfoExt::getHedgedFlag, 0)
+        );
+
+        // 剩下没有平仓的需要锁仓
+        for (BinanceFuturesTradeInfo sellInfo : sellTradeInfoList) {
+            // 当前价格小于开仓价格的忽略掉 不需要止损
+            if (currentPrice.compareTo(sellInfo.getPrice()) <= 0) {
+                continue;
+            }
+
+            // 查询现货止损单
+            List<BinanceTradeInfo> binanceTradeInfos = binanceTradeInfoService.list4hedge(sellInfo.getPrice(), sellInfo.getPrice().add(new BigDecimal("1000")));
+
+            // 标记锁仓
+            BigDecimal qty = sellInfo.getQty();
+            for (BinanceTradeInfo tradeInfo : binanceTradeInfos) {
+                if (qty.compareTo(BigDecimal.ZERO) <= 0) {
+                    break; // 已对冲完毕
+                }
+                // 可匹配的仓位数量
+                if (qty.compareTo(tradeInfo.getQty()) >= 0) {
+                    qty = qty.subtract(tradeInfo.getQty());
+                    binanceTradeInfoExtService.changeHedgedFlag(tradeInfo.getOrderId());
+                }
+            }
+
+
+        }
+
+
         BinanceFuturesTradeStatsInfoVO statsInfoVO = new BinanceFuturesTradeStatsInfoVO();
         return statsInfoVO;
     }

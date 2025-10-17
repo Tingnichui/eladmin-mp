@@ -83,4 +83,6 @@ public interface BinanceTradeInfoService extends IService<BinanceTradeInfo> {
 
     void syncHedge();
 
+    List<BinanceTradeInfo> list4hedge(BigDecimal lowPrice, BigDecimal highPrice);
+
 }

@@ -148,4 +148,10 @@ public class BinanceUsdFuturesUtil {
         List<JSONObject> positions = resJson.getJSONArray("positions").stream().map(obj -> (JSONObject) obj).collect(Collectors.toList());
         return positions.stream().filter(v -> v.getString("symbol").equals("BTCUSDT") && v.getString("positionSide").equals("SHORT")).findFirst().orElse(null);
     }
+
+    public BigDecimal price(BinanceEnum.SYMBOL symbol) {
+        Map<String, Object> parmasMap = new HashMap<>();
+        parmasMap.put("symbol", symbol);
+        return JSON.parseObject(this.doRequest("/fapi/v2/ticker/price", parmasMap, false, true)).getBigDecimal("price");
+    }
 }
