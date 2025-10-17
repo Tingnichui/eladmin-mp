@@ -25,6 +25,7 @@ import java.io.IOException;
 import javax.servlet.http.HttpServletResponse;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
+import me.zhengjie.invest.domain.vo.BinanceFuturesTradeStatsInfoVO;
 import me.zhengjie.utils.PageResult;
 
 /**
@@ -78,5 +79,7 @@ public interface BinanceFuturesTradeInfoService extends IService<BinanceFuturesT
     void sync();
 
     Date getLastPosCloseTime();
+
+    BinanceFuturesTradeStatsInfoVO stats();
 
 }

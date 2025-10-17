@@ -23,6 +23,7 @@ import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
+import me.zhengjie.invest.domain.vo.BinanceFuturesTradeStatsInfoVO;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceUsdFuturesUtil;
@@ -170,6 +171,12 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
         }
 
         return (Date) redisUtils.get(key);
+    }
+
+    @Override
+    public BinanceFuturesTradeStatsInfoVO stats() {
+        BinanceFuturesTradeStatsInfoVO statsInfoVO = new BinanceFuturesTradeStatsInfoVO();
+        return statsInfoVO;
     }
 
 

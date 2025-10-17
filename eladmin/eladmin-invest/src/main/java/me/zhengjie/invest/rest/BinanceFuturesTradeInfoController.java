@@ -15,22 +15,25 @@
 */
 package me.zhengjie.invest.rest;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import lombok.RequiredArgsConstructor;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
-import me.zhengjie.invest.service.BinanceFuturesTradeInfoService;
 import me.zhengjie.invest.domain.vo.BinanceFuturesTradeInfoQueryCriteria;
-import lombok.RequiredArgsConstructor;
-import java.util.List;
+import me.zhengjie.invest.domain.vo.BinanceFuturesTradeStatsInfoVO;
+import me.zhengjie.invest.service.BinanceFuturesTradeInfoService;
+import me.zhengjie.utils.PageResult;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import io.swagger.annotations.*;
-import java.io.IOException;
+
 import javax.servlet.http.HttpServletResponse;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import me.zhengjie.utils.PageResult;
+import java.io.IOException;
+import java.util.List;
 
 /**
 * @author genghui
@@ -58,6 +61,13 @@ public class BinanceFuturesTradeInfoController {
     @PreAuthorize("@el.check('binanceFuturesTradeInfo:list')")
     public ResponseEntity<PageResult<BinanceFuturesTradeInfo>> queryBinanceFuturesTradeInfo(BinanceFuturesTradeInfoQueryCriteria criteria, Page<Object> page){
         return new ResponseEntity<>(binanceFuturesTradeInfoService.queryAll(criteria,page),HttpStatus.OK);
+    }
+
+    @GetMapping("/stats")
+    @ApiOperation("查询币安合约交易汇总")
+    @PreAuthorize("@el.check('binanceFuturesTradeInfo:list')")
+    public ResponseEntity<BinanceFuturesTradeStatsInfoVO> stats(){
+        return new ResponseEntity<>(binanceFuturesTradeInfoService.stats(),HttpStatus.OK);
     }
 
     @PostMapping
