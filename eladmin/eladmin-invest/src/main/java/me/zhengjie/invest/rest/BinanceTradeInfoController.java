@@ -115,7 +115,7 @@ public class BinanceTradeInfoController {
     @ApiOperation("同步交易")
     @PreAuthorize("@el.check('binanceTradeInfo:sync')")
     public ResponseEntity<BinanceTradeStatsInfoVO> syncHedge(){
-        binanceTradeInfoService.syncHedge();
+        binanceFuturesTradeInfoService.stats();
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
