@@ -23,9 +23,8 @@ import me.zhengjie.annotation.Log;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
+import me.zhengjie.invest.service.BinanceFuturesTradeInfoService;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
-import me.zhengjie.invest.task.SyncBinanceTradeInfoServiceTask;
-import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.utils.PageResult;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -48,7 +47,7 @@ import java.util.List;
 public class BinanceTradeInfoController {
 
     private final BinanceTradeInfoService binanceTradeInfoService;
-    private final SyncBinanceTradeInfoServiceTask syncBinanceTradeInfoServiceTask;
+    private final BinanceFuturesTradeInfoService binanceFuturesTradeInfoService;
 
     @Log("导出数据")
     @ApiOperation("导出数据")
@@ -107,6 +106,7 @@ public class BinanceTradeInfoController {
     @PreAuthorize("@el.check('binanceTradeInfo:sync')")
     public ResponseEntity<BinanceTradeStatsInfoVO> sync(){
         binanceTradeInfoService.syncAll();
+        binanceFuturesTradeInfoService.sync();
         return new ResponseEntity<>(HttpStatus.OK);
     }
 

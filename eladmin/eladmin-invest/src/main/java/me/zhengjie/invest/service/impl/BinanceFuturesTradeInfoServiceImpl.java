@@ -117,7 +117,6 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
         // 查询所有账号
         List<BinanceAccountInfo> accountInfoList = binanceAccountInfoService.listUseApiAccount();
         for (BinanceAccountInfo accountInfo : accountInfoList) {
-            Date now = new Date();
             BinanceAccountContextHolder.runWith(accountInfo, () -> {
                 List<BinanceFuturesTradeInfo> orderInfoList = binanceUsdFuturesUtil.userTrades(BinanceEnum.SYMBOL.BTCUSDT, null, null);
                 if (CollectionUtils.isEmpty(orderInfoList)) {
