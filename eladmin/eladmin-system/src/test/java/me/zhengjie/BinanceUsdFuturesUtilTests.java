@@ -77,6 +77,12 @@ public class BinanceUsdFuturesUtilTests {
     }
 
     @Test
+    void getLastPosCloseTime() {
+        Date lastPosCloseTime = binanceFuturesTradeInfoService.getLastPosCloseTime();
+        System.err.println(lastPosCloseTime);
+    }
+
+    @Test
     void fundingRate() {
         BinanceEnum.SYMBOL symbol = BinanceEnum.SYMBOL.BTCUSDT;
         List<BinanceFundingRate> list = new ArrayList<>();

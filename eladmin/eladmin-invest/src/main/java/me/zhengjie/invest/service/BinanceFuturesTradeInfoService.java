@@ -17,6 +17,8 @@ package me.zhengjie.invest.service;
 
 import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
 import me.zhengjie.invest.domain.vo.BinanceFuturesTradeInfoQueryCriteria;
+
+import java.util.Date;
 import java.util.Map;
 import java.util.List;
 import java.io.IOException;
@@ -74,5 +76,7 @@ public interface BinanceFuturesTradeInfoService extends IService<BinanceFuturesT
     void download(List<BinanceFuturesTradeInfo> all, HttpServletResponse response) throws IOException;
 
     void sync();
+
+    Date getLastPosCloseTime();
 
 }

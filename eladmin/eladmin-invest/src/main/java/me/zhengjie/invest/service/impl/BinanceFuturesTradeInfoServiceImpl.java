@@ -33,11 +33,13 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import me.zhengjie.invest.service.BinanceFuturesTradeInfoService;
 import me.zhengjie.invest.domain.vo.BinanceFuturesTradeInfoQueryCriteria;
 import me.zhengjie.invest.mapper.BinanceFuturesTradeInfoMapper;
+import me.zhengjie.utils.RedisUtils;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import me.zhengjie.utils.PageUtil;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.io.IOException;
 import java.util.stream.Collectors;
@@ -57,6 +59,7 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
     private final BinanceFuturesTradeInfoMapper binanceFuturesTradeInfoMapper;
     private final BinanceUsdFuturesUtil binanceUsdFuturesUtil;
     private final BinanceAccountInfoService binanceAccountInfoService;
+    private final RedisUtils redisUtils;
 
     @Override
     public PageResult<BinanceFuturesTradeInfo> queryAll(BinanceFuturesTradeInfoQueryCriteria criteria, Page<Object> page){
@@ -142,4 +145,32 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
             });
         }
     }
+
+    @Override
+    public Date getLastPosCloseTime() {
+        final String key = "BINANCE:FUTURES:LAST_POS_CLOSE_TIME";
+        Date lastPosCloseTime = (Date) redisUtils.get(key);
+        List<BinanceFuturesTradeInfo> binanceFuturesTradeInfoList = binanceFuturesTradeInfoMapper.selectList(
+                Wrappers.lambdaQuery(BinanceFuturesTradeInfo.class)
+                        .gt(null != lastPosCloseTime, BinanceFuturesTradeInfo::getTime, lastPosCloseTime)
+                        .orderByAsc(BinanceFuturesTradeInfo::getTime)
+        );
+
+        BigDecimal pos = BigDecimal.ZERO;
+        for (BinanceFuturesTradeInfo tradeInfo : binanceFuturesTradeInfoList) {
+            // 卖开仓 买减仓
+            if (tradeInfo.getBuyer().equals(1)) {
+                pos = pos.subtract(tradeInfo.getQty());
+            } else {
+                pos = pos.add(tradeInfo.getQty());
+            }
+            if (pos.compareTo(BigDecimal.ZERO) == 0) {
+                redisUtils.set(key, tradeInfo.getTime());
+            }
+        }
+
+        return (Date) redisUtils.get(key);
+    }
+
+
 }
