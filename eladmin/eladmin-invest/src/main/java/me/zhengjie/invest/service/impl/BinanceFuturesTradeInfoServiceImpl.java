@@ -182,6 +182,8 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
 
     @Override
     public BinanceFuturesTradeStatsInfoVO stats() {
+        BinanceFuturesTradeStatsInfoVO statsInfoVO = new BinanceFuturesTradeStatsInfoVO();
+
         // 当前仓位
         Date lastPosCloseTime = this.getLastPosCloseTime();
         List<BinanceFuturesTradeInfo> sellTradeInfoList = binanceFuturesTradeInfoMapper.selectList(
@@ -223,6 +225,11 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
                 BigDecimal matchQty = sellInfo.getQty().min(buyInfo.getQty());
                 buyInfo.setQty(buyInfo.getQty().subtract(matchQty));
                 sellInfo.setQty(sellInfo.getQty().subtract(matchQty));
+                // 累计利润
+                statsInfoVO.setProfit(statsInfoVO.getProfit().add((sellInfo.getTurnover().subtract(buyInfo.getTurnover()))));
+                // 累计手续费
+                statsInfoVO.setFee(statsInfoVO.getFee().add((buyInfo.getFee().add(sellInfo.getFee()))));
+
                 // 移除平仓完毕的做空单
                 if (sellInfo.getQty().compareTo(BigDecimal.ZERO) <= 0) {
                     sellIterator.remove();
@@ -269,7 +276,6 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
         List<BinanceFuturesTradeInfo> noStopLossTradeInfoList = sellTradeInfoList.stream().filter(v -> v.getQty().compareTo(BigDecimal.ZERO) > 0).collect(Collectors.toList());
 
 
-        BinanceFuturesTradeStatsInfoVO statsInfoVO = new BinanceFuturesTradeStatsInfoVO();
         return statsInfoVO;
     }
 

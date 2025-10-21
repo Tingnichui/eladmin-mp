@@ -10,19 +10,15 @@ import java.util.List;
 
 @Data
 public class BinanceFuturesTradeStatsInfoVO implements Serializable {
-    //开仓均价
-    private BigDecimal avgOpenPrice;
-    //平仓均价
-    private BigDecimal avgClosePrice;
-    //总的利润
-    private BigDecimal profit;
-    //收益率
-    private BigDecimal profitPct;
+    // 利润
+    private BigDecimal profit = BigDecimal.ZERO;
+    // 手续费
+    private BigDecimal fee = BigDecimal.ZERO;
     //剩余未平仓总金额
-    private BigDecimal totalWaitSellAmount;
+    private BigDecimal totalWaitSellAmount = BigDecimal.ZERO;
     //剩余未平仓总数量
-    private BigDecimal totalWaitSellQty;
+    private BigDecimal totalWaitSellQty = BigDecimal.ZERO;
     //剩余未平仓均价
-    private BigDecimal totalWaitAvgSellPrice;
+    private BigDecimal totalWaitAvgSellPrice = BigDecimal.ZERO;
 
 }
