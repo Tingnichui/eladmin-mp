@@ -199,7 +199,7 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
         );
 
         // 获取当前合约价格
-        BigDecimal currentPrice = binanceSpotUtil.getPrice(BinanceEnum.SYMBOL.BTCUSDT);
+        BigDecimal currentPrice = binanceUsdFuturesUtil.price(BinanceEnum.SYMBOL.BTCUSDT);
 
         Iterator<BinanceFuturesTradeInfo> sellIterator = sellTradeInfoList.iterator();
         while (sellIterator.hasNext()) {

@@ -83,6 +83,12 @@ public class BinanceUsdFuturesUtilTests {
     }
 
     @Test
+    void price() {
+        BigDecimal price = binanceUsdFuturesUtil.price(BinanceEnum.SYMBOL.BTCUSDT);
+        System.err.println(price);
+    }
+
+    @Test
     void fundingRate() {
         BinanceEnum.SYMBOL symbol = BinanceEnum.SYMBOL.BTCUSDT;
         List<BinanceFundingRate> list = new ArrayList<>();
