@@ -201,6 +201,7 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
         // 获取当前合约价格
         BigDecimal currentPrice = binanceUsdFuturesUtil.price(BinanceEnum.SYMBOL.BTCUSDT);
 
+        // 遍历开仓交易
         Iterator<BinanceFuturesTradeInfo> sellIterator = sellTradeInfoList.iterator();
         while (sellIterator.hasNext()) {
             BinanceFuturesTradeInfo sellInfo = sellIterator.next();
@@ -209,16 +210,20 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
             Iterator<BinanceFuturesTradeInfo> buyItrator = buyTradeInfoList.iterator();
             while (buyItrator.hasNext()) {
                 BinanceFuturesTradeInfo buyInfo = buyItrator.next();
+                // 移除平仓完毕的
                 if (buyInfo.getQty().compareTo(BigDecimal.ZERO) <= 0) {
                     buyItrator.remove();
                     continue;
                 }
+                // 忽略 平仓交易大于开仓交易的，及亏损单，亏损单由现货止损
                 if (buyInfo.getPrice().compareTo(sellInfo.getPrice()) > 0) {
                     continue;
                 }
+                // 更新交易数量
                 BigDecimal matchQty = sellInfo.getQty().min(buyInfo.getQty());
                 buyInfo.setQty(buyInfo.getQty().subtract(matchQty));
                 sellInfo.setQty(sellInfo.getQty().subtract(matchQty));
+                // 移除平仓完毕的做空单
                 if (sellInfo.getQty().compareTo(BigDecimal.ZERO) <= 0) {
                     sellIterator.remove();
                     break;
@@ -233,10 +238,11 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
                         .set(BinanceTradeInfoExt::getHedgedFlag, 0)
         );
 
-        // 剩下没有平仓的需要锁仓
+        // 剩下没有平仓的做空单判断是否需要锁仓
         for (BinanceFuturesTradeInfo sellInfo : sellTradeInfoList) {
-            // 当前价格小于开仓价格的忽略掉 不需要止损
+            // 当前价格小于开仓价格，说明是盈利的，不需要锁仓
             if (currentPrice.compareTo(sellInfo.getPrice()) <= 0) {
+                sellInfo.setQty(BigDecimal.ZERO);
                 continue;
             }
 
@@ -252,12 +258,15 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
                 // 可匹配的仓位数量
                 if (qty.compareTo(tradeInfo.getQty()) >= 0) {
                     qty = qty.subtract(tradeInfo.getQty());
+                    sellInfo.setQty(qty);
                     binanceTradeInfoExtService.changeHedgedFlag(tradeInfo.getOrderId());
                 }
             }
 
 
         }
+
+        List<BinanceFuturesTradeInfo> noStopLossTradeInfoList = sellTradeInfoList.stream().filter(v -> v.getQty().compareTo(BigDecimal.ZERO) > 0).collect(Collectors.toList());
 
 
         BinanceFuturesTradeStatsInfoVO statsInfoVO = new BinanceFuturesTradeStatsInfoVO();
