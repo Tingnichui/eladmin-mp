@@ -94,7 +94,18 @@
             :key="index"
             :label="item.label"
           >
-            {{ formatValue(item.key, item.type) }}
+            {{ formatValue(statsInfo, item.key, item.type) }}
+          </el-descriptions-item>
+          <!-- 分割线 -->
+          <el-descriptions-item :span="3" label-class-name="no-border" content-class-name="no-border">
+            <div class="divider" />
+          </el-descriptions-item>
+          <el-descriptions-item
+            v-for="(item, index) in futuresStatsItems"
+            :key="index"
+            :label="item.label"
+          >
+            {{ formatValue(futuresStatsInfo, item.key, item.type) }}
           </el-descriptions-item>
         </el-descriptions>
         <div>
@@ -121,6 +132,7 @@ export default {
   data() {
     return {
       statsInfo: {},
+      futuresStatsInfo: {},
       accountList: [],
       syncLoading: false,
       query: {
@@ -131,18 +143,23 @@ export default {
         { label: '买入均价', key: 'avgBuyPrice' },
         { label: '卖出均价', key: 'avgSellPrice' },
         { label: '收益率', key: 'profitPct', type: 'percent' },
-        { label: '买入总金额', key: 'totalBuyAmount' },
-        { label: '卖出总金额', key: 'totalSellAmount' },
+        { label: '买入总额', key: 'totalBuyAmount' },
+        { label: '卖出总额', key: 'totalSellAmount' },
         { label: '利润', key: 'profit' },
         { label: '', key: '' },
         { label: '', key: '' },
         { label: '手续费', key: 'fee' },
-        { label: '未平仓均价', key: 'totalWaitAvgSellPrice' },
-        { label: '未平仓数量', key: 'totalWaitSellQty' },
-        { label: '未平仓总额', key: 'totalWaitSellAmount' },
+        { label: '持仓均价', key: 'totalWaitAvgSellPrice' },
+        { label: '持仓数量', key: 'totalWaitSellQty' },
+        { label: '持仓总额', key: 'totalWaitSellAmount' }
+      ],
+      futuresStatsItems: [
         { label: '锁仓均价', key: 'hedgedAvgPrice' },
         { label: '锁仓数量', key: 'hedgedQty' },
-        { label: '锁仓总额', key: 'hedgedAmount' }
+        { label: '锁仓总额', key: 'hedgedAmount' },
+        { label: '', key: '' },
+        { label: '手续费', key: 'fee' },
+        { label: '利润', key: 'profit' }
       ]
     }
   },
@@ -167,8 +184,8 @@ export default {
         this.statsInfo = res
       })
     },
-    formatValue(key, type) {
-      const value = this.statsInfo[key]
+    formatValue(info, key, type) {
+      const value = info[key]
       if (type === 'percent') return this.formatPercent(value)
       if (type === 'duration') return this.formatDuration(value)
       return this.formatDecimal(value)
@@ -200,7 +217,8 @@ export default {
     },
     syncFuturesHedge() {
       this.syncLoading = true
-      crudBinanceTradeInfo.syncFuturesHedge().then(() => {
+      crudBinanceTradeInfo.syncFuturesHedge().then((res) => {
+        this.futuresStatsInfo = res
         this.doStats()
         this.$notify({
           title: '同步成功',

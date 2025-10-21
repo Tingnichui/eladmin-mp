@@ -21,6 +21,7 @@ import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
+import me.zhengjie.invest.domain.vo.BinanceFuturesTradeStatsInfoVO;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.service.BinanceFuturesTradeInfoService;
@@ -114,9 +115,8 @@ public class BinanceTradeInfoController {
     @Log("同步合约锁仓交易")
     @ApiOperation("同步交易")
     @PreAuthorize("@el.check('binanceTradeInfo:sync')")
-    public ResponseEntity<BinanceTradeStatsInfoVO> syncHedge(){
-        binanceFuturesTradeInfoService.syncFuturesHedge();
-        return new ResponseEntity<>(HttpStatus.OK);
+    public ResponseEntity<BinanceFuturesTradeStatsInfoVO> syncHedge(){
+        return new ResponseEntity<>(binanceFuturesTradeInfoService.syncFuturesHedge(), HttpStatus.OK);
     }
 
 }

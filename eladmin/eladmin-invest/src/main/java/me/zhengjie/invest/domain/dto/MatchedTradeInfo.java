@@ -27,7 +27,9 @@ public class MatchedTradeInfo {
         this.sellAmount = qty.multiply(sellPrice);
         this.profit = this.sellAmount.subtract(this.buyAmount);
         this.profitRate = this.profit.divide(this.buyAmount, 4, RoundingMode.HALF_UP);
-        this.holdMillis = sellTime.getTime() - buyTime.getTime();
+        if (null != this.sellTime && null != this.buyTime) {
+            this.holdMillis = sellTime.getTime() - buyTime.getTime();
+        }
     }
 
 

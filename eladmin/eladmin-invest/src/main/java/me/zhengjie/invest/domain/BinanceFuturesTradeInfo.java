@@ -83,14 +83,6 @@ public class BinanceFuturesTradeInfo implements Serializable {
     @ApiModelProperty(value = "持仓方向")
     private String positionSide;
 
-    public BigDecimal getFee() {
-        return getTurnover().multiply(new BigDecimal("0.0005"));
-    }
-
-    public BigDecimal getTurnover() {
-        return this.qty.multiply(this.price);
-    }
-
     public void copy(BinanceFuturesTradeInfo source){
         BeanUtil.copyProperties(source,this, CopyOptions.create().setIgnoreNullValue(true));
     }

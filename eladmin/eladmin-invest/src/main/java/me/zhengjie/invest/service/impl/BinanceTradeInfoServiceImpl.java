@@ -154,22 +154,6 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
     public BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria) {
         BinanceTradeStatsInfoVO statsInfoVO = new BinanceTradeStatsInfoVO();
 
-        // 先查锁仓的交易
-        {
-            criteria.setHedgedFlag(1);
-            List<BinanceTradeInfo> hedgedTradeInfo = binanceTradeInfoMapper.findAll(criteria);
-            if (CollectionUtils.isNotEmpty(hedgedTradeInfo)) {
-                // 锁仓总额
-                statsInfoVO.setHedgedAmount(hedgedTradeInfo.stream().map(BinanceTradeInfo::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
-                // 锁仓数量
-                statsInfoVO.setHedgedQty(hedgedTradeInfo.stream().map(BinanceTradeInfo::getQty).reduce(BigDecimal.ZERO, BigDecimal::add));
-                // 锁仓均价
-                statsInfoVO.setHedgedAvgPrice(NumberUtil.div(statsInfoVO.getHedgedAmount(), statsInfoVO.getHedgedQty()));
-            }
-
-            criteria.setHedgedFlag(null);
-        }
-
         // 未锁仓的撮合交易
         criteria.setHedgedFlag(0);
 
