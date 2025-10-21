@@ -57,6 +57,8 @@ public class BinanceTradeStatsInfoVO implements Serializable {
     private Long avgHoldTimeMs;
     private Long minHoldTimeMs;
     private Long maxHoldTimeMs;
+    //手续费
+    private BigDecimal fee = BigDecimal.ZERO;
 
     private List<MatchedTradeInfo> matchedTradeInfoList;
 

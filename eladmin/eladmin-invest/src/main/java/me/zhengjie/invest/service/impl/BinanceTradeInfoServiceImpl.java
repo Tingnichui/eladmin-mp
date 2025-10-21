@@ -323,6 +323,9 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         buyTradeList.sort(Comparator.comparing(BinanceTradeInfo::getPrice).reversed());
         statsInfoVO.setWaitSellTradeInfoList(buyTradeList);
 
+        // 手续费计算 按照0.1%
+        statsInfoVO.setFee((statsInfoVO.getTotalBuyAmount().add(statsInfoVO.getTotalSellAmount())).multiply(new BigDecimal("0.001")));
+
         return statsInfoVO;
 
     }
