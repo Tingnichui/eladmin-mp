@@ -181,7 +181,7 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
     }
 
     @Override
-    public BinanceFuturesTradeStatsInfoVO stats() {
+    public BinanceFuturesTradeStatsInfoVO syncFuturesHedge() {
         BinanceFuturesTradeStatsInfoVO statsInfoVO = new BinanceFuturesTradeStatsInfoVO();
 
         // 当前仓位

@@ -19,7 +19,6 @@ import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
 import me.zhengjie.invest.domain.vo.BinanceFuturesTradeInfoQueryCriteria;
 
 import java.util.Date;
-import java.util.Map;
 import java.util.List;
 import java.io.IOException;
 import javax.servlet.http.HttpServletResponse;
@@ -80,6 +79,6 @@ public interface BinanceFuturesTradeInfoService extends IService<BinanceFuturesT
 
     Date getLastPosCloseTime();
 
-    BinanceFuturesTradeStatsInfoVO stats();
+    BinanceFuturesTradeStatsInfoVO syncFuturesHedge();
 
 }

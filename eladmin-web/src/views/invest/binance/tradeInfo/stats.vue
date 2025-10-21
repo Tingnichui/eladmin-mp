@@ -90,7 +90,7 @@
       <div>
         <el-descriptions :column="3" border class="stats-descriptions">
           <el-descriptions-item
-            v-for="(item, index) in statItems"
+            v-for="(item, index) in spotStatsItems"
             :key="index"
             :label="item.label"
           >
@@ -127,7 +127,7 @@ export default {
         symbol: 'BTCUSDT',
         tradePairingLogic: 'FIFO'
       },
-      statItems: [
+      spotStatsItems: [
         { label: '买入均价', key: 'avgBuyPrice' },
         { label: '卖出均价', key: 'avgSellPrice' },
         { label: '收益率', key: 'profitPct', type: 'percent' },
@@ -142,10 +142,7 @@ export default {
         { label: '未平仓总额', key: 'totalWaitSellAmount' },
         { label: '锁仓均价', key: 'hedgedAvgPrice' },
         { label: '锁仓数量', key: 'hedgedQty' },
-        { label: '锁仓总额', key: 'hedgedAmount' },
-        { label: '最短持仓', key: 'minHoldTimeMs', type: 'duration' },
-        { label: '最长持仓', key: 'maxHoldTimeMs', type: 'duration' },
-        { label: '平均持仓', key: 'avgHoldTimeMs', type: 'duration' }
+        { label: '锁仓总额', key: 'hedgedAmount' }
       ]
     }
   },

@@ -67,7 +67,7 @@ public class BinanceFuturesTradeInfoController {
     @ApiOperation("查询币安合约交易汇总")
     @PreAuthorize("@el.check('binanceFuturesTradeInfo:list')")
     public ResponseEntity<BinanceFuturesTradeStatsInfoVO> stats(){
-        return new ResponseEntity<>(binanceFuturesTradeInfoService.stats(),HttpStatus.OK);
+        return new ResponseEntity<>(binanceFuturesTradeInfoService.syncFuturesHedge(),HttpStatus.OK);
     }
 
     @PostMapping
