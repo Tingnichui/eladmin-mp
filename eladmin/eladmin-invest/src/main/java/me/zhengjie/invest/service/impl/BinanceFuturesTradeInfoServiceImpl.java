@@ -268,22 +268,11 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
             }
 
             // 查询现货止损单
-            List<BinanceTradeInfo> binanceTradeInfos = binanceTradeInfoService.list4hedge(sellInfo.getPrice(), sellInfo.getPrice().add(new BigDecimal("1000")));
+            List<BinanceTradeInfo> binanceTradeInfos = binanceTradeInfoService.list4hedge(sellInfo.getPrice(), sellInfo.getPrice().add(new BigDecimal("1000")), sellInfo.getQty());
 
-            // 标记锁仓
-            BigDecimal qty = sellInfo.getQty();
-            for (BinanceTradeInfo tradeInfo : binanceTradeInfos) {
-                if (qty.compareTo(BigDecimal.ZERO) <= 0) {
-                    break; // 已对冲完毕
-                }
-                // 可匹配的仓位数量
-                if (qty.compareTo(tradeInfo.getQty()) >= 0) {
-                    qty = qty.subtract(tradeInfo.getQty());
-                    sellInfo.setQty(qty);
-                    binanceTradeInfoExtService.changeHedgedFlag(tradeInfo.getOrderId());
-                }
+            if (CollectionUtils.isNotEmpty(binanceTradeInfos)) {
+                binanceTradeInfoExtService.changeHedgedFlag(binanceTradeInfos.get(0).getOrderId());
             }
-
 
         }
 

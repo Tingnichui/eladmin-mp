@@ -336,7 +336,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             BigDecimal qty = account.getBigDecimal("positionAmt").multiply(new BigDecimal("-1"));
 
             // 对冲仓位的开仓价格 之下，按照创建时间倒序 价格倒序
-            List<BinanceTradeInfo> binanceTradeInfos = binanceTradeInfoMapper.list4hedge(price.subtract(new BigDecimal("1000")) ,price);
+            List<BinanceTradeInfo> binanceTradeInfos = binanceTradeInfoMapper.list4hedge(price.subtract(new BigDecimal("1000")) ,price, null);
 
             // 所有都标记未锁仓
             binanceTradeInfoExtService.getBaseMapper().update(null,
@@ -361,8 +361,8 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
     }
 
     @Override
-    public List<BinanceTradeInfo> list4hedge(BigDecimal lowPrice, BigDecimal highPrice) {
-        return binanceTradeInfoMapper.list4hedge(lowPrice, highPrice);
+    public List<BinanceTradeInfo> list4hedge(BigDecimal lowPrice, BigDecimal highPrice, BigDecimal qty) {
+        return binanceTradeInfoMapper.list4hedge(lowPrice, highPrice, qty);
     }
 
 }
