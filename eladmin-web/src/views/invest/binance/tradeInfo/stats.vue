@@ -78,14 +78,6 @@
           :loading="syncLoading"
           @click="syncSpotTradeInfo"
         >同步</el-button>
-        <el-button
-          class="filter-item"
-          size="mini"
-          type="success"
-          icon="el-icon-refresh"
-          :loading="syncLoading"
-          @click="syncFuturesHedge"
-        >锁仓</el-button>
       </div>
       <div>
         <el-descriptions :column="3" border class="stats-descriptions">
@@ -105,7 +97,7 @@
             :key="index"
             :label="item.label"
           >
-            {{ formatValue(futuresStatsInfo, item.key, item.type) }}
+            {{ formatValue(statsInfo.futuresTradeStatsInfo, item.key, item.type) }}
           </el-descriptions-item>
         </el-descriptions>
         <div>
@@ -132,7 +124,6 @@ export default {
   data() {
     return {
       statsInfo: {},
-      futuresStatsInfo: {},
       accountList: [],
       syncLoading: false,
       query: {
@@ -204,21 +195,6 @@ export default {
     syncSpotTradeInfo() {
       this.syncLoading = true
       crudBinanceTradeInfo.syncSpotTradeInfo().then(() => {
-        this.doStats()
-        this.$notify({
-          title: '同步成功',
-          type: CRUD.NOTIFICATION_TYPE.SUCCESS,
-          duration: 2500
-        })
-        this.syncLoading = false
-      }).catch(() => {
-        this.syncLoading = false
-      })
-    },
-    syncFuturesHedge() {
-      this.syncLoading = true
-      crudBinanceTradeInfo.syncFuturesHedge().then((res) => {
-        this.futuresStatsInfo = res
         this.doStats()
         this.$notify({
           title: '同步成功',

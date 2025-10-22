@@ -98,7 +98,12 @@ public class BinanceTradeInfoController {
     @ApiOperation("查询交易汇总")
     @PreAuthorize("@el.check('binanceTradeInfo:list')")
     public ResponseEntity<BinanceTradeStatsInfoVO> queryBinanceTradeInfo(BinanceTradeInfoQueryCriteria criteria){
-        return new ResponseEntity<>(binanceTradeInfoService.stats(criteria),HttpStatus.OK);
+        // 先调用合约锁仓
+        BinanceFuturesTradeStatsInfoVO binanceFuturesTradeStatsInfoVO = binanceFuturesTradeInfoService.syncFuturesHedge();
+        // 在统计现货仓位分布
+        BinanceTradeStatsInfoVO stats = binanceTradeInfoService.stats(criteria);
+        stats.setFuturesTradeStatsInfo(binanceFuturesTradeStatsInfoVO);
+        return new ResponseEntity<>(stats,HttpStatus.OK);
     }
 
     @PutMapping("/syncSpotTradeInfo")
@@ -109,14 +114,6 @@ public class BinanceTradeInfoController {
         binanceTradeInfoService.syncAll();
         binanceFuturesTradeInfoService.sync();
         return new ResponseEntity<>(HttpStatus.OK);
-    }
-
-    @PutMapping("/syncFuturesHedge")
-    @Log("同步合约锁仓交易")
-    @ApiOperation("同步交易")
-    @PreAuthorize("@el.check('binanceTradeInfo:sync')")
-    public ResponseEntity<BinanceFuturesTradeStatsInfoVO> syncHedge(){
-        return new ResponseEntity<>(binanceFuturesTradeInfoService.syncFuturesHedge(), HttpStatus.OK);
     }
 
 }

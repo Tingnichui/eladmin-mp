@@ -59,5 +59,7 @@ public class BinanceTradeStatsInfoVO implements Serializable {
     // 剩余未平仓交易
     private List<BinanceTradeInfo> waitSellTradeInfoList;
 
+    private BinanceFuturesTradeStatsInfoVO futuresTradeStatsInfo;
+
 
 }

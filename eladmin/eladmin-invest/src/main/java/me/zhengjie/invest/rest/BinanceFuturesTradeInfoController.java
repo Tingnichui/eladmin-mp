@@ -63,13 +63,6 @@ public class BinanceFuturesTradeInfoController {
         return new ResponseEntity<>(binanceFuturesTradeInfoService.queryAll(criteria,page),HttpStatus.OK);
     }
 
-    @GetMapping("/stats")
-    @ApiOperation("查询币安合约交易汇总")
-    @PreAuthorize("@el.check('binanceFuturesTradeInfo:list')")
-    public ResponseEntity<BinanceFuturesTradeStatsInfoVO> stats(){
-        return new ResponseEntity<>(binanceFuturesTradeInfoService.syncFuturesHedge(),HttpStatus.OK);
-    }
-
     @PostMapping
     @Log("新增币安合约交易信息")
     @ApiOperation("新增币安合约交易信息")
