@@ -68,6 +68,7 @@
           size="mini"
           type="success"
           icon="el-icon-tickets"
+          :loading="syncLoading"
           @click="doStats"
         >查询</el-button>
         <el-button
@@ -171,8 +172,10 @@ export default {
       } else {
         delete this.query.endTime // 避免传空字符串
       }
+      this.syncLoading = true
       crudBinanceTradeInfo.stats(this.query).then(res => {
         this.statsInfo = res
+        this.syncLoading = false
       })
     },
     formatValue(info, key, type) {
