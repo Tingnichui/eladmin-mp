@@ -72,6 +72,11 @@ export default {
       }
     }, 100)
     window.addEventListener('resize', this.__resizeHandler)
+
+    // 每 5 更新一次
+    setInterval(() => {
+      this.updateChart()
+    }, 5000)
   },
   beforeDestroy() {
     if (this.chart) {
