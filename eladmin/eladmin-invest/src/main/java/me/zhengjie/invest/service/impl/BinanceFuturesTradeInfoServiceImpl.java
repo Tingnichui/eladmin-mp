@@ -203,78 +203,109 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
                         .orderByAsc(BinanceFuturesTradeInfo::getTime)
         );
 
-        // 获取当前合约价格
-        BigDecimal currentPrice = binanceUsdFuturesUtil.price(BinanceEnum.SYMBOL.BTCUSDT);
+        // 盈利交易匹配
+        {
+            List<MatchedTradeInfo> matchedList = new ArrayList<>();
+            Iterator<BinanceFuturesTradeInfo> sellIterator = sellTradeInfoList.iterator();
+            while (sellIterator.hasNext()) {
+                BinanceFuturesTradeInfo sell = sellIterator.next();
+
+                // 遍历平仓交易
+                Iterator<BinanceFuturesTradeInfo> buyItrator = buyTradeInfoList.iterator();
+                while (buyItrator.hasNext()) {
+                    BinanceFuturesTradeInfo buy = buyItrator.next();
+                    // 移除平仓完毕的
+                    if (buy.getQty().compareTo(BigDecimal.ZERO) <= 0) {
+                        buyItrator.remove();
+                        continue;
+                    }
+                    // 忽略 平仓交易大于开仓交易的，及亏损单，亏损单由现货止损
+                    if (buy.getPrice().compareTo(sell.getPrice()) > 0) {
+                        continue;
+                    }
+                    // 更新交易数量
+                    BigDecimal matchQty = sell.getQty().min(buy.getQty());
+                    buy.setQty(buy.getQty().subtract(matchQty));
+                    sell.setQty(sell.getQty().subtract(matchQty));
+
+                    // 撮合交易记录
+                    MatchedTradeInfo matched = new MatchedTradeInfo();
+                    matched.setQty(matchQty);
+                    matched.setBuyPrice(buy.getPrice());
+                    matched.setSellPrice(sell.getPrice());
+                    matched.computeDerivedFields();
+                    matchedList.add(matched);
+
+                    // 移除平仓完毕的做空单
+                    if (sell.getQty().compareTo(BigDecimal.ZERO) <= 0) {
+                        sellIterator.remove();
+                        break;
+                    }
+                }
+
+            }
+
+            // 计算盈利
+            statsInfoVO.setProfit(matchedList.stream().map(MatchedTradeInfo::getProfit).reduce(BigDecimal.ZERO, BigDecimal::add));
+            // 计算手续费
+            BigDecimal feeRate = new BigDecimal("0.0005");
+            statsInfoVO.setFee(matchedList.stream().map(v -> (v.getBuyAmount().add(v.getSellAmount())).multiply(feeRate)).reduce(BigDecimal.ZERO, BigDecimal::add));
+        }
 
 
-        List<MatchedTradeInfo> matchedList = new ArrayList<>();
-        Iterator<BinanceFuturesTradeInfo> sellIterator = sellTradeInfoList.iterator();
-        while (sellIterator.hasNext()) {
-            BinanceFuturesTradeInfo sell = sellIterator.next();
+        // 现货止损交易匹配
+        {
+            // 获取当前合约价格
+            BigDecimal currentPrice = binanceUsdFuturesUtil.price(BinanceEnum.SYMBOL.BTCUSDT);
 
-            // 遍历平仓交易
-            Iterator<BinanceFuturesTradeInfo> buyItrator = buyTradeInfoList.iterator();
-            while (buyItrator.hasNext()) {
-                BinanceFuturesTradeInfo buy = buyItrator.next();
-                // 移除平仓完毕的
-                if (buy.getQty().compareTo(BigDecimal.ZERO) <= 0) {
-                    buyItrator.remove();
+            // 所有都标记未锁仓
+            binanceTradeInfoExtService.getBaseMapper().update(null,
+                    Wrappers.lambdaUpdate(BinanceTradeInfoExt.class)
+                            .set(BinanceTradeInfoExt::getHedgedFlag, 0)
+            );
+
+            // 交易匹配
+            List<MatchedTradeInfo> matchedList = new ArrayList<>();
+            Iterator<BinanceFuturesTradeInfo> sellIterator = sellTradeInfoList.iterator();
+            while (sellIterator.hasNext()) {
+                BinanceFuturesTradeInfo sell = sellIterator.next();
+                // 当前价格小于开仓价格，说明是盈利的，不需要锁仓
+                if (currentPrice.compareTo(sell.getPrice()) <= 0) {
+                    sell.setQty(BigDecimal.ZERO);
                     continue;
                 }
-                // 忽略 平仓交易大于开仓交易的，及亏损单，亏损单由现货止损
-                if (buy.getPrice().compareTo(sell.getPrice()) > 0) {
-                    continue;
-                }
-                // 更新交易数量
-                BigDecimal matchQty = sell.getQty().min(buy.getQty());
-                buy.setQty(buy.getQty().subtract(matchQty));
-                sell.setQty(sell.getQty().subtract(matchQty));
 
-                // 撮合交易记录
-                MatchedTradeInfo matched = new MatchedTradeInfo();
-                matched.setQty(matchQty);
-                matched.setBuyPrice(buy.getPrice());
-                matched.setSellPrice(sell.getPrice());
-                matched.computeDerivedFields();
-                matchedList.add(matched);
+                // 查询现货止损单
+                BigDecimal qty = sell.getQty();
+                List<BinanceTradeInfo> binanceTradeInfos = binanceTradeInfoService.list4hedge(sell.getPrice(), sell.getPrice().add(new BigDecimal("1000")), qty);
 
-                // 移除平仓完毕的做空单
-                if (sell.getQty().compareTo(BigDecimal.ZERO) <= 0) {
+                if (CollectionUtils.isNotEmpty(binanceTradeInfos)) {
+                    BinanceTradeInfo buy = binanceTradeInfos.get(0);
+
+                    // 撮合交易记录
+                    MatchedTradeInfo matched = new MatchedTradeInfo();
+                    matched.setQty(qty);
+                    matched.setBuyPrice(buy.getPrice());
+                    matched.setSellPrice(sell.getPrice());
+                    matched.computeDerivedFields();
+                    matchedList.add(matched);
+
+                    // 更新锁仓
+                    binanceTradeInfoExtService.changeHedgedFlag(buy.getOrderId());
                     sellIterator.remove();
-                    break;
+
                 }
+
             }
+
+            statsInfoVO.setStopLossMatchTradeInfoList(matchedList);
+            // 计算止损金额
+            statsInfoVO.setStopLossAmount(matchedList.stream().map(MatchedTradeInfo::getProfit).reduce(BigDecimal.ZERO, BigDecimal::add));
+            // 未匹配到现货止损的交易
+            statsInfoVO.setNoStopLossTradeInfoList(sellTradeInfoList.stream().filter(v -> v.getQty().compareTo(BigDecimal.ZERO) > 0).collect(Collectors.toList()));
 
         }
 
-        // 计算盈利
-        statsInfoVO.setProfit(matchedList.stream().map(MatchedTradeInfo::getProfit).reduce(BigDecimal.ZERO, BigDecimal::add));
-        // 计算手续费
-        BigDecimal feeRate = new BigDecimal("0.0005");
-        statsInfoVO.setFee(matchedList.stream().map(v -> (v.getBuyAmount().add(v.getSellAmount())).multiply(feeRate)).reduce(BigDecimal.ZERO, BigDecimal::add));
-
-        // 所有都标记未锁仓
-        binanceTradeInfoExtService.getBaseMapper().update(null,
-                Wrappers.lambdaUpdate(BinanceTradeInfoExt.class)
-                        .set(BinanceTradeInfoExt::getHedgedFlag, 0)
-        );
-
-        // 剩下没有平仓的做空单判断是否需要锁仓
-        for (BinanceFuturesTradeInfo sellInfo : sellTradeInfoList) {
-            // 当前价格小于开仓价格，说明是盈利的，不需要锁仓
-            if (currentPrice.compareTo(sellInfo.getPrice()) <= 0) {
-                sellInfo.setQty(BigDecimal.ZERO);
-                continue;
-            }
-
-            // 查询现货止损单
-            List<BinanceTradeInfo> binanceTradeInfos = binanceTradeInfoService.list4hedge(sellInfo.getPrice(), sellInfo.getPrice().add(new BigDecimal("1000")), sellInfo.getQty());
-
-            if (CollectionUtils.isNotEmpty(binanceTradeInfos)) {
-                binanceTradeInfoExtService.changeHedgedFlag(binanceTradeInfos.get(0).getOrderId());
-            }
-
-        }
 
         // 锁仓统计
         {
@@ -290,10 +321,6 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
                 statsInfoVO.setHedgedAvgPrice(NumberUtil.div(statsInfoVO.getHedgedAmount(), statsInfoVO.getHedgedQty()));
             }
         }
-
-
-        // 未匹配到现货止损的交易
-        statsInfoVO.setNoStopLossTradeInfoList(sellTradeInfoList.stream().filter(v -> v.getQty().compareTo(BigDecimal.ZERO) > 0).collect(Collectors.toList()));
 
 
         return statsInfoVO;

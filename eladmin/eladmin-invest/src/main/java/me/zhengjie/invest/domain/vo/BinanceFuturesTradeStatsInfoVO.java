@@ -2,6 +2,7 @@ package me.zhengjie.invest.domain.vo;
 
 import lombok.Data;
 import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
+import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -19,13 +20,11 @@ public class BinanceFuturesTradeStatsInfoVO implements Serializable {
     private BigDecimal hedgedQty = BigDecimal.ZERO;
     //锁仓均价
     private BigDecimal hedgedAvgPrice = BigDecimal.ZERO;
-    //剩余未平仓总金额
-    private BigDecimal totalWaitCloseAmount = BigDecimal.ZERO;
-    //剩余未平仓总数量
-    private BigDecimal totalWaitCloseQty = BigDecimal.ZERO;
-    //剩余未平仓均价
-    private BigDecimal totalWaitAvgClosePrice = BigDecimal.ZERO;
     // 未匹配到止损的交易
     private List<BinanceFuturesTradeInfo> noStopLossTradeInfoList;
+    // 止损金额
+    private BigDecimal stopLossAmount = BigDecimal.ZERO;
+    // 现货止损对冲交易
+    private List<MatchedTradeInfo> stopLossMatchTradeInfoList;
 
 }
