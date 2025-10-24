@@ -102,7 +102,10 @@
         FROM (
             SELECT t1.order_id,t1.price, SUM(t1.qty) qty
             FROM binance_trade_info t1
+            LEFT JOIN binance_account_info t2 on t2.uid = t1.uid
+            LEFT JOIN binance_trade_info_ext t3 on t3.order_id = t1.order_id
             WHERE t1.is_buyer = 1
+                AND (t3.hedged_flag = 0 or t3.hedged_flag IS NULL)
                 AND t1.price BETWEEN #{lowPrice} AND #{highPrice}
             GROUP BY t1.order_id, t1.price
             ORDER BY t1.price DESC, t1.time DESC
