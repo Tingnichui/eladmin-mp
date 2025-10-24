@@ -22,7 +22,7 @@ import echarts from 'echarts'
 require('echarts/theme/macarons') // echarts theme
 import { debounce } from '@/utils'
 import { price } from '@/api/investKlinesRecord'
-import { addAmount, divAmount, mulAmount } from '@/utils/numberUtil'
+import { addAmount, divAmount, formatPercent, mulAmount, subAmount } from '@/utils/numberUtil'
 
 export default {
   props: {
@@ -110,11 +110,23 @@ export default {
         bucketsMap[key].totalAmount = addAmount(bucketsMap[key].totalAmount, mulAmount(trade.price, trade.qty))
       })
 
-      return Object.values(bucketsMap).map(bucket => ({
-        range: bucket.range,
-        totalQty: bucket.totalQty,
-        avgPrice: bucket.totalQty > 0 ? divAmount(bucket.totalAmount, bucket.totalQty, 2) : 0
-      })).sort((a, b) => {
+      return Object.values(bucketsMap).map(bucket => {
+        const avgPrice = bucket.totalQty > 0 ? divAmount(bucket.totalAmount, bucket.totalQty, 2) : 0
+        let profit = 0
+        let profitRate = 0
+        if (this.currentPrice) {
+          profit = bucket.totalQty > 0 ? mulAmount(subAmount(this.currentPrice, avgPrice), bucket.totalQty) : 0
+          profitRate = avgPrice > 0 ? divAmount(subAmount(this.currentPrice, avgPrice), avgPrice) : 0
+        }
+
+        return {
+          range: bucket.range,
+          totalQty: bucket.totalQty,
+          avgPrice,
+          profit: profit.toFixed(2),
+          profitRate: formatPercent(profitRate)
+        }
+      }).sort((a, b) => {
         const aUpper = parseInt(a.range.split('-')[1])
         const bUpper = parseInt(b.range.split('-')[1])
         return aUpper - bUpper
@@ -149,10 +161,13 @@ export default {
           axisPointer: { type: 'shadow' },
           formatter: function(params) {
             const d = params[0].data
+            console.log(d)
             return `
               价格区间: ${d.range}<br/>
               持仓量: ${d.totalQty}<br/>
-              平均价格: ${d.avgPrice}
+              平均价格: ${d.avgPrice}<br/>
+              收益: ${d.profit}<br/>
+              收益率: ${d.profitRate}
             `
           }
         },
@@ -220,10 +235,8 @@ export default {
               }
 
               return {
+                ...item,
                 value: item.totalQty,
-                range: item.range,
-                totalQty: item.totalQty,
-                avgPrice: item.avgPrice,
                 itemStyle: { color }
               }
             }),
