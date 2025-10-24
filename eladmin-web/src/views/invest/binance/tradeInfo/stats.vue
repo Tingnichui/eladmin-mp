@@ -149,7 +149,7 @@ export default {
         { label: '锁仓均价', key: 'hedgedAvgPrice' },
         { label: '锁仓数量', key: 'hedgedQty' },
         { label: '锁仓总额', key: 'hedgedAmount' },
-        { label: '', key: '' },
+        { label: '止损', key: 'stopLossAmount' },
         { label: '手续费', key: 'fee' },
         { label: '利润', key: 'profit' }
       ]
