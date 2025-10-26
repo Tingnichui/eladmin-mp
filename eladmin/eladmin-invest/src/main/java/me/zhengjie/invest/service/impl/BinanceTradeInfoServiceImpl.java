@@ -161,10 +161,8 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         List<MatchedTradeInfo> matchedList = new ArrayList<>();
         List<BinanceTradeInfo> buyTradeList, sellTradeList;
         {
-
-            TradePairingLogicEnum tradePairingLogicEnum = TradePairingLogicEnum.getByKey(criteria.getTradePairingLogic());
-            // 查询所有买入 时间从早到晚
-            criteria.setOrderColumn("time");
+            // 查询所有买入 价格从低到高
+            criteria.setOrderColumn("price");
             criteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
             criteria.setIsBuyer(1);
             buyTradeList = binanceTradeInfoMapper.findAll(criteria);
@@ -187,6 +185,9 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                         buyIterator.remove();
                         continue;
                     }
+                    if (sell.getTime().before(buy.getTime())) {
+                        continue;
+                    }
 
                     // 可匹配的仓位数量
                     BigDecimal matchQty = buy.getQty().min(sell.getQty());
@@ -198,8 +199,8 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                     matched.setBuyTime(buy.getTime());
                     matched.setSellTime(sell.getTime());
                     matched.computeDerivedFields();
-                    // 是否符合撮合策略
-                    if (!tradePairingLogicEnum.allowMatch(matched)) {
+                    // 最小利润限制
+                    if (matched.getProfitRate().compareTo(criteria.getMinProfitPct()) < 0) {
                         continue;
                     }
 

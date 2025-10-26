@@ -37,22 +37,22 @@
             :value="item.value"
           />
         </el-select>
-        <label class="el-form-item-label">撮合逻辑</label>
-        <el-select
-          v-model="query.tradePairingLogic"
-          size="small"
-          placeholder="投资类型"
-          class="filter-item"
-          style="width: 185px"
-          @change="doStats"
-        >
-          <el-option
-            v-for="item in dict.invest_binance_trade_pairing_logic"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
+        <!--        <label class="el-form-item-label">撮合逻辑</label>-->
+        <!--        <el-select-->
+        <!--          v-model="query.tradePairingLogic"-->
+        <!--          size="small"-->
+        <!--          placeholder="投资类型"-->
+        <!--          class="filter-item"-->
+        <!--          style="width: 185px"-->
+        <!--          @change="doStats"-->
+        <!--        >-->
+        <!--          <el-option-->
+        <!--            v-for="item in dict.invest_binance_trade_pairing_logic"-->
+        <!--            :key="item.value"-->
+        <!--            :label="item.label"-->
+        <!--            :value="item.value"-->
+        <!--          />-->
+        <!--        </el-select>-->
         <label class="el-form-item-label">截止日期</label>
         <el-date-picker
           v-model="query.endTime"
@@ -103,7 +103,7 @@
         </el-descriptions>
         <div>
           <trade-position-distribution-bar :row-data="statsInfo.waitSellTradeInfoList" :symbol="query.symbol" height="400px" style="margin-top: 20px" />
-          <trade-profit-rate-scatter :row-data="statsInfo.matchedTradeInfoList" height="400px" style="margin-top: 20px" />
+          <!--          <trade-profit-rate-scatter :row-data="statsInfo.matchedTradeInfoList" height="400px" style="margin-top: 20px" />-->
         </div>
       </div>
     </div>
@@ -113,14 +113,13 @@
 <script>
 import crudBinanceTradeInfo from '@/api/binanceTradeInfo'
 import { formatDuration } from '@/utils/dateUtil'
-import TradeProfitRateScatter from '@/views/invest/binance/tradeInfo/TradeProfitRateScatter.vue'
 import { listAllAccount } from '@/api/binanceAccountInfo'
 import TradePositionDistributionBar from '@/views/invest/binance/tradeInfo/TradePositionDistributionBar.vue'
 import CRUD from '@crud/crud'
 
 export default {
   name: 'BinanceTradeInfoStats',
-  components: { TradePositionDistributionBar, TradeProfitRateScatter },
+  components: { TradePositionDistributionBar },
   dicts: ['invest_binance_trade_pairing_logic', 'invest_binance_symbol'],
   data() {
     return {
@@ -175,6 +174,8 @@ export default {
       this.syncLoading = true
       crudBinanceTradeInfo.stats(this.query).then(res => {
         this.statsInfo = res
+        this.syncLoading = false
+      }).catch(() => {
         this.syncLoading = false
       })
     },

@@ -31,7 +31,7 @@
         from binance_trade_info t1
         left join binance_account_info t2 on t2.uid = t1.uid
         left join binance_trade_info_ext t3 on t3.order_id = t1.order_id
-        where t1.time > '2025-01-01'
+        where 1 = 1
             <if test="criteria.hedgedFlag != null">
                 <choose>
                     <when test="criteria.hedgedFlag == 0">

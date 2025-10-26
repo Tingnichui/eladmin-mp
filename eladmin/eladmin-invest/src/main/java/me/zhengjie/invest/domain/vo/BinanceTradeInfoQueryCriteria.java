@@ -47,6 +47,9 @@ public class BinanceTradeInfoQueryCriteria{
     private Timestamp endTime;
     private List<BigDecimal> quoteQty;
 
+    private BigDecimal minProfitPct = new BigDecimal("0.002");
+
+
     /**
      * 撮合逻辑
      */
