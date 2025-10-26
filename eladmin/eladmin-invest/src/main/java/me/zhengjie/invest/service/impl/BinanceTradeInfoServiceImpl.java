@@ -157,85 +157,66 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         // 未锁仓的撮合交易
         criteria.setHedgedFlag(0);
 
-        List<BinanceTradeInfo> buyTradeList, sellTradeList;
-
-        TradePairingLogicEnum tradePairingLogicEnum = TradePairingLogicEnum.getByKey(criteria.getTradePairingLogic());
-        switch (tradePairingLogicEnum) {
-            // 最大收益
-            case MAX_PROFIT:
-                // 查询所有买入 价格从低到高
-                criteria.setOrderColumn("price");
-                criteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
-                criteria.setIsBuyer(1);
-                buyTradeList = binanceTradeInfoMapper.findAll(criteria);
-                // 查询所有卖出 价格从高到低
-                criteria.setOrderColumn("price");
-                criteria.setOrderDirection(OrderDirectionEnum.DESC.getValue());
-                criteria.setIsBuyer(0);
-                sellTradeList = binanceTradeInfoMapper.findAll(criteria);
-                break;
-            // 时间顺序 先进先出
-            case FIFO:
-                // 查询所有买入 时间从早到晚
-                criteria.setOrderColumn("time");
-                criteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
-                criteria.setIsBuyer(1);
-                buyTradeList = binanceTradeInfoMapper.findAll(criteria);
-                // 查询所有卖出 时间从早到晚
-                criteria.setOrderColumn("time");
-                criteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
-                criteria.setIsBuyer(0);
-                sellTradeList = binanceTradeInfoMapper.findAll(criteria);
-                break;
-            default:
-                throw new BadRequestException("未知撮合方式");
-        }
-
-
         // 撮合交易对
         List<MatchedTradeInfo> matchedList = new ArrayList<>();
-        Iterator<BinanceTradeInfo> buyIterator = buyTradeList.iterator();
-        while (buyIterator.hasNext()) {
-            BinanceTradeInfo buy = buyIterator.next();
-            // 按照顺序寻找卖单
-            Iterator<BinanceTradeInfo> sellIterator = sellTradeList.iterator();
-            while (sellIterator.hasNext()) {
-                BinanceTradeInfo sell = sellIterator.next();
-                // 卖出是否还有剩余 没有剩余就直接移除
-                if (sell.getQty().compareTo(BigDecimal.ZERO) <= 0) {
-                    sellIterator.remove();
-                    continue;
-                }
+        List<BinanceTradeInfo> buyTradeList, sellTradeList;
+        {
 
-                // 可匹配的仓位数量
-                BigDecimal matchQty = buy.getQty().min(sell.getQty());
-                // 撮合交易记录
-                MatchedTradeInfo matched = new MatchedTradeInfo();
-                matched.setQty(matchQty);
-                matched.setBuyPrice(buy.getPrice());
-                matched.setSellPrice(sell.getPrice());
-                matched.setBuyTime(buy.getTime());
-                matched.setSellTime(sell.getTime());
-                matched.computeDerivedFields();
-                // 是否符合撮合策略
-                if (!tradePairingLogicEnum.allowMatch(matched)) {
-                    continue;
-                }
+            TradePairingLogicEnum tradePairingLogicEnum = TradePairingLogicEnum.getByKey(criteria.getTradePairingLogic());
+            // 查询所有买入 时间从早到晚
+            criteria.setOrderColumn("time");
+            criteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
+            criteria.setIsBuyer(1);
+            buyTradeList = binanceTradeInfoMapper.findAll(criteria);
+            // 查询所有卖出 时间从早到晚
+            criteria.setOrderColumn("time");
+            criteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
+            criteria.setIsBuyer(0);
+            sellTradeList = binanceTradeInfoMapper.findAll(criteria);
 
-                matchedList.add(matched);
-                // 更新买入剩余量
-                buy.setQty(buy.getQty().subtract(matchQty));
-                // 更新卖出剩余量`
-                sell.setQty(sell.getQty().subtract(matchQty));
+            Iterator<BinanceTradeInfo> buyIterator = buyTradeList.iterator();
+            while (buyIterator.hasNext()) {
+                BinanceTradeInfo buy = buyIterator.next();
+                // 按照顺序寻找卖单
+                Iterator<BinanceTradeInfo> sellIterator = sellTradeList.iterator();
+                while (sellIterator.hasNext()) {
+                    BinanceTradeInfo sell = sellIterator.next();
+                    // 卖出是否还有剩余 没有剩余就直接移除
+                    if (sell.getQty().compareTo(BigDecimal.ZERO) <= 0) {
+                        sellIterator.remove();
+                        continue;
+                    }
 
-                // 判断是否买入还有剩余 已经平仓掉了就直接去除，并且终止撮合
-                if (buy.getQty().compareTo(BigDecimal.ZERO) <= 0) {
-                    buyIterator.remove();
-                    break;
+                    // 可匹配的仓位数量
+                    BigDecimal matchQty = buy.getQty().min(sell.getQty());
+                    // 撮合交易记录
+                    MatchedTradeInfo matched = new MatchedTradeInfo();
+                    matched.setQty(matchQty);
+                    matched.setBuyPrice(buy.getPrice());
+                    matched.setSellPrice(sell.getPrice());
+                    matched.setBuyTime(buy.getTime());
+                    matched.setSellTime(sell.getTime());
+                    matched.computeDerivedFields();
+                    // 是否符合撮合策略
+                    if (!tradePairingLogicEnum.allowMatch(matched)) {
+                        continue;
+                    }
+
+                    matchedList.add(matched);
+                    // 更新买入剩余量
+                    buy.setQty(buy.getQty().subtract(matchQty));
+                    // 更新卖出剩余量`
+                    sell.setQty(sell.getQty().subtract(matchQty));
+
+                    // 判断是否买入还有剩余 已经平仓掉了就直接去除，并且终止撮合
+                    if (buy.getQty().compareTo(BigDecimal.ZERO) <= 0) {
+                        buyIterator.remove();
+                        break;
+                    }
+
                 }
 
             }
-
         }
 
 
