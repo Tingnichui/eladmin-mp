@@ -174,16 +174,17 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             criteria.setIsBuyer(0);
             sellTradeList = binanceTradeInfoMapper.findAll(criteria);
 
-            Iterator<BinanceTradeInfo> buyIterator = buyTradeList.iterator();
-            while (buyIterator.hasNext()) {
-                BinanceTradeInfo buy = buyIterator.next();
-                // 按照顺序寻找卖单
-                Iterator<BinanceTradeInfo> sellIterator = sellTradeList.iterator();
-                while (sellIterator.hasNext()) {
-                    BinanceTradeInfo sell = sellIterator.next();
-                    // 卖出是否还有剩余 没有剩余就直接移除
-                    if (sell.getQty().compareTo(BigDecimal.ZERO) <= 0) {
-                        sellIterator.remove();
+
+            // 匹配逻辑：遍历卖单，有卖肯定有买
+            Iterator<BinanceTradeInfo> sellIterator = sellTradeList.iterator();
+            while (sellIterator.hasNext()) {
+                BinanceTradeInfo sell = sellIterator.next();
+                // 按照顺序寻找之前的买单
+                Iterator<BinanceTradeInfo> buyIterator = buyTradeList.iterator();
+                while (buyIterator.hasNext()) {
+                    BinanceTradeInfo buy = buyIterator.next();
+                    if (buy.getQty().compareTo(BigDecimal.ZERO) <= 0) {
+                        buyIterator.remove();
                         continue;
                     }
 
@@ -209,8 +210,8 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                     sell.setQty(sell.getQty().subtract(matchQty));
 
                     // 判断是否买入还有剩余 已经平仓掉了就直接去除，并且终止撮合
-                    if (buy.getQty().compareTo(BigDecimal.ZERO) <= 0) {
-                        buyIterator.remove();
+                    if (sell.getQty().compareTo(BigDecimal.ZERO) <= 0) {
+                        sellIterator.remove();
                         break;
                     }
 
