@@ -53,6 +53,14 @@ public class BinanceTradeStatsInfoVO implements Serializable {
     private Long maxHoldTimeMs;
     //手续费
     private BigDecimal fee = BigDecimal.ZERO;
+    // 持仓盈利
+    private BigDecimal holdingProfit = BigDecimal.ZERO;
+    // 持仓亏损
+    private BigDecimal holdingLoss = BigDecimal.ZERO;
+    // 持仓盈亏
+    private BigDecimal holdingProfitLoss = BigDecimal.ZERO;
+    // 当前现货价格
+    private BigDecimal currentSpotPrice = BigDecimal.ZERO;
 
     private List<MatchedTradeInfo> matchedTradeInfoList;
 

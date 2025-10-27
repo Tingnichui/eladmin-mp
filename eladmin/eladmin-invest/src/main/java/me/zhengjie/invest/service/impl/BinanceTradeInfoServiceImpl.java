@@ -293,8 +293,39 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         // 手续费计算 按照0.1%
         statsInfoVO.setFee((statsInfoVO.getTotalBuyAmount().add(statsInfoVO.getTotalSellAmount())).multiply(new BigDecimal("0.001")));
 
-        return statsInfoVO;
 
+        try {
+            BigDecimal currentPrice = binanceSpotUtil.getPrice(BinanceEnum.SYMBOL.valueOf(criteria.getSymbol()));
+            statsInfoVO.setCurrentSpotPrice(currentPrice);
+
+            // 计算买入总金额与数量
+            for (BinanceTradeInfo buy : buyTradeList) {
+                // 可匹配的仓位数量
+                BigDecimal matchQty = buy.getQty();
+                // 撮合交易记录
+                MatchedTradeInfo matched = new MatchedTradeInfo();
+                matched.setQty(matchQty);
+                matched.setBuyPrice(buy.getPrice());
+                matched.setSellPrice(currentPrice);
+                matched.computeDerivedFields();
+
+                BigDecimal p = matched.getProfit();
+                if (p.compareTo(BigDecimal.ZERO) > 0) {
+                    // 持仓盈利
+                    statsInfoVO.setHoldingProfit(statsInfoVO.getHoldingProfit().add(p));
+                } else {
+                    // 持仓亏损
+                    statsInfoVO.setHoldingLoss(statsInfoVO.getHoldingLoss().add(p));
+                }
+
+                // 持仓盈亏
+                statsInfoVO.setHoldingProfitLoss(statsInfoVO.getHoldingProfitLoss().add(p));
+            }
+
+        } catch (Exception e) {
+        }
+
+        return statsInfoVO;
     }
 
     @Override

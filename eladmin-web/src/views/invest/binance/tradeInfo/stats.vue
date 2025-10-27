@@ -142,7 +142,10 @@ export default {
         { label: '手续费', key: 'fee' },
         { label: '持仓均价', key: 'totalWaitAvgSellPrice' },
         { label: '持仓数量', key: 'totalWaitSellQty' },
-        { label: '持仓总额', key: 'totalWaitSellAmount' }
+        { label: '持仓总额', key: 'totalWaitSellAmount' },
+        { label: '持仓盈利', key: 'holdingProfit' },
+        { label: '持仓亏损', key: 'holdingLoss' },
+        { label: '持仓盈亏', key: 'holdingProfitLoss' }
       ],
       futuresStatsItems: [
         { label: '锁仓均价', key: 'hedgedAvgPrice' },
