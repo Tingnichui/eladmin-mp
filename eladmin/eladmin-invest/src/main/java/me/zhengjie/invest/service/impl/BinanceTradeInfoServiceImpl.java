@@ -198,7 +198,6 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                     matched.setSellPrice(sell.getPrice());
                     matched.setBuyTime(buy.getTime());
                     matched.setSellTime(sell.getTime());
-                    matched.computeDerivedFields();
                     // 最小利润限制
                     if (matched.getProfitRate().compareTo(criteria.getMinProfitPct()) < 0) {
                         continue;
@@ -307,7 +306,6 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                 matched.setQty(matchQty);
                 matched.setBuyPrice(buy.getPrice());
                 matched.setSellPrice(currentPrice);
-                matched.computeDerivedFields();
 
                 BigDecimal p = matched.getProfit();
                 if (p.compareTo(BigDecimal.ZERO) > 0) {

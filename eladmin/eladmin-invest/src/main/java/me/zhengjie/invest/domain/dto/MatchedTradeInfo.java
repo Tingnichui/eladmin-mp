@@ -22,14 +22,28 @@ public class MatchedTradeInfo {
     private BigDecimal profitRate;
     private Long holdMillis;
 
-    public void computeDerivedFields() {
-        this.buyAmount = qty.multiply(buyPrice);
-        this.sellAmount = qty.multiply(sellPrice);
-        this.profit = this.sellAmount.subtract(this.buyAmount);
-        this.profitRate = this.profit.divide(this.buyAmount, 4, RoundingMode.HALF_UP);
+
+    public BigDecimal getBuyAmount() {
+        return qty.multiply(buyPrice);
+    }
+
+    public BigDecimal getSellAmount() {
+        return qty.multiply(sellPrice);
+    }
+
+    public BigDecimal getProfit() {
+        return this.getSellAmount().subtract(this.getBuyAmount());
+    }
+
+    public BigDecimal getProfitRate() {
+        return this.getProfit().divide(this.getBuyAmount(), 4, RoundingMode.HALF_UP);
+    }
+
+    public Long getHoldMillis() {
         if (null != this.sellTime && null != this.buyTime) {
-            this.holdMillis = sellTime.getTime() - buyTime.getTime();
+            return sellTime.getTime() - buyTime.getTime();
         }
+        return 0L;
     }
 
 

@@ -233,7 +233,6 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
                     matched.setQty(matchQty);
                     matched.setBuyPrice(buy.getPrice());
                     matched.setSellPrice(sell.getPrice());
-                    matched.computeDerivedFields();
                     matchedList.add(matched);
 
                     // 移除平仓完毕的做空单
@@ -287,7 +286,6 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
                     matched.setQty(qty);
                     matched.setBuyPrice(buy.getPrice());
                     matched.setSellPrice(sell.getPrice());
-                    matched.computeDerivedFields();
                     matchedList.add(matched);
 
                     // 更新锁仓
