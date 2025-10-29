@@ -226,7 +226,7 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
                     sell.setQty(sell.getQty().subtract(matchQty));
 
                     // 撮合交易记录
-                    MatchedTradeInfo matched = new MatchedTradeInfo(true);
+                    MatchedTradeInfo matched = new MatchedTradeInfo(true, "0.0005");
                     matched.setQty(matchQty);
                     matched.setOpenPrice(buy.getPrice());
                     matched.setClosePrice(sell.getPrice());
@@ -242,7 +242,7 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
             }
 
             // 计算盈利
-            statsInfoVO.setProfit(matchedList.stream().map(MatchedTradeInfo::getRealizedPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
+            statsInfoVO.setProfit(matchedList.stream().map(MatchedTradeInfo::getPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
             // 计算手续费
             BigDecimal feeRate = new BigDecimal("0.0005");
             statsInfoVO.setFee(matchedList.stream().map(v -> (v.getOpenAmount().add(v.getCloseAmount())).multiply(feeRate)).reduce(BigDecimal.ZERO, BigDecimal::add));
@@ -279,7 +279,7 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
                     BinanceTradeInfo buy = binanceTradeInfos.get(0);
 
                     // 撮合交易记录
-                    MatchedTradeInfo matched = new MatchedTradeInfo(true);
+                    MatchedTradeInfo matched = new MatchedTradeInfo(true, "0.0005");
                     matched.setQty(qty);
                     matched.setOpenPrice(buy.getPrice());
                     matched.setClosePrice(sell.getPrice());
@@ -295,7 +295,7 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
 
             statsInfoVO.setStopLossMatchTradeInfoList(matchedList);
             // 计算止损金额
-            statsInfoVO.setStopLossAmount(matchedList.stream().map(MatchedTradeInfo::getRealizedPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
+            statsInfoVO.setStopLossAmount(matchedList.stream().map(MatchedTradeInfo::getPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
             // 未匹配到现货止损的交易
             statsInfoVO.setNoStopLossTradeInfoList(sellTradeInfoList.stream().filter(v -> v.getQty().compareTo(BigDecimal.ZERO) > 0).collect(Collectors.toList()));
 

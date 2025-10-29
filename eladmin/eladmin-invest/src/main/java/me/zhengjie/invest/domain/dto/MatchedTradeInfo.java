@@ -43,18 +43,41 @@ public class MatchedTradeInfo {
      */
     private BigDecimal closeAmount;
     /**
-     * 实现盈亏
+     * 盈亏
      */
-    private BigDecimal realizedPnl;
+    private BigDecimal pnl;
     /**
-     * 盈亏率
+     * 回报率
      */
-    private BigDecimal pnlRatio;
+    private BigDecimal roi;
+    /**
+     * 持仓时间
+     */
     private Long holdMillis;
+    /**
+     * 手续费
+     */
+    private BigDecimal fee;
+    /**
+     * 手续费率
+     */
+    private BigDecimal feeRate;
+    /**
+     * 净盈亏
+     */
+    private BigDecimal netPnl;
 
+    public BigDecimal getNetPnl() {
+        return this.getPnl().subtract(this.getFee());
+    }
 
-    public MatchedTradeInfo(boolean side) {
+    public BigDecimal getFee() {
+        return (this.getOpenAmount().add(this.getCloseAmount())).multiply(this.feeRate);
+    }
+
+    public MatchedTradeInfo(boolean side,String feeRate) {
         this.side = side;
+        this.feeRate = new BigDecimal(feeRate);
     }
 
     public BigDecimal getOpenAmount() {
@@ -65,13 +88,13 @@ public class MatchedTradeInfo {
         return qty.multiply(closePrice);
     }
 
-    public BigDecimal getRealizedPnl() {
+    public BigDecimal getPnl() {
         BigDecimal pnl = this.getCloseAmount().subtract(this.getOpenAmount());
         return this.side ? pnl : pnl.negate();
     }
 
-    public BigDecimal getPnlRatio() {
-        BigDecimal radio = this.getRealizedPnl().divide(this.getOpenAmount(), 4, RoundingMode.HALF_UP);
+    public BigDecimal getRoi() {
+        BigDecimal radio = this.getPnl().divide(this.getOpenAmount(), 4, RoundingMode.HALF_UP);
         return this.side ? radio : radio.negate();
     }
 

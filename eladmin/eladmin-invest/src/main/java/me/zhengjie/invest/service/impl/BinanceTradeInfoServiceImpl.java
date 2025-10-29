@@ -187,14 +187,14 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                     // 可匹配的仓位数量
                     BigDecimal matchQty = buy.getQty().min(sell.getQty());
                     // 撮合交易记录
-                    MatchedTradeInfo matched = new MatchedTradeInfo(true);
+                    MatchedTradeInfo matched = new MatchedTradeInfo(true, "0.001");
                     matched.setQty(matchQty);
                     matched.setOpenPrice(buy.getPrice());
                     matched.setClosePrice(sell.getPrice());
                     matched.setOpenTime(buy.getTime());
                     matched.setCloseTime(sell.getTime());
                     // 最小利润限制
-                    if (matched.getPnlRatio().compareTo(criteria.getMinProfitPct()) < 0) {
+                    if (matched.getRoi().compareTo(criteria.getMinProfitPct()) < 0) {
                         continue;
                     }
 
@@ -297,12 +297,12 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                 // 可匹配的仓位数量
                 BigDecimal matchQty = buy.getQty();
                 // 撮合交易记录
-                MatchedTradeInfo matched = new MatchedTradeInfo(true);
+                MatchedTradeInfo matched = new MatchedTradeInfo(true, "0.001");
                 matched.setQty(matchQty);
                 matched.setOpenPrice(buy.getPrice());
                 matched.setClosePrice(currentPrice);
 
-                BigDecimal p = matched.getRealizedPnl();
+                BigDecimal p = matched.getPnl();
                 if (p.compareTo(BigDecimal.ZERO) > 0) {
                     // 持仓盈利
                     statsInfoVO.setHoldingProfit(statsInfoVO.getHoldingProfit().add(p));
