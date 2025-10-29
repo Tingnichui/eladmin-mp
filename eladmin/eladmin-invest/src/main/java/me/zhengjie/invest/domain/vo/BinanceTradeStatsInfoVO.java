@@ -17,7 +17,6 @@ package me.zhengjie.invest.domain.vo;
 
 import lombok.Data;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
-import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -32,25 +31,20 @@ import java.util.List;
 public class BinanceTradeStatsInfoVO implements Serializable {
     //买入总金额
     private BigDecimal totalBuyAmount;
-    //买入均价
-    private BigDecimal avgBuyPrice;
     //卖出总金额
     private BigDecimal totalSellAmount;
-    //卖出均价
-    private BigDecimal avgSellPrice;
-    //总的利润
-    private BigDecimal profit;
+    //盈亏
+    private BigDecimal pnl;
+    //净盈亏
+    private BigDecimal netPnl;
     //收益率
-    private BigDecimal profitPct;
+    private BigDecimal roi;
     //剩余未平仓总金额
     private BigDecimal totalWaitSellAmount;
     //剩余未平仓总数量
     private BigDecimal totalWaitSellQty;
     //剩余未平仓均价
     private BigDecimal totalWaitAvgSellPrice;
-    private Long avgHoldTimeMs;
-    private Long minHoldTimeMs;
-    private Long maxHoldTimeMs;
     //手续费
     private BigDecimal fee = BigDecimal.ZERO;
     // 持仓盈利
@@ -61,8 +55,6 @@ public class BinanceTradeStatsInfoVO implements Serializable {
     private BigDecimal holdingProfitLoss = BigDecimal.ZERO;
     // 当前现货价格
     private BigDecimal currentSpotPrice = BigDecimal.ZERO;
-
-    private List<MatchedTradeInfo> matchedTradeInfoList;
 
     // 剩余未平仓交易
     private List<BinanceTradeInfo> waitSellTradeInfoList;

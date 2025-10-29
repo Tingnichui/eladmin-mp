@@ -215,41 +215,20 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             }
         }
 
-
-        // 撮合总量
-        BigDecimal totalQty = matchedList.stream()
-                .map(MatchedTradeInfo::getQty)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
         // 买入总金额
-        BigDecimal totalBuyAmount = matchedList.stream()
-                .map(MatchedTradeInfo::getOpenAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        statsInfoVO.setTotalBuyAmount(totalBuyAmount);
-        // 买入均价
-        BigDecimal avgBuyPrice = totalBuyAmount.divide(totalQty, 8, RoundingMode.HALF_UP);
-        statsInfoVO.setAvgBuyPrice(avgBuyPrice);
-
+        statsInfoVO.setTotalBuyAmount(matchedList.stream().map(MatchedTradeInfo::getOpenAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
         // 卖出总金额
-        BigDecimal totalSellAmount = matchedList.stream()
-                .map(MatchedTradeInfo::getCloseAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        statsInfoVO.setTotalSellAmount(totalSellAmount);
-        // 卖出均价
-        BigDecimal avgSellPrice = totalSellAmount.divide(totalQty, 8, RoundingMode.HALF_UP);
-        statsInfoVO.setAvgSellPrice(avgSellPrice);
+        statsInfoVO.setTotalSellAmount(matchedList.stream().map(MatchedTradeInfo::getCloseAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
 
-        // 总的利润
-        BigDecimal profit = totalSellAmount.subtract(totalBuyAmount);
-        statsInfoVO.setProfit(profit);
-        // 收益率
-        BigDecimal profitPct = profit.divide(totalBuyAmount, 4, RoundingMode.HALF_UP);
-        statsInfoVO.setProfitPct(profitPct);
+        // 盈亏
+        statsInfoVO.setPnl(matchedList.stream().map(MatchedTradeInfo::getPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
+        // 手续费
+        statsInfoVO.setFee(matchedList.stream().map(MatchedTradeInfo::getFee).reduce(BigDecimal.ZERO, BigDecimal::add));
+        // 净盈亏
+        statsInfoVO.setNetPnl(matchedList.stream().map(MatchedTradeInfo::getNetPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
 
         // 剩余未平仓总金额
-        BigDecimal totalWaitSellAmount = buyTradeList.stream()
-                .map(b -> b.getQty().multiply(b.getPrice()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalWaitSellAmount = buyTradeList.stream().map(b -> b.getQty().multiply(b.getPrice())).reduce(BigDecimal.ZERO, BigDecimal::add);
         statsInfoVO.setTotalWaitSellAmount(totalWaitSellAmount);
         // 剩余未平仓总数量
         BigDecimal totalWaitSellQty = buyTradeList.stream()
@@ -260,33 +239,9 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         BigDecimal totalWaitAvgSellPrice = totalWaitSellAmount.divide(totalWaitSellQty, 8, RoundingMode.HALF_UP);
         statsInfoVO.setTotalWaitAvgSellPrice(totalWaitAvgSellPrice);
 
-        // 持仓时间（单位：毫秒）
-        List<Long> holdDurations = matchedList.stream()
-                .map(MatchedTradeInfo::getHoldMillis)
-                .collect(Collectors.toList());
-
-        if (!holdDurations.isEmpty()) {
-            // 平均持仓时间（毫秒）
-            long avgHoldTimeMs = (long) holdDurations.stream().mapToLong(Long::longValue).average().orElse(0);
-            // 最小/最大持仓时间
-            long minHoldTimeMs = Collections.min(holdDurations);
-            long maxHoldTimeMs = Collections.max(holdDurations);
-
-            // 可选择换算成小时/分钟/秒
-            statsInfoVO.setAvgHoldTimeMs(avgHoldTimeMs);
-            statsInfoVO.setMinHoldTimeMs(minHoldTimeMs);
-            statsInfoVO.setMaxHoldTimeMs(maxHoldTimeMs);
-        }
-
-        statsInfoVO.setMatchedTradeInfoList(matchedList);
-
         // 剩余待平仓交易
         buyTradeList.sort(Comparator.comparing(BinanceTradeInfo::getPrice).reversed());
         statsInfoVO.setWaitSellTradeInfoList(buyTradeList);
-
-        // 手续费计算 按照0.1%
-        statsInfoVO.setFee((statsInfoVO.getTotalBuyAmount().add(statsInfoVO.getTotalSellAmount())).multiply(new BigDecimal("0.001")));
-
 
         try {
             BigDecimal currentPrice = binanceSpotUtil.getPrice(BinanceEnum.SYMBOL.valueOf(criteria.getSymbol()));
