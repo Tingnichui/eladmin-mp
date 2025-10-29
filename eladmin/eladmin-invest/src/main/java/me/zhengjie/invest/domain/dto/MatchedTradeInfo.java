@@ -9,39 +9,75 @@ import java.sql.Timestamp;
 @Data
 public class MatchedTradeInfo {
 
+    /**
+     * 开仓方向，true做多 false做空
+     */
+    private boolean side;
+    /**
+     * 成交数量
+     */
     private BigDecimal qty;
-    private BigDecimal buyPrice;
-    private BigDecimal sellPrice;
-    private Timestamp buyTime;
-    private Timestamp sellTime;
+    /**
+     * 开仓价格
+     */
+    private BigDecimal openPrice;
+    /**
+     * 平仓价格
+     */
+    private BigDecimal closePrice;
+    /**
+     * 开仓时间
+     */
+    private Timestamp openTime;
+    /**
+     * 平仓时间
+     */
+    private Timestamp closeTime;
 
-    // 以下字段通过基础信息计算
-    private BigDecimal buyAmount;
-    private BigDecimal sellAmount;
-    private BigDecimal profit;
-    private BigDecimal profitRate;
+    /**
+     * 开仓金额
+     */
+    private BigDecimal openAmount;
+    /**
+     * 平仓金额
+     */
+    private BigDecimal closeAmount;
+    /**
+     * 实现盈亏
+     */
+    private BigDecimal realizedPnl;
+    /**
+     * 盈亏率
+     */
+    private BigDecimal pnlRatio;
     private Long holdMillis;
 
 
-    public BigDecimal getBuyAmount() {
-        return qty.multiply(buyPrice);
+    public MatchedTradeInfo(boolean side) {
+        this.side = side;
     }
 
-    public BigDecimal getSellAmount() {
-        return qty.multiply(sellPrice);
+    public BigDecimal getOpenAmount() {
+        return qty.multiply(openPrice);
     }
 
-    public BigDecimal getProfit() {
-        return this.getSellAmount().subtract(this.getBuyAmount());
+    public BigDecimal getCloseAmount() {
+        return qty.multiply(closePrice);
     }
 
-    public BigDecimal getProfitRate() {
-        return this.getProfit().divide(this.getBuyAmount(), 4, RoundingMode.HALF_UP);
+    public BigDecimal getRealizedPnl() {
+        BigDecimal pnl = this.getCloseAmount().subtract(this.getOpenAmount());
+        return this.side ? pnl : pnl.negate();
+    }
+
+    public BigDecimal getPnlRatio() {
+        BigDecimal radio = this.getRealizedPnl().divide(this.getOpenAmount(), 4, RoundingMode.HALF_UP);
+        return this.side ? radio : radio.negate();
     }
 
     public Long getHoldMillis() {
-        if (null != this.sellTime && null != this.buyTime) {
-            return sellTime.getTime() - buyTime.getTime();
+        if (null != this.closeTime && null != this.openTime) {
+            return closeTime.getTime() - openTime.getTime();
         }
         return 0L;
     }

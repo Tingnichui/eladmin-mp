@@ -15,9 +15,6 @@
 */
 package me.zhengjie.invest.service.impl;
 
-import cn.hutool.core.date.DatePattern;
-import cn.hutool.core.date.DateTime;
-import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.NumberUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import me.zhengjie.invest.constants.BinanceEnum;
@@ -229,10 +226,10 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
                     sell.setQty(sell.getQty().subtract(matchQty));
 
                     // 撮合交易记录
-                    MatchedTradeInfo matched = new MatchedTradeInfo();
+                    MatchedTradeInfo matched = new MatchedTradeInfo(true);
                     matched.setQty(matchQty);
-                    matched.setBuyPrice(buy.getPrice());
-                    matched.setSellPrice(sell.getPrice());
+                    matched.setOpenPrice(buy.getPrice());
+                    matched.setClosePrice(sell.getPrice());
                     matchedList.add(matched);
 
                     // 移除平仓完毕的做空单
@@ -245,10 +242,10 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
             }
 
             // 计算盈利
-            statsInfoVO.setProfit(matchedList.stream().map(MatchedTradeInfo::getProfit).reduce(BigDecimal.ZERO, BigDecimal::add));
+            statsInfoVO.setProfit(matchedList.stream().map(MatchedTradeInfo::getRealizedPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
             // 计算手续费
             BigDecimal feeRate = new BigDecimal("0.0005");
-            statsInfoVO.setFee(matchedList.stream().map(v -> (v.getBuyAmount().add(v.getSellAmount())).multiply(feeRate)).reduce(BigDecimal.ZERO, BigDecimal::add));
+            statsInfoVO.setFee(matchedList.stream().map(v -> (v.getOpenAmount().add(v.getCloseAmount())).multiply(feeRate)).reduce(BigDecimal.ZERO, BigDecimal::add));
         }
 
 
@@ -282,10 +279,10 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
                     BinanceTradeInfo buy = binanceTradeInfos.get(0);
 
                     // 撮合交易记录
-                    MatchedTradeInfo matched = new MatchedTradeInfo();
+                    MatchedTradeInfo matched = new MatchedTradeInfo(true);
                     matched.setQty(qty);
-                    matched.setBuyPrice(buy.getPrice());
-                    matched.setSellPrice(sell.getPrice());
+                    matched.setOpenPrice(buy.getPrice());
+                    matched.setClosePrice(sell.getPrice());
                     matchedList.add(matched);
 
                     // 更新锁仓
@@ -298,7 +295,7 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
 
             statsInfoVO.setStopLossMatchTradeInfoList(matchedList);
             // 计算止损金额
-            statsInfoVO.setStopLossAmount(matchedList.stream().map(MatchedTradeInfo::getProfit).reduce(BigDecimal.ZERO, BigDecimal::add));
+            statsInfoVO.setStopLossAmount(matchedList.stream().map(MatchedTradeInfo::getRealizedPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
             // 未匹配到现货止损的交易
             statsInfoVO.setNoStopLossTradeInfoList(sellTradeInfoList.stream().filter(v -> v.getQty().compareTo(BigDecimal.ZERO) > 0).collect(Collectors.toList()));
 

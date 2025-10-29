@@ -15,15 +15,12 @@
  */
 package me.zhengjie.invest.service.impl;
 
-import cn.hutool.core.util.NumberUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
-import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.invest.constants.BinanceEnum;
-import me.zhengjie.invest.constants.TradePairingLogicEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfoExt;
@@ -32,7 +29,6 @@ import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.mapper.BinanceTradeInfoMapper;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
-import me.zhengjie.invest.service.BinanceFuturesTradeInfoService;
 import me.zhengjie.invest.service.BinanceTradeInfoExtService;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
@@ -42,7 +38,6 @@ import me.zhengjie.utils.FileUtil;
 import me.zhengjie.utils.PageResult;
 import me.zhengjie.utils.PageUtil;
 import me.zhengjie.utils.enums.OrderDirectionEnum;
-import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -192,14 +187,14 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                     // 可匹配的仓位数量
                     BigDecimal matchQty = buy.getQty().min(sell.getQty());
                     // 撮合交易记录
-                    MatchedTradeInfo matched = new MatchedTradeInfo();
+                    MatchedTradeInfo matched = new MatchedTradeInfo(true);
                     matched.setQty(matchQty);
-                    matched.setBuyPrice(buy.getPrice());
-                    matched.setSellPrice(sell.getPrice());
-                    matched.setBuyTime(buy.getTime());
-                    matched.setSellTime(sell.getTime());
+                    matched.setOpenPrice(buy.getPrice());
+                    matched.setClosePrice(sell.getPrice());
+                    matched.setOpenTime(buy.getTime());
+                    matched.setCloseTime(sell.getTime());
                     // 最小利润限制
-                    if (matched.getProfitRate().compareTo(criteria.getMinProfitPct()) < 0) {
+                    if (matched.getPnlRatio().compareTo(criteria.getMinProfitPct()) < 0) {
                         continue;
                     }
 
@@ -228,7 +223,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
         // 买入总金额
         BigDecimal totalBuyAmount = matchedList.stream()
-                .map(MatchedTradeInfo::getBuyAmount)
+                .map(MatchedTradeInfo::getOpenAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         statsInfoVO.setTotalBuyAmount(totalBuyAmount);
         // 买入均价
@@ -237,7 +232,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
         // 卖出总金额
         BigDecimal totalSellAmount = matchedList.stream()
-                .map(MatchedTradeInfo::getSellAmount)
+                .map(MatchedTradeInfo::getCloseAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         statsInfoVO.setTotalSellAmount(totalSellAmount);
         // 卖出均价
@@ -302,12 +297,12 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                 // 可匹配的仓位数量
                 BigDecimal matchQty = buy.getQty();
                 // 撮合交易记录
-                MatchedTradeInfo matched = new MatchedTradeInfo();
+                MatchedTradeInfo matched = new MatchedTradeInfo(true);
                 matched.setQty(matchQty);
-                matched.setBuyPrice(buy.getPrice());
-                matched.setSellPrice(currentPrice);
+                matched.setOpenPrice(buy.getPrice());
+                matched.setClosePrice(currentPrice);
 
-                BigDecimal p = matched.getProfit();
+                BigDecimal p = matched.getRealizedPnl();
                 if (p.compareTo(BigDecimal.ZERO) > 0) {
                     // 持仓盈利
                     statsInfoVO.setHoldingProfit(statsInfoVO.getHoldingProfit().add(p));
