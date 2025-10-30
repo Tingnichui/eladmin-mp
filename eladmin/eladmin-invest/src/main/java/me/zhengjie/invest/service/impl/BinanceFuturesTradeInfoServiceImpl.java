@@ -187,14 +187,14 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
 
         // 当前仓位
         Date lastPosCloseTime = this.getLastPosCloseTime();
-        List<BinanceFuturesTradeInfo> sellTradeInfoList = binanceFuturesTradeInfoMapper.selectList(
+        List<BinanceFuturesTradeInfo> closeList = binanceFuturesTradeInfoMapper.selectList(
                 Wrappers.lambdaQuery(BinanceFuturesTradeInfo.class)
                         .gt(BinanceFuturesTradeInfo::getTime, lastPosCloseTime)
                         .eq(BinanceFuturesTradeInfo::getBuyer, 0)
                         .orderByAsc(BinanceFuturesTradeInfo::getTime)
         );
 
-        List<BinanceFuturesTradeInfo> buyTradeInfoList = binanceFuturesTradeInfoMapper.selectList(
+        List<BinanceFuturesTradeInfo> openList = binanceFuturesTradeInfoMapper.selectList(
                 Wrappers.lambdaQuery(BinanceFuturesTradeInfo.class)
                         .gt(BinanceFuturesTradeInfo::getTime, lastPosCloseTime)
                         .eq(BinanceFuturesTradeInfo::getBuyer, 1)
@@ -204,38 +204,38 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
         // 盈利交易匹配
         {
             List<MatchedTradeInfo> matchedList = new ArrayList<>();
-            Iterator<BinanceFuturesTradeInfo> sellIterator = sellTradeInfoList.iterator();
-            while (sellIterator.hasNext()) {
-                BinanceFuturesTradeInfo sell = sellIterator.next();
+            Iterator<BinanceFuturesTradeInfo> closeIt = closeList.iterator();
+            while (closeIt.hasNext()) {
+                BinanceFuturesTradeInfo close = closeIt.next();
 
                 // 遍历平仓交易
-                Iterator<BinanceFuturesTradeInfo> buyItrator = buyTradeInfoList.iterator();
-                while (buyItrator.hasNext()) {
-                    BinanceFuturesTradeInfo buy = buyItrator.next();
+                Iterator<BinanceFuturesTradeInfo> openIt = openList.iterator();
+                while (openIt.hasNext()) {
+                    BinanceFuturesTradeInfo open = openIt.next();
                     // 移除平仓完毕的
-                    if (buy.getQty().compareTo(BigDecimal.ZERO) <= 0) {
-                        buyItrator.remove();
+                    if (open.getQty().compareTo(BigDecimal.ZERO) <= 0) {
+                        openIt.remove();
                         continue;
                     }
                     // 忽略 平仓交易大于开仓交易的，及亏损单，亏损单由现货止损
-                    if (buy.getPrice().compareTo(sell.getPrice()) > 0) {
+                    if (open.getPrice().compareTo(close.getPrice()) > 0) {
                         continue;
                     }
                     // 更新交易数量
-                    BigDecimal matchQty = sell.getQty().min(buy.getQty());
-                    buy.setQty(buy.getQty().subtract(matchQty));
-                    sell.setQty(sell.getQty().subtract(matchQty));
+                    BigDecimal matchQty = close.getQty().min(open.getQty());
+                    open.setQty(open.getQty().subtract(matchQty));
+                    close.setQty(close.getQty().subtract(matchQty));
 
                     // 撮合交易记录
                     MatchedTradeInfo matched = new MatchedTradeInfo(true, "0.0005");
                     matched.setQty(matchQty);
-                    matched.setOpenPrice(buy.getPrice());
-                    matched.setClosePrice(sell.getPrice());
+                    matched.setOpenPrice(open.getPrice());
+                    matched.setClosePrice(close.getPrice());
                     matchedList.add(matched);
 
                     // 移除平仓完毕的做空单
-                    if (sell.getQty().compareTo(BigDecimal.ZERO) <= 0) {
-                        sellIterator.remove();
+                    if (close.getQty().compareTo(BigDecimal.ZERO) <= 0) {
+                        closeIt.remove();
                         break;
                     }
                 }
@@ -249,11 +249,11 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
             // 净盈亏
             statsInfoVO.setNetPnl(matchedList.stream().map(MatchedTradeInfo::getNetPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
 
-            if (CollectionUtils.isNotEmpty(sellTradeInfoList)) {
+            if (CollectionUtils.isNotEmpty(closeList)) {
                 // 持仓金额
-                statsInfoVO.setPosAmount(sellTradeInfoList.stream().map(v -> v.getQty().multiply(v.getPrice())).reduce(BigDecimal.ZERO, BigDecimal::add));
+                statsInfoVO.setPosAmount(closeList.stream().map(v -> v.getQty().multiply(v.getPrice())).reduce(BigDecimal.ZERO, BigDecimal::add));
                 // 持仓数量
-                statsInfoVO.setPosQty(sellTradeInfoList.stream().map(BinanceFuturesTradeInfo::getQty).reduce(BigDecimal.ZERO, BigDecimal::add));
+                statsInfoVO.setPosQty(closeList.stream().map(BinanceFuturesTradeInfo::getQty).reduce(BigDecimal.ZERO, BigDecimal::add));
                 // 持仓均价
                 statsInfoVO.setPosAvgPrice(statsInfoVO.getPosAmount().divide(statsInfoVO.getPosQty(), 8, RoundingMode.HALF_UP));
             }
@@ -274,18 +274,18 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
 
             // 交易匹配
             List<MatchedTradeInfo> matchedList = new ArrayList<>();
-            Iterator<BinanceFuturesTradeInfo> sellIterator = sellTradeInfoList.iterator();
-            while (sellIterator.hasNext()) {
-                BinanceFuturesTradeInfo sell = sellIterator.next();
+            Iterator<BinanceFuturesTradeInfo> openIt = closeList.iterator();
+            while (openIt.hasNext()) {
+                BinanceFuturesTradeInfo open = openIt.next();
                 // 当前价格小于开仓价格，说明是盈利的，不需要锁仓
-                if (currentPrice.compareTo(sell.getPrice()) <= 0) {
-                    sell.setQty(BigDecimal.ZERO);
+                if (currentPrice.compareTo(open.getPrice()) <= 0) {
+                    open.setQty(BigDecimal.ZERO);
                     continue;
                 }
 
                 // 查询现货止损单
-                BigDecimal qty = sell.getQty();
-                List<BinanceTradeInfo> binanceTradeInfos = binanceTradeInfoService.list4hedge(sell.getPrice(), sell.getPrice().add(new BigDecimal("1000")), qty);
+                BigDecimal qty = open.getQty();
+                List<BinanceTradeInfo> binanceTradeInfos = binanceTradeInfoService.list4hedge(open.getPrice(), open.getPrice().add(new BigDecimal("1000")), qty);
 
                 if (CollectionUtils.isNotEmpty(binanceTradeInfos)) {
                     BinanceTradeInfo buy = binanceTradeInfos.get(0);
@@ -294,12 +294,12 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
                     MatchedTradeInfo matched = new MatchedTradeInfo(true, "0.0005");
                     matched.setQty(qty);
                     matched.setOpenPrice(buy.getPrice());
-                    matched.setClosePrice(sell.getPrice());
+                    matched.setClosePrice(open.getPrice());
                     matchedList.add(matched);
 
                     // 更新锁仓
                     binanceTradeInfoExtService.changeHedgedFlag(buy.getOrderId());
-                    sellIterator.remove();
+                    openIt.remove();
 
                 }
 
@@ -309,7 +309,7 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
             // 计算止损金额
             statsInfoVO.setStopLossAmount(matchedList.stream().map(MatchedTradeInfo::getPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
             // 未匹配到现货止损的交易
-            statsInfoVO.setNoStopLossTradeInfoList(sellTradeInfoList.stream().filter(v -> v.getQty().compareTo(BigDecimal.ZERO) > 0).collect(Collectors.toList()));
+            statsInfoVO.setNoStopLossTradeInfoList(closeList.stream().filter(v -> v.getQty().compareTo(BigDecimal.ZERO) > 0).collect(Collectors.toList()));
 
         }
 
