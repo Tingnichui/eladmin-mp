@@ -137,7 +137,6 @@ export default {
         { label: '盈亏', key: 'pnl' },
         { label: '手续费', key: 'fee' },
         { label: '净盈亏', key: 'netPnl' },
-        { label: '', key: '' },
         { label: '持仓均价', key: 'totalWaitAvgSellPrice' },
         { label: '持仓数量', key: 'totalWaitSellQty' },
         { label: '持仓总额', key: 'totalWaitSellAmount' },
@@ -146,12 +145,18 @@ export default {
         { label: '持仓盈亏', key: 'holdingProfitLoss' }
       ],
       futuresStatsItems: [
+        { label: '持仓均价', key: 'posAvgPrice' },
+        { label: '持仓数量', key: 'posQty' },
+        { label: '持仓金额', key: 'posAmount' },
         { label: '锁仓均价', key: 'hedgedAvgPrice' },
         { label: '锁仓数量', key: 'hedgedQty' },
         { label: '锁仓总额', key: 'hedgedAmount' },
-        { label: '止损', key: 'stopLossAmount' },
+        { label: '盈亏', key: 'pnl' },
         { label: '手续费', key: 'fee' },
-        { label: '利润', key: 'profit' }
+        { label: '净盈亏', key: 'netPnl' },
+        { label: '', key: '' },
+        { label: '', key: '' },
+        { label: '对冲止损', key: 'stopLossAmount' }
       ]
     }
   },

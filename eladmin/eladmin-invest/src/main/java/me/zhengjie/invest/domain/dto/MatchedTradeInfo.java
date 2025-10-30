@@ -66,6 +66,23 @@ public class MatchedTradeInfo {
      * 净盈亏
      */
     private BigDecimal netPnl;
+    /**
+     * 盈亏平衡价
+     */
+    private BigDecimal breakEvenPrice;
+
+    public BigDecimal getBreakEvenPrice() {
+        BigDecimal qty = this.getQty();
+        if (qty == null || qty.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+
+        // 每单位的手续费
+        BigDecimal feePerUnit = this.getFee().divide(qty, 8, RoundingMode.HALF_UP);
+        // 此时只计算了
+        BigDecimal breakEvenPrice = this.side ? this.openPrice.add(feePerUnit) : this.openPrice.subtract(feePerUnit);
+        return breakEvenPrice.setScale(8, RoundingMode.HALF_UP);
+    }
 
     public BigDecimal getNetPnl() {
         return this.getPnl().subtract(this.getFee());

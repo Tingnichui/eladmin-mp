@@ -45,6 +45,7 @@ import org.springframework.transaction.annotation.Transactional;
 import me.zhengjie.utils.PageUtil;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.io.IOException;
 import java.util.stream.Collectors;
@@ -241,11 +242,22 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
 
             }
 
-            // 计算盈利
-            statsInfoVO.setProfit(matchedList.stream().map(MatchedTradeInfo::getPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
-            // 计算手续费
-            BigDecimal feeRate = new BigDecimal("0.0005");
-            statsInfoVO.setFee(matchedList.stream().map(v -> (v.getOpenAmount().add(v.getCloseAmount())).multiply(feeRate)).reduce(BigDecimal.ZERO, BigDecimal::add));
+            // 盈亏
+            statsInfoVO.setPnl(matchedList.stream().map(MatchedTradeInfo::getPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
+            // 手续费
+            statsInfoVO.setFee(matchedList.stream().map(MatchedTradeInfo::getFee).reduce(BigDecimal.ZERO, BigDecimal::add));
+            // 净盈亏
+            statsInfoVO.setNetPnl(matchedList.stream().map(MatchedTradeInfo::getNetPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
+
+            if (CollectionUtils.isNotEmpty(sellTradeInfoList)) {
+                // 持仓金额
+                statsInfoVO.setPosAmount(sellTradeInfoList.stream().map(v -> v.getQty().multiply(v.getPrice())).reduce(BigDecimal.ZERO, BigDecimal::add));
+                // 持仓数量
+                statsInfoVO.setPosQty(sellTradeInfoList.stream().map(BinanceFuturesTradeInfo::getQty).reduce(BigDecimal.ZERO, BigDecimal::add));
+                // 持仓均价
+                statsInfoVO.setPosAvgPrice(statsInfoVO.getPosAmount().divide(statsInfoVO.getPosQty(), 8, RoundingMode.HALF_UP));
+            }
+
         }
 
 
