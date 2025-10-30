@@ -3,6 +3,7 @@ package me.zhengjie.invest.util;
 import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -32,6 +33,7 @@ public class TradeMatcherUtil {
             Function<T, BigDecimal> qtyGetter,
             BiConsumer<T, BigDecimal> qtySetter,
             Function<T, BigDecimal> priceGetter,
+            Function<T, Timestamp> timeGetter,
             Predicate<MatchedTradeInfo> filter
     ) {
         List<MatchedTradeInfo> matchedList = new ArrayList<>();
@@ -47,6 +49,11 @@ public class TradeMatcherUtil {
                 // 跳过数量为 0 的开仓单
                 if (qtyGetter.apply(open).compareTo(BigDecimal.ZERO) <= 0) {
                     openIt.remove();
+                    continue;
+                }
+
+                // 忽略 平仓时间早于开仓时间的
+                if (timeGetter.apply(close).before(timeGetter.apply(open))) {
                     continue;
                 }
 

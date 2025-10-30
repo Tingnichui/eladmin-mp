@@ -158,7 +158,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         List<BinanceTradeInfo> openList, closeList;
         {
             // 查询所有买入 价格从低到高
-            criteria.setOrderColumn("time");
+            criteria.setOrderColumn("price");
             criteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
             criteria.setIsBuyer(1);
             openList = binanceTradeInfoMapper.findAll(criteria);
@@ -176,6 +176,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                     BinanceTradeInfo::getQty,
                     BinanceTradeInfo::setQty,
                     BinanceTradeInfo::getPrice,
+                    BinanceTradeInfo::getTime,
                     matched -> {
                         return matched.getNetPnl().compareTo(criteria.getMinProfitPct()) >= 0;
                     }

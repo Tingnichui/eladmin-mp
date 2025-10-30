@@ -218,6 +218,7 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
                     BinanceFuturesTradeInfo::getQty,
                     BinanceFuturesTradeInfo::setQty,
                     BinanceFuturesTradeInfo::getPrice,
+                    BinanceFuturesTradeInfo::getTime,
                     match -> {
                         return match.getNetPnl().compareTo(BigDecimal.ZERO) >= 0;
                     }
