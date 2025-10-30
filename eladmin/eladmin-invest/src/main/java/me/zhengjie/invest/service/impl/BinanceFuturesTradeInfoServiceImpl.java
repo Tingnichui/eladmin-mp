@@ -231,7 +231,7 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
             // 净盈亏
             statsInfoVO.setNetPnl(matchedList.stream().map(MatchedTradeInfo::getNetPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
 
-            if (CollectionUtils.isNotEmpty(closeList)) {
+            if (CollectionUtils.isNotEmpty(openList)) {
                 // 持仓金额
                 statsInfoVO.setPosAmount(openList.stream().map(v -> v.getQty().multiply(v.getPrice())).reduce(BigDecimal.ZERO, BigDecimal::add));
                 // 持仓数量
@@ -259,24 +259,24 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
             Iterator<BinanceFuturesTradeInfo> openIt = openList.iterator();
             while (openIt.hasNext()) {
                 BinanceFuturesTradeInfo open = openIt.next();
+
+                MatchedTradeInfo matched = new MatchedTradeInfo(false, "0.0005");
+                matched.setQty(open.getQty());
+                matched.setOpenPrice(open.getPrice());
+                matched.setClosePrice(currentPrice);
+
                 // 当前价格小于开仓价格，说明是盈利的，不需要锁仓
-                if (currentPrice.compareTo(open.getPrice()) <= 0) {
+                if (matched.getNetPnl().compareTo(BigDecimal.ZERO) >= 0) {
                     open.setQty(BigDecimal.ZERO);
                     continue;
                 }
 
                 // 查询现货止损单
-                BigDecimal qty = open.getQty();
-                List<BinanceTradeInfo> binanceTradeInfos = binanceTradeInfoService.list4hedge(open.getPrice(), open.getPrice().add(new BigDecimal("1000")), qty);
+                List<BinanceTradeInfo> binanceTradeInfos = binanceTradeInfoService.list4hedge(open.getPrice(), open.getPrice().add(new BigDecimal("1000")), matched.getQty());
 
                 if (CollectionUtils.isNotEmpty(binanceTradeInfos)) {
                     BinanceTradeInfo buy = binanceTradeInfos.get(0);
-
-                    // 撮合交易记录
-                    MatchedTradeInfo matched = new MatchedTradeInfo(true, "0.0005");
-                    matched.setQty(qty);
-                    matched.setOpenPrice(buy.getPrice());
-                    matched.setClosePrice(open.getPrice());
+                    matched.setClosePrice(buy.getPrice());
                     matchedList.add(matched);
 
                     // 更新锁仓
