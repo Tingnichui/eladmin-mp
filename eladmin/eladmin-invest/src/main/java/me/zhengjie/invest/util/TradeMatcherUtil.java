@@ -1,5 +1,6 @@
 package me.zhengjie.invest.util;
 
+import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
 
 import java.math.BigDecimal;
@@ -85,6 +86,31 @@ public class TradeMatcherUtil {
             }
         }
 
+        return matchedList;
+    }
+
+
+    public static <T> List<MatchedTradeInfo> matchTrades(
+            boolean side,
+            String feeRate,
+            List<T> openList,
+            Function<T, BigDecimal> qtyGetter,
+            Function<T, BigDecimal> priceGetter,
+            BigDecimal currentPrice
+    ) {
+        List<MatchedTradeInfo> matchedList = new ArrayList<>();
+
+        for (T open : openList) {
+            // 可匹配的仓位数量
+            BigDecimal matchQty = qtyGetter.apply(open);
+            // 撮合交易记录
+            MatchedTradeInfo matched = new MatchedTradeInfo(side, feeRate);
+            matched.setQty(matchQty);
+            matched.setOpenPrice(priceGetter.apply(open));
+            matched.setClosePrice(currentPrice);
+
+            matchedList.add(matched);
+        }
         return matchedList;
     }
 

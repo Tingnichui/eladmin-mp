@@ -156,6 +156,9 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
         // 撮合交易对
         List<BinanceTradeInfo> openList, closeList;
+        final boolean side = true;
+        final String feeRate = "0.001";
+
         {
             // 查询所有买入 价格从低到高
             criteria.setOrderColumn("price");
@@ -169,8 +172,8 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             closeList = binanceTradeInfoMapper.findAll(criteria);
 
             List<MatchedTradeInfo> matchedList = TradeMatcherUtil.matchTrades(
-                    true,
-                    "0.001",
+                    side,
+                    feeRate,
                     openList,
                     closeList,
                     BinanceTradeInfo::getQty,
@@ -218,28 +221,14 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             BigDecimal currentPrice = binanceSpotUtil.getPrice(BinanceEnum.SYMBOL.valueOf(criteria.getSymbol()));
             statsInfoVO.setCurrentSpotPrice(currentPrice);
 
-            // 计算买入总金额与数量
-            for (BinanceTradeInfo buy : openList) {
-                // 可匹配的仓位数量
-                BigDecimal matchQty = buy.getQty();
-                // 撮合交易记录
-                MatchedTradeInfo matched = new MatchedTradeInfo(true, "0.001");
-                matched.setQty(matchQty);
-                matched.setOpenPrice(buy.getPrice());
-                matched.setClosePrice(currentPrice);
 
-                BigDecimal p = matched.getPnl();
-                if (p.compareTo(BigDecimal.ZERO) > 0) {
-                    // 持仓盈利
-                    statsInfoVO.setHoldingProfit(statsInfoVO.getHoldingProfit().add(p));
-                } else {
-                    // 持仓亏损
-                    statsInfoVO.setHoldingLoss(statsInfoVO.getHoldingLoss().add(p));
-                }
-
-                // 持仓盈亏
-                statsInfoVO.setHoldingProfitLoss(statsInfoVO.getHoldingProfitLoss().add(p));
-            }
+            List<MatchedTradeInfo> matchedTradeInfos = TradeMatcherUtil.matchTrades(side, feeRate, openList, BinanceTradeInfo::getQty, BinanceTradeInfo::getPrice, currentPrice);
+            // 持仓盈利
+            statsInfoVO.setHoldingProfit(matchedTradeInfos.stream().map(MatchedTradeInfo::getNetPnl).filter(netPnl -> netPnl.compareTo(BigDecimal.ZERO) > 0).reduce(BigDecimal.ZERO, BigDecimal::add));
+            // 持仓亏损
+            statsInfoVO.setHoldingLoss(matchedTradeInfos.stream().map(MatchedTradeInfo::getNetPnl).filter(netPnl -> netPnl.compareTo(BigDecimal.ZERO) <= 0).reduce(BigDecimal.ZERO, BigDecimal::add));
+            // 持仓盈亏
+            statsInfoVO.setHoldingProfitLoss(matchedTradeInfos.stream().map(MatchedTradeInfo::getNetPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
 
         } catch (Exception e) {
         }
