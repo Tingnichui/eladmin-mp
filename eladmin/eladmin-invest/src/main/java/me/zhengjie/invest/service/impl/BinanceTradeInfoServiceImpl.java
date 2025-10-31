@@ -258,42 +258,6 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
     }
 
     @Override
-    public void syncHedge() {
-
-        BinanceAccountContextHolder.runWith(binanceAccountInfoService.getAccountByIdCardName("耿辉"), () -> {
-            JSONObject account = binanceUsdFuturesUtil.account();
-            if (null == account) {
-                throw new RuntimeException("获取合约信息失败");
-            }
-            BigDecimal price = account.getBigDecimal("entryPrice");
-            BigDecimal qty = account.getBigDecimal("positionAmt").multiply(new BigDecimal("-1"));
-
-            // 对冲仓位的开仓价格 之下，按照创建时间倒序 价格倒序
-            List<BinanceTradeInfo> binanceTradeInfos = binanceTradeInfoMapper.list4hedge(price.subtract(new BigDecimal("1000")) ,price, null);
-
-            // 所有都标记未锁仓
-            binanceTradeInfoExtService.getBaseMapper().update(null,
-                    Wrappers.lambdaUpdate(BinanceTradeInfoExt.class)
-                            .set(BinanceTradeInfoExt::getHedgedFlag, 0)
-            );
-
-            // 匹配标记锁仓
-            for (BinanceTradeInfo tradeInfo : binanceTradeInfos) {
-                if (qty.compareTo(BigDecimal.ZERO) <= 0) {
-                    break; // 已对冲完毕
-                }
-                // 可匹配的仓位数量
-                if (qty.compareTo(tradeInfo.getQty()) >= 0) {
-                    qty = qty.subtract(tradeInfo.getQty());
-                    binanceTradeInfoExtService.changeHedgedFlag(tradeInfo.getOrderId());
-                }
-            }
-
-        });
-
-    }
-
-    @Override
     public List<BinanceTradeInfo> list4hedge(BigDecimal lowPrice, BigDecimal highPrice, BigDecimal qty) {
         return binanceTradeInfoMapper.list4hedge(lowPrice, highPrice, qty);
     }
