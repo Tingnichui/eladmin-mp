@@ -222,7 +222,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             statsInfoVO.setCurrentSpotPrice(currentPrice);
 
 
-            List<MatchedTradeInfo> matchedTradeInfos = TradeMatcherUtil.matchTrades(side, feeRate, openList, BinanceTradeInfo::getQty, BinanceTradeInfo::getPrice, currentPrice);
+            List<MatchedTradeInfo> matchedTradeInfos = TradeMatcherUtil.matchTrades(side, feeRate, openList, BinanceTradeInfo::getQty, BinanceTradeInfo::getPrice, currentPrice, null);
             // 持仓盈利
             statsInfoVO.setHoldingProfit(matchedTradeInfos.stream().map(MatchedTradeInfo::getNetPnl).filter(netPnl -> netPnl.compareTo(BigDecimal.ZERO) > 0).reduce(BigDecimal.ZERO, BigDecimal::add));
             // 持仓亏损

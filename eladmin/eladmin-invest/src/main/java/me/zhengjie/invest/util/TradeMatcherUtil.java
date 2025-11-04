@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -105,11 +106,14 @@ public class TradeMatcherUtil {
             List<T> openList,
             Function<T, BigDecimal> qtyGetter,
             Function<T, BigDecimal> priceGetter,
-            BigDecimal currentPrice
+            BigDecimal currentPrice,
+            Consumer<MatchedTradeInfo> customHandler
     ) {
         List<MatchedTradeInfo> matchedList = new ArrayList<>();
 
-        for (T open : openList) {
+        Iterator<T> openIt = openList.iterator();
+        while (openIt.hasNext()) {
+            T open = openIt.next();
             // 可匹配的仓位数量
             BigDecimal matchQty = qtyGetter.apply(open);
             // 撮合交易记录
@@ -117,6 +121,10 @@ public class TradeMatcherUtil {
             matched.setQty(matchQty);
             matched.setOpenPrice(priceGetter.apply(open));
             matched.setClosePrice(currentPrice);
+
+            if (customHandler != null) {
+                customHandler.accept(matched);
+            }
 
             matchedList.add(matched);
         }

@@ -188,6 +188,8 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
 
         // 当前仓位
         Date lastPosCloseTime = this.getLastPosCloseTime();
+        final boolean side = false;
+
 
         // 开仓 做空空单
         List<BinanceFuturesTradeInfo> openList = binanceFuturesTradeInfoMapper.selectList(
@@ -211,7 +213,7 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
         {
 
             List<MatchedTradeInfo> matchedList = TradeMatcherUtil.matchTrades(
-                    false,
+                    side,
                     "0.0005",
                     openList,
                     closeList,
@@ -254,38 +256,20 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
                             .set(BinanceTradeInfoExt::getHedgedFlag, 0)
             );
 
-            // 交易匹配
-            List<MatchedTradeInfo> matchedList = new ArrayList<>();
-            Iterator<BinanceFuturesTradeInfo> openIt = openList.iterator();
-            while (openIt.hasNext()) {
-                BinanceFuturesTradeInfo open = openIt.next();
+            List<MatchedTradeInfo> matchedList = TradeMatcherUtil.matchTrades(side, "0.001", openList, BinanceFuturesTradeInfo::getQty, BinanceFuturesTradeInfo::getPrice, currentPrice,
+                    matched -> {
+                        // 亏损单找现货做对冲止损
+                        if (matched.getNetPnl().compareTo(BigDecimal.ZERO) <= 0) {
+                            // 查询现货止损单
+                            List<BinanceTradeInfo> binanceTradeInfos = binanceTradeInfoService.list4hedge(matched.getOpenPrice(), matched.getOpenPrice().add(new BigDecimal("1000")), matched.getQty());
+                            if (CollectionUtils.isNotEmpty(binanceTradeInfos)) {
+                                BinanceTradeInfo buy = binanceTradeInfos.get(0);
+                                matched.setClosePrice(buy.getPrice());
+                                binanceTradeInfoExtService.changeHedgedFlag(buy.getOrderId());
+                            }
+                        }
+                    });
 
-                MatchedTradeInfo matched = new MatchedTradeInfo(false, "0.0005");
-                matched.setQty(open.getQty());
-                matched.setOpenPrice(open.getPrice());
-                matched.setClosePrice(currentPrice);
-
-                // 当前价格小于开仓价格，说明是盈利的，不需要锁仓
-                if (matched.getNetPnl().compareTo(BigDecimal.ZERO) >= 0) {
-                    open.setQty(BigDecimal.ZERO);
-                    continue;
-                }
-
-                // 查询现货止损单
-                List<BinanceTradeInfo> binanceTradeInfos = binanceTradeInfoService.list4hedge(open.getPrice(), open.getPrice().add(new BigDecimal("1000")), matched.getQty());
-
-                if (CollectionUtils.isNotEmpty(binanceTradeInfos)) {
-                    BinanceTradeInfo buy = binanceTradeInfos.get(0);
-                    matched.setClosePrice(buy.getPrice());
-                    matchedList.add(matched);
-
-                    // 更新锁仓
-                    binanceTradeInfoExtService.changeHedgedFlag(buy.getOrderId());
-                    openIt.remove();
-
-                }
-
-            }
 
             statsInfoVO.setStopLossMatchTradeInfoList(matchedList);
             // 计算止损金额
