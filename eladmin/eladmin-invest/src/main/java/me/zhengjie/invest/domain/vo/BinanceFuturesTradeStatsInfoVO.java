@@ -28,11 +28,9 @@ public class BinanceFuturesTradeStatsInfoVO implements Serializable {
     private BigDecimal hedgedQty = BigDecimal.ZERO;
     //锁仓均价
     private BigDecimal hedgedAvgPrice = BigDecimal.ZERO;
-    // 未匹配到止损的交易
-    private List<BinanceFuturesTradeInfo> noStopLossTradeInfoList;
     // 止损金额
     private BigDecimal stopLossAmount = BigDecimal.ZERO;
-    // 现货止损对冲交易
-    private List<MatchedTradeInfo> stopLossMatchTradeInfoList;
+    // 开仓交易
+    private List<MatchedTradeInfo> openTrade;
 
 }

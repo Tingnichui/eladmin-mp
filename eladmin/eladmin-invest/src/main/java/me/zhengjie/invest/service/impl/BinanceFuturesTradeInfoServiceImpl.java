@@ -270,12 +270,10 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
                         }
                     });
 
-
-            statsInfoVO.setStopLossMatchTradeInfoList(matchedList);
             // 计算止损金额
-            statsInfoVO.setStopLossAmount(matchedList.stream().map(MatchedTradeInfo::getPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
-            // 未匹配到现货止损的交易
-            statsInfoVO.setNoStopLossTradeInfoList(closeList.stream().filter(v -> v.getQty().compareTo(BigDecimal.ZERO) > 0).collect(Collectors.toList()));
+            statsInfoVO.setStopLossAmount(matchedList.stream().map(MatchedTradeInfo::getPnl).filter(v -> v.compareTo(BigDecimal.ZERO) <= 0).reduce(BigDecimal.ZERO, BigDecimal::add));
+            // 未平仓的交易
+            statsInfoVO.setOpenTrade(matchedList);
 
         }
 
