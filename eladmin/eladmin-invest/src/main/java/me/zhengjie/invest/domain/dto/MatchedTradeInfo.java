@@ -73,15 +73,18 @@ public class MatchedTradeInfo {
 
     public BigDecimal getBreakEvenPrice() {
         BigDecimal qty = this.getQty();
-        if (qty == null || qty.compareTo(BigDecimal.ZERO) == 0) {
+        if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
             return BigDecimal.ZERO;
         }
+        BigDecimal one = BigDecimal.ONE;
 
-        // 每单位的手续费
-        BigDecimal feePerUnit = this.getFee().divide(qty, 8, RoundingMode.HALF_UP);
-        // 此时只计算了
-        BigDecimal breakEvenPrice = this.side ? this.openPrice.add(feePerUnit) : this.openPrice.subtract(feePerUnit);
-        return breakEvenPrice.setScale(8, RoundingMode.HALF_UP);
+        if (side) { // 做多
+            return openPrice.multiply(one.add(feeRate))
+                    .divide(one.subtract(feeRate), 8, RoundingMode.HALF_UP);
+        } else {    // 做空
+            return openPrice.multiply(one.subtract(feeRate))
+                    .divide(one.add(feeRate), 8, RoundingMode.HALF_UP);
+        }
     }
 
     public BigDecimal getNetPnl() {
