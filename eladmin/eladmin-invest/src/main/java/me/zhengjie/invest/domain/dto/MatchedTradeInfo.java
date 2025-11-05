@@ -118,8 +118,7 @@ public class MatchedTradeInfo {
             return BigDecimal.ZERO;
         }
 
-        BigDecimal radio = this.getNetPnl().divide(this.getOpenAmount(), 4, RoundingMode.HALF_UP);
-        return this.side ? radio : radio.negate();
+        return this.getNetPnl().divide(this.getOpenAmount(), 4, RoundingMode.HALF_UP);
     }
 
     public Long getHoldMillis() {
