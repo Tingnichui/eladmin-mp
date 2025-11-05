@@ -33,3 +33,17 @@ export function mulAmount(a, b, fixed = null) {
   const result = new Decimal(a || 0).mul(new Decimal(b || 0))
   return fixed != null ? Number(result.toFixed(fixed)) : Number(result)
 }
+
+export function formatDecimal(val) {
+  return val != null ? Number(val).toFixed(4) : '--'
+}
+
+export function formatByType(value, type) {
+  if (!value) {
+    return ''
+  }
+  if (type === 'percent') return this.formatPercent(value)
+  if (type === 'duration') return this.formatDuration(value)
+  if (type === 'length') return value.length
+  return this.formatDecimal(value)
+}

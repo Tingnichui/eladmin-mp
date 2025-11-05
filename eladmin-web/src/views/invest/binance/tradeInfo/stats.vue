@@ -123,7 +123,6 @@
       title="未平仓交易详情"
       :visible.sync="showOpenTrades"
       width="80%"
-      :close-on-click-modal="false"
     >
       <el-table :data="openTradeList" border stripe>
         <el-table-column
@@ -146,6 +145,7 @@ import { formatDuration } from '@/utils/dateUtil'
 import { listAllAccount } from '@/api/binanceAccountInfo'
 import TradePositionDistributionBar from '@/views/invest/binance/tradeInfo/TradePositionDistributionBar.vue'
 import CRUD from '@crud/crud'
+import * as numberUtil from '@/utils/numberUtil'
 
 export default {
   name: 'BinanceTradeInfoStats',
@@ -204,7 +204,7 @@ export default {
         { prop: 'pnl', label: '盈亏' },
         { prop: 'fee', label: '手续费' },
         { prop: 'netPnl', label: '净盈亏' },
-        { prop: 'roi', label: '回报率', formatter: (row) => (this.formatNum(row.roi, 'percent')) }
+        { prop: 'roi', label: '回报率', formatter: (row) => (numberUtil.formatByType(row.roi, 'percent')) }
       ]
     }
   },
@@ -234,19 +234,7 @@ export default {
       })
     },
     formatValue(info, key, type) {
-      return this.formatNum(info[key], type)
-    },
-    formatNum(value, type) {
-      if (type === 'percent') return this.formatPercent(value)
-      if (type === 'duration') return this.formatDuration(value)
-      if (type === 'length') return value.length
-      return this.formatDecimal(value)
-    },
-    formatDecimal(val) {
-      return val != null ? Number(val).toFixed(4) : '--'
-    },
-    formatPercent(val) {
-      return val != null ? (val * 100).toFixed(2) + '%' : '--'
+      return numberUtil.formatByType(info[key], type)
     },
     refreshAccountList() {
       listAllAccount().then(data => {
