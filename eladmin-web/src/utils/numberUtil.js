@@ -43,7 +43,6 @@ export function formatByType(value, type) {
     return ''
   }
   if (type === 'percent') return this.formatPercent(value)
-  if (type === 'duration') return this.formatDuration(value)
   if (type === 'length') return value.length
   return this.formatDecimal(value)
 }
