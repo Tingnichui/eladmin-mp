@@ -152,8 +152,6 @@ export default {
         rangeAvgPriceMap[item.range] = item.avgPrice
       })
 
-      console.log(buckets)
-
       this.chart.setOption({
         title: {
           text: '仓位分布（价格区间 - 持仓量）',
@@ -166,7 +164,6 @@ export default {
           axisPointer: { type: 'shadow' },
           formatter: function(params) {
             const d = params[0].data
-            console.log(d)
             return `
               价格区间: ${d.range}<br/>
               持仓量: ${d.totalQty}<br/>

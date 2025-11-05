@@ -114,6 +114,10 @@ public class MatchedTradeInfo {
     }
 
     public BigDecimal getRoi() {
+        if (this.getOpenAmount().compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+
         BigDecimal radio = this.getPnl().divide(this.getOpenAmount(), 4, RoundingMode.HALF_UP);
         return this.side ? radio : radio.negate();
     }

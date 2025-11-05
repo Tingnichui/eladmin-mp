@@ -127,8 +127,7 @@ export default {
       accountList: [],
       syncLoading: false,
       query: {
-        symbol: 'BTCUSDT',
-        tradePairingLogic: 'FIFO'
+        symbol: 'BTCUSDT'
       },
       spotStatsItems: [
         { label: '买入总额', key: 'totalBuyAmount' },
