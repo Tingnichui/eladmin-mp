@@ -273,7 +273,7 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
             // 计算止损金额
             statsInfoVO.setStopLossAmount(matchedList.stream().map(MatchedTradeInfo::getPnl).filter(v -> v.compareTo(BigDecimal.ZERO) <= 0).reduce(BigDecimal.ZERO, BigDecimal::add));
             // 未平仓的交易
-            statsInfoVO.setOpenTrade(matchedList);
+            statsInfoVO.setOpenTradeList(matchedList);
 
         }
 

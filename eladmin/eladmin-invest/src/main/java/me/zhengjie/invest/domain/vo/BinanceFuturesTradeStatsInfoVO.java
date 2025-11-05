@@ -1,7 +1,6 @@
 package me.zhengjie.invest.domain.vo;
 
 import lombok.Data;
-import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
 import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
 
 import java.io.Serializable;
@@ -31,6 +30,6 @@ public class BinanceFuturesTradeStatsInfoVO implements Serializable {
     // 止损金额
     private BigDecimal stopLossAmount = BigDecimal.ZERO;
     // 开仓交易
-    private List<MatchedTradeInfo> openTrade;
+    private List<MatchedTradeInfo> openTradeList;
 
 }

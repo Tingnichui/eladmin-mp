@@ -98,7 +98,12 @@
             :key="index"
             :label="item.label"
           >
-            {{ formatValue(statsInfo.futuresTradeStatsInfo, item.key, item.type) }}
+            <div v-if="item.showType === 'link'">
+              <el-link type="primary" @click="showOpenTrades = true">
+                {{ formatValue(statsInfo.futuresTradeStatsInfo, item.key, item.type) }}
+              </el-link>
+            </div>
+            <div v-else> {{ formatValue(statsInfo.futuresTradeStatsInfo, item.key, item.type) }}</div>
           </el-descriptions-item>
         </el-descriptions>
         <div>
@@ -107,6 +112,30 @@
         </div>
       </div>
     </div>
+
+    <!-- 🔹 弹窗 -->
+    <el-dialog
+      title="未平仓交易详情"
+      :visible.sync="showOpenTrades"
+      width="80%"
+      :close-on-click-modal="false"
+    >
+      <el-table :data="statsInfo.futuresTradeStatsInfo.openTradeList" border stripe>
+        <el-table-column
+          v-for="(col, index) in tableColumns"
+          :key="index"
+          :prop="col.prop"
+          :formatter="col.formatter"
+          :label="col.label"
+          :min-width="col.width || 100"
+        />
+      </el-table>
+
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="showOpenTrades = false">关闭</el-button>
+      </span>
+    </el-dialog>
+
   </div>
 </template>
 
@@ -126,6 +155,7 @@ export default {
       statsInfo: {},
       accountList: [],
       syncLoading: false,
+      showOpenTrades: false,
       query: {
         symbol: 'BTCUSDT'
       },
@@ -155,7 +185,21 @@ export default {
         { label: '净盈亏', key: 'netPnl' },
         { label: '', key: '' },
         { label: '', key: '' },
-        { label: '对冲止损', key: 'stopLossAmount' }
+        { label: '对冲止损', key: 'stopLossAmount' },
+        { label: '', key: '' },
+        { label: '', key: '' },
+        { label: '交易订单', key: 'openTradeList', type: 'length', showType: 'link' }
+      ],
+      tableColumns: [
+        { prop: 'side', label: '方向', formatter: (row) => (row.side ? '做多' : '做空') },
+        { prop: 'qty', label: '成交数量' },
+        { prop: 'openPrice', label: '开仓价' },
+        { prop: 'closePrice', label: '平仓价' },
+        { prop: 'breakEvenPrice', label: '盈亏平衡价' },
+        { prop: 'pnl', label: '盈亏' },
+        { prop: 'fee', label: '手续费' },
+        { prop: 'netPnl', label: '净盈亏' },
+        { prop: 'roi', label: '回报率' }
       ]
     }
   },
@@ -188,6 +232,7 @@ export default {
       const value = info[key]
       if (type === 'percent') return this.formatPercent(value)
       if (type === 'duration') return this.formatDuration(value)
+      if (type === 'length') return value.length
       return this.formatDecimal(value)
     },
     formatDecimal(val) {
