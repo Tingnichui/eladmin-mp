@@ -17,6 +17,7 @@ package me.zhengjie.invest.domain.vo;
 
 import lombok.Data;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
+import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -58,6 +59,8 @@ public class BinanceTradeStatsInfoVO implements Serializable {
 
     // 剩余未平仓交易
     private List<BinanceTradeInfo> waitSellTradeInfoList;
+
+    private List<MatchedTradeInfo> openTradeList;
 
     private BinanceFuturesTradeStatsInfoVO futuresTradeStatsInfo;
 

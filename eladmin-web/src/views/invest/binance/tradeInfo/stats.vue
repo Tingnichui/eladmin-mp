@@ -88,7 +88,7 @@
             :label="item.label"
           >
             <div v-if="item.showType === 'link'">
-              <el-link type="primary" @click="showOpenTrades = true">
+              <el-link type="primary" @click="showOpenTrades = true;openTradeList = statsInfo.openTradeList">
                 {{ formatValue(statsInfo, item.key, item.type) }}
               </el-link>
             </div>
@@ -104,7 +104,7 @@
             :label="item.label"
           >
             <div v-if="item.showType === 'link'">
-              <el-link type="primary" @click="showOpenTrades = true">
+              <el-link type="primary" @click="showOpenTrades = true;openTradeList = statsInfo.futuresTradeStatsInfo.openTradeList">
                 {{ formatValue(statsInfo.futuresTradeStatsInfo, item.key, item.type) }}
               </el-link>
             </div>
@@ -125,7 +125,7 @@
       width="80%"
       :close-on-click-modal="false"
     >
-      <el-table :data="statsInfo.futuresTradeStatsInfo.openTradeList" border stripe>
+      <el-table :data="openTradeList" border stripe>
         <el-table-column
           v-for="(col, index) in tableColumns"
           :key="index"
@@ -135,10 +135,6 @@
           :min-width="col.width || 100"
         />
       </el-table>
-
-      <span slot="footer" class="dialog-footer">
-        <el-button @click="showOpenTrades = false">关闭</el-button>
-      </span>
     </el-dialog>
 
   </div>
@@ -161,6 +157,7 @@ export default {
       accountList: [],
       syncLoading: false,
       showOpenTrades: false,
+      openTradeList: [],
       query: {
         symbol: 'BTCUSDT'
       },
@@ -176,7 +173,10 @@ export default {
         { label: '持仓总额', key: 'totalWaitSellAmount' },
         { label: '持仓盈利', key: 'holdingProfit' },
         { label: '持仓亏损', key: 'holdingLoss' },
-        { label: '持仓盈亏', key: 'holdingProfitLoss' }
+        { label: '持仓盈亏', key: 'holdingProfitLoss' },
+        { label: '', key: '' },
+        { label: '', key: '' },
+        { label: '持仓订单', key: 'openTradeList', type: 'length', showType: 'link' }
       ],
       futuresStatsItems: [
         { label: '持仓均价', key: 'posAvgPrice' },
@@ -193,7 +193,7 @@ export default {
         { label: '对冲止损', key: 'stopLossAmount' },
         { label: '', key: '' },
         { label: '', key: '' },
-        { label: '交易订单', key: 'openTradeList', type: 'length', showType: 'link' }
+        { label: '持仓订单', key: 'openTradeList', type: 'length', showType: 'link' }
       ],
       tableColumns: [
         { prop: 'side', label: '方向', formatter: (row) => (row.side ? '做多' : '做空') },
@@ -204,7 +204,7 @@ export default {
         { prop: 'pnl', label: '盈亏' },
         { prop: 'fee', label: '手续费' },
         { prop: 'netPnl', label: '净盈亏' },
-        { prop: 'roi', label: '回报率' }
+        { prop: 'roi', label: '回报率', formatter: (row) => (this.formatNum(row.roi, 'percent')) }
       ]
     }
   },
@@ -234,7 +234,9 @@ export default {
       })
     },
     formatValue(info, key, type) {
-      const value = info[key]
+      return this.formatNum(info[key], type)
+    },
+    formatNum(value, type) {
       if (type === 'percent') return this.formatPercent(value)
       if (type === 'duration') return this.formatDuration(value)
       if (type === 'length') return value.length

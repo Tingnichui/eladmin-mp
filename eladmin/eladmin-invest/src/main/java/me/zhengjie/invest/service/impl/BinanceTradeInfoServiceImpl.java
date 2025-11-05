@@ -229,6 +229,20 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             statsInfoVO.setHoldingLoss(matchedTradeInfos.stream().map(MatchedTradeInfo::getNetPnl).filter(netPnl -> netPnl.compareTo(BigDecimal.ZERO) <= 0).reduce(BigDecimal.ZERO, BigDecimal::add));
             // 持仓盈亏
             statsInfoVO.setHoldingProfitLoss(matchedTradeInfos.stream().map(MatchedTradeInfo::getNetPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
+            // 持仓订单
+            statsInfoVO.setOpenTradeList(
+                    matchedTradeInfos.stream().collect(Collectors.groupingBy(MatchedTradeInfo::getOpenPrice))
+                            .entrySet()
+                            .stream().map(v -> {
+                                MatchedTradeInfo m = new MatchedTradeInfo(side, feeRate);
+                                m.setOpenPrice(v.getKey());
+                                m.setClosePrice(currentPrice);
+                                m.setQty(v.getValue().stream().map(MatchedTradeInfo::getQty).reduce(BigDecimal.ZERO, BigDecimal::add));
+                                return m;
+                            }).collect(Collectors.toList())
+                            .stream().sorted(Comparator.comparing(MatchedTradeInfo::getRoi).reversed())
+                            .collect(Collectors.toList())
+            );
 
         } catch (Exception e) {
         }

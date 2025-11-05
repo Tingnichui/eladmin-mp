@@ -54,12 +54,6 @@ public class TradeMatcherUtil {
                 while (openIt.hasNext()) {
                     T open = openIt.next();
 
-                    // 跳过数量为 0 的开仓单
-                    if (qtyGetter.apply(open).compareTo(BigDecimal.ZERO) <= 0) {
-                        openIt.remove();
-                        continue;
-                    }
-
                     // 忽略 平仓时间早于开仓时间的
                     if (i == 0 && timeGetter.apply(close).before(timeGetter.apply(open))) {
                         continue;
@@ -84,6 +78,11 @@ public class TradeMatcherUtil {
                     // 更新剩余数量
                     qtySetter.accept(open, qtyGetter.apply(open).subtract(matchQty));
                     qtySetter.accept(close, qtyGetter.apply(close).subtract(matchQty));
+
+                    // 开仓单 都平仓了就移除
+                    if (qtyGetter.apply(open).compareTo(BigDecimal.ZERO) <= 0) {
+                        openIt.remove();
+                    }
 
                     // 平仓单撮合完则移除
                     if (qtyGetter.apply(close).compareTo(BigDecimal.ZERO) <= 0) {
