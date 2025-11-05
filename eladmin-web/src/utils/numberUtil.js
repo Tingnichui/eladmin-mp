@@ -42,7 +42,7 @@ export function formatByType(value, type) {
   if (!value) {
     return ''
   }
-  if (type === 'percent') return this.formatPercent(value)
+  if (type === 'percent') return formatPercent(value)
   if (type === 'length') return value.length
-  return this.formatDecimal(value)
+  return formatDecimal(value)
 }
