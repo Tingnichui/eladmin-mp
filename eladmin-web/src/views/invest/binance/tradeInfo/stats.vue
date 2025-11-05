@@ -87,7 +87,12 @@
             :key="index"
             :label="item.label"
           >
-            {{ formatValue(statsInfo, item.key, item.type) }}
+            <div v-if="item.showType === 'link'">
+              <el-link type="primary" @click="showOpenTrades = true">
+                {{ formatValue(statsInfo, item.key, item.type) }}
+              </el-link>
+            </div>
+            <div v-else> {{ formatValue(statsInfo, item.key, item.type) }}</div>
           </el-descriptions-item>
           <!-- 分割线 -->
           <el-descriptions-item :span="3" label-class-name="no-border" content-class-name="no-border">
