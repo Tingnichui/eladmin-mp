@@ -81,34 +81,25 @@
         >同步</el-button>
       </div>
       <div>
-        <el-descriptions :column="3" border class="stats-descriptions">
+        <el-descriptions
+          v-for="description in statsDescriptions"
+          :key="description.title"
+          :title="description.title"
+          :column="3"
+          border
+          style="margin-bottom: 20px;margin-top: 20px"
+        >
           <el-descriptions-item
-            v-for="(item, index) in spotStatsItems"
+            v-for="(item, index) in description.descriptionsItems"
             :key="index"
             :label="item.label"
           >
             <div v-if="item.showType === 'link'">
-              <el-link type="primary" @click="showOpenTrades = true;openTradeList = statsInfo.openTradeList">
-                {{ formatValue(statsInfo, item.key, item.type) }}
+              <el-link type="primary" @click="showOpenTrades = true;openTradeList = description.data.openTradeList">
+                {{ formatValue(description.data, item.key, item.type) }}
               </el-link>
             </div>
-            <div v-else> {{ formatValue(statsInfo, item.key, item.type) }}</div>
-          </el-descriptions-item>
-          <!-- 分割线 -->
-          <el-descriptions-item :span="3" label-class-name="no-border" content-class-name="no-border">
-            <div class="divider" />
-          </el-descriptions-item>
-          <el-descriptions-item
-            v-for="(item, index) in futuresStatsItems"
-            :key="index"
-            :label="item.label"
-          >
-            <div v-if="item.showType === 'link'">
-              <el-link type="primary" @click="showOpenTrades = true;openTradeList = statsInfo.futuresTradeStatsInfo.openTradeList">
-                {{ formatValue(statsInfo.futuresTradeStatsInfo, item.key, item.type) }}
-              </el-link>
-            </div>
-            <div v-else> {{ formatValue(statsInfo.futuresTradeStatsInfo, item.key, item.type) }}</div>
+            <div v-else> {{ formatValue(description.data, item.key, item.type) }}</div>
           </el-descriptions-item>
         </el-descriptions>
         <div>
@@ -161,40 +152,6 @@ export default {
       query: {
         symbol: 'BTCUSDT'
       },
-      spotStatsItems: [
-        { label: '买入总额', key: 'totalBuyAmount' },
-        { label: '卖出总额', key: 'totalSellAmount' },
-        { label: '收益率', key: 'profitPct', type: 'percent' },
-        { label: '盈亏', key: 'pnl' },
-        { label: '手续费', key: 'fee' },
-        { label: '净盈亏', key: 'netPnl' },
-        { label: '持仓均价', key: 'totalWaitAvgSellPrice' },
-        { label: '持仓数量', key: 'totalWaitSellQty' },
-        { label: '持仓总额', key: 'totalWaitSellAmount' },
-        { label: '持仓盈利', key: 'holdingProfit' },
-        { label: '持仓亏损', key: 'holdingLoss' },
-        { label: '持仓盈亏', key: 'holdingProfitLoss' },
-        { label: '', key: '' },
-        { label: '', key: '' },
-        { label: '持仓订单', key: 'openTradeList', type: 'length', showType: 'link' }
-      ],
-      futuresStatsItems: [
-        { label: '持仓均价', key: 'posAvgPrice' },
-        { label: '持仓数量', key: 'posQty' },
-        { label: '持仓金额', key: 'posAmount' },
-        { label: '锁仓均价', key: 'hedgedAvgPrice' },
-        { label: '锁仓数量', key: 'hedgedQty' },
-        { label: '锁仓总额', key: 'hedgedAmount' },
-        { label: '盈亏', key: 'pnl' },
-        { label: '手续费', key: 'fee' },
-        { label: '净盈亏', key: 'netPnl' },
-        { label: '', key: '' },
-        { label: '', key: '' },
-        { label: '对冲止损', key: 'stopLossAmount' },
-        { label: '', key: '' },
-        { label: '', key: '' },
-        { label: '持仓订单', key: 'openTradeList', type: 'length', showType: 'link' }
-      ],
       tableColumns: [
         { prop: 'side', label: '方向', formatter: (row) => (row.side ? '做多' : '做空') },
         { prop: 'qty', label: '成交数量' },
@@ -205,6 +162,54 @@ export default {
         { prop: 'fee', label: '手续费' },
         { prop: 'netPnl', label: '净盈亏' },
         { prop: 'roi', label: '回报率', formatter: (row) => (numberUtil.formatByType(row.roi, 'percent')) }
+      ]
+    }
+  },
+  computed: {
+    statsDescriptions() {
+      return [
+        {
+          title: '现货统计',
+          data: this.statsInfo || {},
+          descriptionsItems: [
+            { label: '买入总额', key: 'totalBuyAmount' },
+            { label: '卖出总额', key: 'totalSellAmount' },
+            { label: '收益率', key: 'profitPct', type: 'percent' },
+            { label: '盈亏', key: 'pnl' },
+            { label: '手续费', key: 'fee' },
+            { label: '净盈亏', key: 'netPnl' },
+            { label: '持仓均价', key: 'totalWaitAvgSellPrice' },
+            { label: '持仓数量', key: 'totalWaitSellQty' },
+            { label: '持仓总额', key: 'totalWaitSellAmount' },
+            { label: '持仓盈利', key: 'holdingProfit' },
+            { label: '持仓亏损', key: 'holdingLoss' },
+            { label: '持仓盈亏', key: 'holdingProfitLoss' },
+            { label: '', key: '' },
+            { label: '', key: '' },
+            { label: '持仓订单', key: 'openTradeList', type: 'length', showType: 'link' }
+          ]
+        },
+        {
+          title: '合约统计',
+          data: (this.statsInfo && this.statsInfo.futuresTradeStatsInfo) || {},
+          descriptionsItems: [
+            { label: '持仓均价', key: 'posAvgPrice' },
+            { label: '持仓数量', key: 'posQty' },
+            { label: '持仓金额', key: 'posAmount' },
+            { label: '锁仓均价', key: 'hedgedAvgPrice' },
+            { label: '锁仓数量', key: 'hedgedQty' },
+            { label: '锁仓总额', key: 'hedgedAmount' },
+            { label: '盈亏', key: 'pnl' },
+            { label: '手续费', key: 'fee' },
+            { label: '净盈亏', key: 'netPnl' },
+            { label: '', key: '' },
+            { label: '', key: '' },
+            { label: '对冲止损', key: 'stopLossAmount' },
+            { label: '', key: '' },
+            { label: '', key: '' },
+            { label: '持仓订单', key: 'openTradeList', type: 'length', showType: 'link' }
+          ]
+        }
       ]
     }
   },
