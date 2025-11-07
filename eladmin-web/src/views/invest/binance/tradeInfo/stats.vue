@@ -99,6 +99,25 @@
                 {{ formatValue(description.data, item.key, item.type) }}
               </el-link>
             </div>
+            <template v-else-if="item.showType === 'diff'">
+              <span>
+                {{ formatValue(description.data, item.key, item.type) }}
+                <span
+                  v-if="description.data.lastNetPnl != null"
+                  :style="{
+                    color: description.data[item.key] - description.data[item.diffKey] > 0 ? 'green' : description.data[item.key] - description.data[item.diffKey] < 0 ? 'red' : '#999',
+                    fontSize: '12px',
+                    marginLeft: '4px'
+                  }"
+                >
+                  (
+                  {{
+                    (description.data[item.key] - description.data[item.diffKey] > 0 ? '+' : '') + (description.data[item.key] - description.data[item.diffKey]).toFixed(2)
+                  }}
+                  )
+                </span>
+              </span>
+            </template>
             <div v-else> {{ formatValue(description.data, item.key, item.type) }}</div>
           </el-descriptions-item>
         </el-descriptions>
@@ -177,7 +196,7 @@ export default {
             { label: '收益率', key: 'profitPct', type: 'percent' },
             { label: '盈亏', key: 'pnl' },
             { label: '手续费', key: 'fee' },
-            { label: '净盈亏', key: 'netPnl' },
+            { label: '净盈亏', key: 'netPnl', showType: 'diff', diffKey: 'lastNetPnl' },
             { label: '持仓均价', key: 'totalWaitAvgSellPrice' },
             { label: '持仓数量', key: 'totalWaitSellQty' },
             { label: '持仓总额', key: 'totalWaitSellAmount' },

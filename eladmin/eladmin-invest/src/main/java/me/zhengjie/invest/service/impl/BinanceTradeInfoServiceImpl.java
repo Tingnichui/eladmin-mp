@@ -39,6 +39,7 @@ import me.zhengjie.invest.util.TradeMatcherUtil;
 import me.zhengjie.utils.FileUtil;
 import me.zhengjie.utils.PageResult;
 import me.zhengjie.utils.PageUtil;
+import me.zhengjie.utils.RedisUtils;
 import me.zhengjie.utils.enums.OrderDirectionEnum;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,6 +65,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
     private final BinanceSpotUtil binanceSpotUtil;
     private final BinanceTradeInfoExtService binanceTradeInfoExtService;
     private final BinanceUsdFuturesUtil binanceUsdFuturesUtil;
+    private final RedisUtils redisUtils;
 
     @Override
     public PageResult<BinanceTradeInfo> queryAll(BinanceTradeInfoQueryCriteria criteria, Page<Object> page) {
@@ -149,7 +151,9 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
     @Override
     public BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria) {
+        final String key = "SPOT_LAST_NET_PNL";
         BinanceTradeStatsInfoVO statsInfoVO = new BinanceTradeStatsInfoVO();
+        statsInfoVO.setLastNetPnl((BigDecimal) redisUtils.get(key));
 
         // 未锁仓的撮合交易
         criteria.setHedgedFlag(0);
@@ -196,6 +200,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             statsInfoVO.setFee(matchedList.stream().map(MatchedTradeInfo::getFee).reduce(BigDecimal.ZERO, BigDecimal::add));
             // 净盈亏
             statsInfoVO.setNetPnl(matchedList.stream().map(MatchedTradeInfo::getNetPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
+            redisUtils.set(key, statsInfoVO.getNetPnl());
 
         }
 

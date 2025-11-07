@@ -21,6 +21,8 @@ public class BinanceFuturesTradeStatsInfoVO implements Serializable {
     private BigDecimal fee = BigDecimal.ZERO;
     // 净盈亏
     private BigDecimal netPnl = BigDecimal.ZERO;
+    //上一次净盈亏
+    private BigDecimal lastNetPnl;
     //锁仓总金额
     private BigDecimal hedgedAmount = BigDecimal.ZERO;
     //锁仓总数量

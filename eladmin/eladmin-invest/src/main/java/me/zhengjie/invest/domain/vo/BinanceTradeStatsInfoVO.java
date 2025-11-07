@@ -38,6 +38,8 @@ public class BinanceTradeStatsInfoVO implements Serializable {
     private BigDecimal pnl;
     //净盈亏
     private BigDecimal netPnl;
+    //上一次净盈亏
+    private BigDecimal lastNetPnl;
     //收益率
     private BigDecimal roi;
     //剩余未平仓总金额
