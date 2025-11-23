@@ -137,15 +137,15 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
                 }
 
                 // 查询已经在库中的订单
-                Set<Long> existOrderIdSet = this.list(
+                Set<Long> existIdSet = this.list(
                         Wrappers.lambdaQuery(BinanceFuturesTradeInfo.class)
-                                .select(BinanceFuturesTradeInfo::getOrderId)
-                                .in(BinanceFuturesTradeInfo::getOrderId, orderInfoList.stream().map(BinanceFuturesTradeInfo::getOrderId).collect(Collectors.toSet()))
-                ).stream().map(BinanceFuturesTradeInfo::getOrderId).collect(Collectors.toSet());
+                                .select(BinanceFuturesTradeInfo::getId)
+                                .in(BinanceFuturesTradeInfo::getId, orderInfoList.stream().map(BinanceFuturesTradeInfo::getId).collect(Collectors.toSet()))
+                ).stream().map(BinanceFuturesTradeInfo::getId).collect(Collectors.toSet());
 
                 // 过滤掉已存在的订单
                 List<BinanceFuturesTradeInfo> newOrders = orderInfoList.stream()
-                        .filter(order -> !existOrderIdSet.contains(order.getOrderId()))
+                        .filter(order -> !existIdSet.contains(order.getId()))
                         .peek(order -> order.setUid(accountInfo.getUid()))
                         .collect(Collectors.toList());
 
@@ -249,13 +249,6 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
         {
             // 获取当前合约价格
             BigDecimal currentPrice = binanceUsdFuturesUtil.price(BinanceEnum.SYMBOL.BTCUSDT);
-
-            // 所有都标记未锁仓
-            binanceTradeInfoExtService.getBaseMapper().update(null,
-                    Wrappers.lambdaUpdate(BinanceTradeInfoExt.class)
-                            .set(BinanceTradeInfoExt::getHedgedFlag, 0)
-            );
-
             List<MatchedTradeInfo> matchedList = TradeMatcherUtil.matchTrades(side, "0.001", openList, BinanceFuturesTradeInfo::getQty, BinanceFuturesTradeInfo::getPrice, currentPrice,
                     matched -> {
                         // 亏损单找现货做对冲止损

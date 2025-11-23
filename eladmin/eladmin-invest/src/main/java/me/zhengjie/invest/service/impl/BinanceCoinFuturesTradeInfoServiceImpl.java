@@ -126,15 +126,15 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
                 }
 
                 // 查询已经在库中的订单
-                Set<Long> existOrderIdSet = this.list(
+                Set<Long> existIdSet = this.list(
                         Wrappers.lambdaQuery(BinanceCoinFuturesTradeInfo.class)
-                                .select(BinanceCoinFuturesTradeInfo::getOrderId)
-                                .in(BinanceCoinFuturesTradeInfo::getOrderId, orderInfoList.stream().map(BinanceCoinFuturesTradeInfo::getOrderId).collect(Collectors.toSet()))
-                ).stream().map(BinanceCoinFuturesTradeInfo::getOrderId).collect(Collectors.toSet());
+                                .select(BinanceCoinFuturesTradeInfo::getId)
+                                .in(BinanceCoinFuturesTradeInfo::getId, orderInfoList.stream().map(BinanceCoinFuturesTradeInfo::getId).collect(Collectors.toSet()))
+                ).stream().map(BinanceCoinFuturesTradeInfo::getId).collect(Collectors.toSet());
 
                 // 过滤掉已存在的订单
                 List<BinanceCoinFuturesTradeInfo> newOrders = orderInfoList.stream()
-                        .filter(order -> !existOrderIdSet.contains(order.getOrderId()))
+                        .filter(order -> !existIdSet.contains(order.getId()))
                         .peek(order -> order.setUid(accountInfo.getUid()))
                         .collect(Collectors.toList());
 

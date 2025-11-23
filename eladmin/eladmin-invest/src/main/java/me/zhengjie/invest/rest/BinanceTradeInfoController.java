@@ -15,17 +15,20 @@
 */
 package me.zhengjie.invest.rest;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
+import me.zhengjie.invest.domain.BinanceTradeInfoExt;
 import me.zhengjie.invest.domain.vo.BinanceFuturesTradeStatsInfoVO;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.service.BinanceCoinFuturesTradeInfoService;
 import me.zhengjie.invest.service.BinanceFuturesTradeInfoService;
+import me.zhengjie.invest.service.BinanceTradeInfoExtService;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
 import me.zhengjie.utils.PageResult;
 import org.springframework.http.HttpStatus;
@@ -51,6 +54,7 @@ public class BinanceTradeInfoController {
     private final BinanceTradeInfoService binanceTradeInfoService;
     private final BinanceFuturesTradeInfoService binanceFuturesTradeInfoService;
     private final BinanceCoinFuturesTradeInfoService binanceCoinFuturesTradeInfoService;
+    private final BinanceTradeInfoExtService binanceTradeInfoExtService;
 
     @Log("导出数据")
     @ApiOperation("导出数据")
@@ -100,10 +104,18 @@ public class BinanceTradeInfoController {
     @ApiOperation("查询交易汇总")
     @PreAuthorize("@el.check('binanceTradeInfo:list')")
     public ResponseEntity<BinanceTradeStatsInfoVO> queryBinanceTradeInfo(BinanceTradeInfoQueryCriteria criteria){
-        // 先调用合约锁仓
+        // 移除所有锁仓
+        binanceTradeInfoExtService.getBaseMapper().update(null,
+                Wrappers.lambdaUpdate(BinanceTradeInfoExt.class)
+                        .set(BinanceTradeInfoExt::getHedgedFlag, 0)
+                        .set(BinanceTradeInfoExt::getHedgedQty, 0)
+        );
+        // U本位合约锁仓
         BinanceFuturesTradeStatsInfoVO binanceFuturesTradeStatsInfoVO = binanceFuturesTradeInfoService.syncFuturesHedge();
-        // 在统计现货仓位分布
+        // 现货仓位分布
         BinanceTradeStatsInfoVO stats = binanceTradeInfoService.stats(criteria);
+
+
         stats.setFuturesTradeStatsInfo(binanceFuturesTradeStatsInfoVO);
         return new ResponseEntity<>(stats,HttpStatus.OK);
     }

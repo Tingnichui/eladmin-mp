@@ -128,15 +128,15 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             // 调用接口获取最近的订单信息
             List<BinanceTradeInfo> orderInfoList = binanceSpotUtil.getMyTrades(symbol);
             // 查询已经在库中的订单
-            Set<Long> existOrderIdSet = this.list(
+            Set<Long> existIdSet = this.list(
                     Wrappers.lambdaQuery(BinanceTradeInfo.class)
-                            .select(BinanceTradeInfo::getOrderId)
-                            .in(BinanceTradeInfo::getOrderId, orderInfoList.stream().map(BinanceTradeInfo::getOrderId).collect(Collectors.toSet()))
-            ).stream().map(BinanceTradeInfo::getOrderId).collect(Collectors.toSet());
+                            .select(BinanceTradeInfo::getId)
+                            .in(BinanceTradeInfo::getId, orderInfoList.stream().map(BinanceTradeInfo::getId).collect(Collectors.toSet()))
+            ).stream().map(BinanceTradeInfo::getId).collect(Collectors.toSet());
 
             // 过滤掉已存在的订单
             List<BinanceTradeInfo> newOrders = orderInfoList.stream()
-                    .filter(order -> !existOrderIdSet.contains(order.getOrderId()))
+                    .filter(order -> !existIdSet.contains(order.getId()))
                     .peek(order -> order.setUid(accountInfo.getUid()))
                     .collect(Collectors.toList());
 
