@@ -15,7 +15,14 @@
 */
 package me.zhengjie.invest.service.impl;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import me.zhengjie.invest.constants.BinanceEnum;
+import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
+import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
+import me.zhengjie.invest.service.BinanceAccountInfoService;
+import me.zhengjie.invest.util.BinanceAccountContextHolder;
+import me.zhengjie.invest.util.BinanceCoinFuturesUtil;
 import me.zhengjie.utils.FileUtil;
 import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -23,15 +30,16 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import me.zhengjie.invest.service.BinanceCoinFuturesTradeInfoService;
 import me.zhengjie.invest.domain.vo.BinanceCoinFuturesTradeInfoQueryCriteria;
 import me.zhengjie.invest.mapper.BinanceCoinFuturesTradeInfoMapper;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import me.zhengjie.utils.PageUtil;
-import java.util.List;
-import java.util.Map;
+
+import java.util.*;
 import java.io.IOException;
+import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletResponse;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
+
 import me.zhengjie.utils.PageResult;
 
 /**
@@ -44,6 +52,8 @@ import me.zhengjie.utils.PageResult;
 public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceCoinFuturesTradeInfoMapper, BinanceCoinFuturesTradeInfo> implements BinanceCoinFuturesTradeInfoService {
 
     private final BinanceCoinFuturesTradeInfoMapper binanceCoinFuturesTradeInfoMapper;
+    private final BinanceAccountInfoService binanceAccountInfoService;
+    private final BinanceCoinFuturesUtil binanceCoinFuturesUtil;
 
     @Override
     public PageResult<BinanceCoinFuturesTradeInfo> queryAll(BinanceCoinFuturesTradeInfoQueryCriteria criteria, Page<Object> page){
@@ -100,4 +110,36 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
         }
         FileUtil.downloadExcel(list, response);
     }
+
+    @Override
+    public void sync() {
+        // 查询所有账号
+        List<BinanceAccountInfo> accountInfoList = binanceAccountInfoService.listUseApiAccount();
+        for (BinanceAccountInfo accountInfo : accountInfoList) {
+            BinanceAccountContextHolder.runWith(accountInfo, () -> {
+                List<BinanceCoinFuturesTradeInfo> orderInfoList = binanceCoinFuturesUtil.userTrades(BinanceEnum.SYMBOL.BTCUSD_PERP, null, null);
+                if (CollectionUtils.isEmpty(orderInfoList)) {
+                    return;
+                }
+
+                // 查询已经在库中的订单
+                Set<Long> existOrderIdSet = this.list(
+                        Wrappers.lambdaQuery(BinanceCoinFuturesTradeInfo.class)
+                                .select(BinanceCoinFuturesTradeInfo::getOrderId)
+                                .in(BinanceCoinFuturesTradeInfo::getOrderId, orderInfoList.stream().map(BinanceCoinFuturesTradeInfo::getOrderId).collect(Collectors.toSet()))
+                ).stream().map(BinanceCoinFuturesTradeInfo::getOrderId).collect(Collectors.toSet());
+
+                // 过滤掉已存在的订单
+                List<BinanceCoinFuturesTradeInfo> newOrders = orderInfoList.stream()
+                        .filter(order -> !existOrderIdSet.contains(order.getOrderId()))
+                        .peek(order -> order.setUid(accountInfo.getUid()))
+                        .collect(Collectors.toList());
+
+                // 保存新订单
+                this.saveOrUpdateBatch(newOrders);
+
+            });
+        }
+    }
+
 }

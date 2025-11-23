@@ -72,4 +72,7 @@ public interface BinanceCoinFuturesTradeInfoService extends IService<BinanceCoin
     * @throws IOException /
     */
     void download(List<BinanceCoinFuturesTradeInfo> all, HttpServletResponse response) throws IOException;
+
+    void sync();
+
 }

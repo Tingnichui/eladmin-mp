@@ -24,6 +24,7 @@ import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.domain.vo.BinanceFuturesTradeStatsInfoVO;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
+import me.zhengjie.invest.service.BinanceCoinFuturesTradeInfoService;
 import me.zhengjie.invest.service.BinanceFuturesTradeInfoService;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
 import me.zhengjie.utils.PageResult;
@@ -49,6 +50,7 @@ public class BinanceTradeInfoController {
 
     private final BinanceTradeInfoService binanceTradeInfoService;
     private final BinanceFuturesTradeInfoService binanceFuturesTradeInfoService;
+    private final BinanceCoinFuturesTradeInfoService binanceCoinFuturesTradeInfoService;
 
     @Log("导出数据")
     @ApiOperation("导出数据")
@@ -113,6 +115,7 @@ public class BinanceTradeInfoController {
     public ResponseEntity<BinanceTradeStatsInfoVO> sync(){
         binanceTradeInfoService.syncAll();
         binanceFuturesTradeInfoService.sync();
+        binanceCoinFuturesTradeInfoService.sync();
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
