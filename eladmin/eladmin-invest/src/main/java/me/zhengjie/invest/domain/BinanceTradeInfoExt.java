@@ -15,17 +15,17 @@
 */
 package me.zhengjie.invest.domain;
 
-import lombok.Data;
 import cn.hutool.core.bean.BeanUtil;
-import io.swagger.annotations.ApiModelProperty;
 import cn.hutool.core.bean.copier.CopyOptions;
-import java.io.Serializable;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import io.swagger.annotations.ApiModelProperty;
+import lombok.Data;
 
-import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import java.io.Serializable;
+import java.math.BigDecimal;
 
 /**
 * @description /
@@ -49,6 +49,9 @@ public class BinanceTradeInfoExt implements Serializable {
 
     @ApiModelProperty(value = "是否锁仓；0未锁仓 1锁仓")
     private Integer hedgedFlag;
+
+    @ApiModelProperty(value = "锁仓数量")
+    private BigDecimal hedgedQty;
 
     @ApiModelProperty(value = "备注")
     private String remark;
