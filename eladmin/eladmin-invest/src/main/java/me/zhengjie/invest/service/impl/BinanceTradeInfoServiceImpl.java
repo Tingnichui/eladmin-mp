@@ -15,6 +15,7 @@
  */
 package me.zhengjie.invest.service.impl;
 
+import cn.hutool.core.util.NumberUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -26,6 +27,7 @@ import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfoExt;
 import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
+import me.zhengjie.invest.domain.vo.BinanceSpotHedgedTradeStatsInfoVO;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.mapper.BinanceTradeInfoMapper;
@@ -41,6 +43,7 @@ import me.zhengjie.utils.PageResult;
 import me.zhengjie.utils.PageUtil;
 import me.zhengjie.utils.RedisUtils;
 import me.zhengjie.utils.enums.OrderDirectionEnum;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -275,6 +278,25 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
     @Override
     public List<BinanceTradeInfo> list4hedge(BigDecimal lowPrice, BigDecimal highPrice, BigDecimal qty) {
         return binanceTradeInfoMapper.list4hedge(lowPrice, highPrice, qty);
+    }
+
+    @Override
+    public BinanceSpotHedgedTradeStatsInfoVO hedgedStats() {
+        BinanceSpotHedgedTradeStatsInfoVO statsInfo = new BinanceSpotHedgedTradeStatsInfoVO();
+
+        BinanceTradeInfoQueryCriteria criteria = new BinanceTradeInfoQueryCriteria();
+        criteria.setHedgedFlag(1);
+        List<BinanceTradeInfo> hedgedTradeInfo = this.queryAll(criteria);
+        if (CollectionUtils.isNotEmpty(hedgedTradeInfo)) {
+            // 锁仓总额
+            statsInfo.setHedgedAmount(hedgedTradeInfo.stream().map(BinanceTradeInfo::getHedgedAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
+            // 锁仓数量
+            statsInfo.setHedgedQty(hedgedTradeInfo.stream().map(BinanceTradeInfo::getHedgedQty).reduce(BigDecimal.ZERO, BigDecimal::add));
+            // 锁仓均价
+            statsInfo.setHedgedAvgPrice(NumberUtil.div(statsInfo.getHedgedAmount(), statsInfo.getHedgedQty()));
+        }
+
+        return statsInfo;
     }
 
 }

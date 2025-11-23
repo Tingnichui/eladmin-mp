@@ -66,5 +66,7 @@ public class BinanceTradeStatsInfoVO implements Serializable {
 
     private BinanceFuturesTradeStatsInfoVO futuresTradeStatsInfo;
 
+    private BinanceSpotHedgedTradeStatsInfoVO spotHedgedTradeStatsInfo;
+
 
 }

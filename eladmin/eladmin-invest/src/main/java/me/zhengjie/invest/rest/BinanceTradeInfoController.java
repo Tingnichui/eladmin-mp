@@ -109,12 +109,14 @@ public class BinanceTradeInfoController {
                 Wrappers.lambdaUpdate(BinanceTradeInfoExt.class)
                         .set(BinanceTradeInfoExt::getHedgedQty, 0)
         );
-        // U本位合约锁仓
+        // U本位合约统计
         BinanceFuturesTradeStatsInfoVO binanceFuturesTradeStatsInfoVO = binanceFuturesTradeInfoService.syncFuturesHedge();
         // 现货仓位分布
         BinanceTradeStatsInfoVO stats = binanceTradeInfoService.stats(criteria);
 
         stats.setFuturesTradeStatsInfo(binanceFuturesTradeStatsInfoVO);
+        stats.setSpotHedgedTradeStatsInfo(binanceTradeInfoService.hedgedStats());
+
         return new ResponseEntity<>(stats,HttpStatus.OK);
     }
 

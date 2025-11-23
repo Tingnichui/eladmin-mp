@@ -16,6 +16,7 @@
 package me.zhengjie.invest.service;
 
 import me.zhengjie.invest.domain.BinanceTradeInfo;
+import me.zhengjie.invest.domain.vo.BinanceSpotHedgedTradeStatsInfoVO;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 
 import java.math.BigDecimal;
@@ -82,5 +83,7 @@ public interface BinanceTradeInfoService extends IService<BinanceTradeInfo> {
     void syncAll();
 
     List<BinanceTradeInfo> list4hedge(BigDecimal lowPrice, BigDecimal highPrice, BigDecimal qty);
+
+    BinanceSpotHedgedTradeStatsInfoVO hedgedStats();
 
 }

@@ -215,9 +215,6 @@ export default {
             { label: '持仓均价', key: 'posAvgPrice' },
             { label: '持仓数量', key: 'posQty' },
             { label: '持仓金额', key: 'posAmount' },
-            { label: '锁仓均价', key: 'hedgedAvgPrice' },
-            { label: '锁仓数量', key: 'hedgedQty' },
-            { label: '锁仓总额', key: 'hedgedAmount' },
             { label: '盈亏', key: 'pnl' },
             { label: '手续费', key: 'fee' },
             { label: '净盈亏', key: 'netPnl' },
@@ -227,6 +224,15 @@ export default {
             { label: '', key: '' },
             { label: '', key: '' },
             { label: '持仓订单', key: 'openTradeList', type: 'length', showType: 'link' }
+          ]
+        },
+        {
+          title: '对冲统计',
+          data: (this.statsInfo && this.statsInfo.spotHedgedTradeStatsInfo) || {},
+          descriptionsItems: [
+            { label: '锁仓均价', key: 'hedgedAvgPrice' },
+            { label: '锁仓数量', key: 'hedgedQty' },
+            { label: '锁仓总额', key: 'hedgedAmount' }
           ]
         }
       ]

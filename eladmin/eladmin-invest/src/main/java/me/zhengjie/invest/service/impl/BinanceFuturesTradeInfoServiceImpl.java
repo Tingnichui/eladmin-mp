@@ -301,23 +301,6 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
 
         }
 
-
-        // 锁仓统计
-        {
-            BinanceTradeInfoQueryCriteria criteria = new BinanceTradeInfoQueryCriteria();
-            criteria.setHedgedFlag(1);
-            List<BinanceTradeInfo> hedgedTradeInfo = binanceTradeInfoService.queryAll(criteria);
-            if (CollectionUtils.isNotEmpty(hedgedTradeInfo)) {
-                // 锁仓总额
-                statsInfoVO.setHedgedAmount(hedgedTradeInfo.stream().map(BinanceTradeInfo::getHedgedAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
-                // 锁仓数量
-                statsInfoVO.setHedgedQty(hedgedTradeInfo.stream().map(BinanceTradeInfo::getHedgedQty).reduce(BigDecimal.ZERO, BigDecimal::add));
-                // 锁仓均价
-                statsInfoVO.setHedgedAvgPrice(NumberUtil.div(statsInfoVO.getHedgedAmount(), statsInfoVO.getHedgedQty()));
-            }
-        }
-
-
         return statsInfoVO;
     }
 
