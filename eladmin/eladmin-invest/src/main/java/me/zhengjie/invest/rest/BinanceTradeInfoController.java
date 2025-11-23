@@ -107,14 +107,12 @@ public class BinanceTradeInfoController {
         // 移除所有锁仓
         binanceTradeInfoExtService.getBaseMapper().update(null,
                 Wrappers.lambdaUpdate(BinanceTradeInfoExt.class)
-                        .set(BinanceTradeInfoExt::getHedgedFlag, 0)
                         .set(BinanceTradeInfoExt::getHedgedQty, 0)
         );
         // U本位合约锁仓
         BinanceFuturesTradeStatsInfoVO binanceFuturesTradeStatsInfoVO = binanceFuturesTradeInfoService.syncFuturesHedge();
         // 现货仓位分布
         BinanceTradeStatsInfoVO stats = binanceTradeInfoService.stats(criteria);
-
 
         stats.setFuturesTradeStatsInfo(binanceFuturesTradeStatsInfoVO);
         return new ResponseEntity<>(stats,HttpStatus.OK);

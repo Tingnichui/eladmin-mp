@@ -19,18 +19,23 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
+import me.zhengjie.invest.domain.BinanceAccountInfo;
+import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfoExt;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoExtQueryCriteria;
 import me.zhengjie.invest.mapper.BinanceTradeInfoExtMapper;
 import me.zhengjie.invest.service.BinanceTradeInfoExtService;
+import me.zhengjie.invest.service.BinanceTradeInfoService;
 import me.zhengjie.utils.FileUtil;
 import me.zhengjie.utils.PageResult;
 import me.zhengjie.utils.PageUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -45,7 +50,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class BinanceTradeInfoExtServiceImpl extends ServiceImpl<BinanceTradeInfoExtMapper, BinanceTradeInfoExt> implements BinanceTradeInfoExtService {
 
-    private final BinanceTradeInfoExtMapper binanceTradeInfoExtMapper;
+    @Resource
+    private BinanceTradeInfoExtMapper binanceTradeInfoExtMapper;
+    @Resource
+    private BinanceTradeInfoService binanceTradeInfoService;
+
 
     @Override
     public PageResult<BinanceTradeInfoExt> queryAll(BinanceTradeInfoExtQueryCriteria criteria, Page<Object> page) {
@@ -80,35 +89,37 @@ public class BinanceTradeInfoExtServiceImpl extends ServiceImpl<BinanceTradeInfo
     @Override
     public void download(List<BinanceTradeInfoExt> all, HttpServletResponse response) throws IOException {
         List<Map<String, Object>> list = new ArrayList<>();
-        for (BinanceTradeInfoExt binanceTradeInfoExt : all) {
-            Map<String, Object> map = new LinkedHashMap<>();
-            map.put("订单 ID", binanceTradeInfoExt.getOrderId());
-            map.put("仓位编号", binanceTradeInfoExt.getPosId());
-            map.put("是否锁仓；0未锁仓 1锁仓", binanceTradeInfoExt.getHedgedFlag());
-            map.put("备注", binanceTradeInfoExt.getRemark());
-            list.add(map);
-        }
+//        for (BinanceTradeInfoExt binanceTradeInfoExt : all) {
+//            Map<String, Object> map = new LinkedHashMap<>();
+//            map.put("订单 ID", binanceTradeInfoExt.getOrderId());
+//            map.put("仓位编号", binanceTradeInfoExt.getPosId());
+//            map.put("是否锁仓；0未锁仓 1锁仓", binanceTradeInfoExt.getHedgedFlag());
+//            map.put("备注", binanceTradeInfoExt.getRemark());
+//            list.add(map);
+//        }
         FileUtil.downloadExcel(list, response);
     }
 
     @Override
-    public void changeHedgedFlag(Long orderId) {
-        BinanceTradeInfoExt binanceTradeInfoExt = binanceTradeInfoExtMapper.selectOne(
-                Wrappers.lambdaQuery(BinanceTradeInfoExt.class)
-                        .eq(BinanceTradeInfoExt::getOrderId, orderId)
-        );
-        if (null == binanceTradeInfoExt) {
-            binanceTradeInfoExt = new BinanceTradeInfoExt();
-            binanceTradeInfoExt.setOrderId(orderId);
-            binanceTradeInfoExt.setHedgedFlag(0);
-            binanceTradeInfoExtMapper.insert(binanceTradeInfoExt);
+    public void changeHedgedFlag(Long id, BigDecimal qty) {
+        // 先查现货
+        BinanceTradeInfo spotInfo = binanceTradeInfoService.getById(id);
+        if (null == spotInfo) {
+            throw new RuntimeException("现货订单不存在");
+        }
+        if (spotInfo.getNetQty().compareTo(qty) < 0) {
+            throw new RuntimeException("可用对冲数量不足");
         }
 
-        this.update(
-                Wrappers.lambdaUpdate(BinanceTradeInfoExt.class)
-                        .eq(BinanceTradeInfoExt::getId, binanceTradeInfoExt.getId())
-                        .set(BinanceTradeInfoExt::getHedgedFlag, 1 ^ binanceTradeInfoExt.getHedgedFlag())
-        );
+        BinanceTradeInfoExt spotExt = binanceTradeInfoExtMapper.selectById(id);
+        if (null == spotExt) {
+            spotExt = new BinanceTradeInfoExt();
+            spotExt.setId(id);
+            spotExt.setHedgedQty(BigDecimal.ZERO);
+        }
 
+        spotExt.setHedgedQty(spotExt.getHedgedQty().add(qty));
+
+        this.saveOrUpdate(spotExt);
     }
 }

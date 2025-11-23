@@ -18,6 +18,7 @@ package me.zhengjie.invest.service;
 import me.zhengjie.invest.domain.BinanceTradeInfoExt;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoExtQueryCriteria;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.io.IOException;
 import javax.servlet.http.HttpServletResponse;
@@ -73,6 +74,6 @@ public interface BinanceTradeInfoExtService extends IService<BinanceTradeInfoExt
     */
     void download(List<BinanceTradeInfoExt> all, HttpServletResponse response) throws IOException;
 
-    void changeHedgedFlag(Long orderId);
+    void changeHedgedFlag(Long id, BigDecimal qty);
 
 }

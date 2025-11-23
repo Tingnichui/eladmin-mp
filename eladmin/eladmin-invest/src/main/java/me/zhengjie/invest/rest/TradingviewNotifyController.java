@@ -137,10 +137,10 @@ public class TradingviewNotifyController {
                             // 调用接口成功之后标识
                             redisUtils.set(redisKey, "1", 30, TimeUnit.DAYS);
                             // 记录到扩展信息表
-                            BinanceTradeInfoExt tradeInfoExt = new BinanceTradeInfoExt();
-                            tradeInfoExt.setOrderId(orderId);
-                            tradeInfoExt.setPosId(posId);
-                            binanceTradeInfoExtService.save(tradeInfoExt);
+//                            BinanceTradeInfoExt tradeInfoExt = new BinanceTradeInfoExt();
+//                            tradeInfoExt.setOrderId(orderId);
+//                            tradeInfoExt.setPosId(posId);
+//                            binanceTradeInfoExtService.save(tradeInfoExt);
                         }
                     });
                 }

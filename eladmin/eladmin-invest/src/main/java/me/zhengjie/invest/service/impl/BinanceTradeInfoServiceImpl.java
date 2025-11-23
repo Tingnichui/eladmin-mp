@@ -44,6 +44,7 @@ import me.zhengjie.utils.enums.OrderDirectionEnum;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -60,12 +61,18 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMapper, BinanceTradeInfo> implements BinanceTradeInfoService {
 
-    private final BinanceTradeInfoMapper binanceTradeInfoMapper;
-    private final BinanceAccountInfoService binanceAccountInfoService;
-    private final BinanceSpotUtil binanceSpotUtil;
-    private final BinanceTradeInfoExtService binanceTradeInfoExtService;
-    private final BinanceUsdFuturesUtil binanceUsdFuturesUtil;
-    private final RedisUtils redisUtils;
+    @Resource
+    private BinanceTradeInfoMapper binanceTradeInfoMapper;
+    @Resource
+    private BinanceAccountInfoService binanceAccountInfoService;
+    @Resource
+    private BinanceSpotUtil binanceSpotUtil;
+    @Resource
+    private BinanceTradeInfoExtService binanceTradeInfoExtService;
+    @Resource
+    private BinanceUsdFuturesUtil binanceUsdFuturesUtil;
+    @Resource
+    private RedisUtils redisUtils;
 
     @Override
     public PageResult<BinanceTradeInfo> queryAll(BinanceTradeInfoQueryCriteria criteria, Page<Object> page) {

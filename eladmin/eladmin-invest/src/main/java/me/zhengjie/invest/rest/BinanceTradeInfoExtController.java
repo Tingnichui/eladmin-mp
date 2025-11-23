@@ -94,7 +94,7 @@ public class BinanceTradeInfoExtController {
     @ApiOperation("修改币安账户")
     @PreAuthorize("@el.check('binanceTradeInfoExt:edit')")
     public ResponseEntity<Object> changeHedgedFlag(@RequestBody Long orderId){
-        binanceTradeInfoExtService.changeHedgedFlag(orderId);
+//        binanceTradeInfoExtService.changeHedgedFlag(orderId);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }

@@ -97,8 +97,21 @@ public class BinanceTradeInfo implements Serializable {
     @TableField(exist = false)
     private Integer hedgedFlag = 0;
 
+    @TableField(exist = false)
+    private BigDecimal hedgedQty = BigDecimal.ZERO;
+
+    @TableField(exist = false)
+    private BigDecimal netQty = BigDecimal.ZERO;
+    public BigDecimal getNetQty() {
+        return qty.subtract(hedgedQty);
+    }
+
     public BigDecimal getAmount() {
         return NumberUtil.mul(this.price, this.qty);
+    }
+
+    public BigDecimal getHedgedAmount() {
+        return NumberUtil.mul(this.price, this.hedgedQty);
     }
 
     public void copy(BinanceTradeInfo source){

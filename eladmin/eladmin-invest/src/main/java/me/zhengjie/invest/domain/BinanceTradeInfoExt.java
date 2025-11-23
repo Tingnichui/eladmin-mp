@@ -17,13 +17,11 @@ package me.zhengjie.invest.domain;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.bean.copier.CopyOptions;
-import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
-import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.math.BigDecimal;
 
@@ -36,19 +34,9 @@ import java.math.BigDecimal;
 @TableName("binance_trade_info_ext")
 public class BinanceTradeInfoExt implements Serializable {
 
-    @TableId(value = "id", type = IdType.AUTO)
+    @TableId(value = "id")
     @ApiModelProperty(value = "id")
-    private Integer id;
-
-    @NotNull
-    @ApiModelProperty(value = "订单 ID")
-    private Long orderId;
-
-    @ApiModelProperty(value = "仓位编号")
-    private String posId;
-
-    @ApiModelProperty(value = "是否锁仓；0未锁仓 1锁仓")
-    private Integer hedgedFlag;
+    private Long id;
 
     @ApiModelProperty(value = "锁仓数量")
     private BigDecimal hedgedQty;

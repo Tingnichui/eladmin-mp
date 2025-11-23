@@ -27,18 +27,18 @@
         select
             t1.*,
             t2.id_card_name,
-            t3.hedged_flag
+            t3.hedged_qty
         from binance_trade_info t1
         left join binance_account_info t2 on t2.uid = t1.uid
-        left join binance_trade_info_ext t3 on t3.order_id = t1.order_id
+        left join binance_trade_info_ext t3 on t3.id = t1.id
         where 1 = 1
             <if test="criteria.hedgedFlag != null">
                 <choose>
                     <when test="criteria.hedgedFlag == 0">
-                        and (t3.hedged_flag = 0 or t3.hedged_flag IS NULL)
+                        and (t3.hedged_qty = 0 or t3.hedged_qty IS NULL)
                     </when>
                     <otherwise>
-                        and t3.hedged_flag = #{criteria.hedgedFlag}
+                        and t3.hedged_qty != 0
                     </otherwise>
                 </choose>
             </if>
@@ -98,22 +98,19 @@
     </select>
 
     <select id="list4hedge" resultType="me.zhengjie.invest.domain.BinanceTradeInfo">
-        select *
-        FROM (
-            SELECT t1.order_id,t1.price, SUM(t1.qty) qty
-            FROM binance_trade_info t1
+        SELECT
+            t1.id,
+            t1.price,
+            t1.qty,
+            t3.hedged_qty,
+            t1.qty - IFNULL(t3.hedged_qty, 0) as netQty
+        FROM binance_trade_info t1
             LEFT JOIN binance_account_info t2 on t2.uid = t1.uid
-            LEFT JOIN binance_trade_info_ext t3 on t3.order_id = t1.order_id
-            WHERE t1.is_buyer = 1
-                AND (t3.hedged_flag = 0 or t3.hedged_flag IS NULL)
-                AND t1.price BETWEEN #{lowPrice} AND #{highPrice}
-            GROUP BY t1.order_id, t1.price
-            ORDER BY t1.price ASC
-        ) temp
-        WHERE 1 = 1
-        <if test="qty != null">
-            AND qty = #{qty}
-        </if>
+            LEFT JOIN binance_trade_info_ext t3 on t3.id = t1.id
+        WHERE t1.is_buyer = 1
+            AND t1.price BETWEEN #{lowPrice} AND #{highPrice}
+        HAVING netQty > 0
+        ORDER BY t1.price ASC
     </select>
 
 </mapper>

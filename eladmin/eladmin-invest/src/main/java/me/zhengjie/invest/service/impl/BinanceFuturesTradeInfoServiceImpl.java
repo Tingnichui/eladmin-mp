@@ -50,6 +50,7 @@ import java.math.RoundingMode;
 import java.util.*;
 import java.io.IOException;
 import java.util.stream.Collectors;
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 
 import me.zhengjie.utils.PageResult;
@@ -63,13 +64,20 @@ import me.zhengjie.utils.PageResult;
 @RequiredArgsConstructor
 public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFuturesTradeInfoMapper, BinanceFuturesTradeInfo> implements BinanceFuturesTradeInfoService {
 
-    private final BinanceFuturesTradeInfoMapper binanceFuturesTradeInfoMapper;
-    private final BinanceUsdFuturesUtil binanceUsdFuturesUtil;
-    private final BinanceSpotUtil binanceSpotUtil;
-    private final BinanceAccountInfoService binanceAccountInfoService;
-    private final RedisUtils redisUtils;
-    private final BinanceTradeInfoExtService binanceTradeInfoExtService;
-    private final BinanceTradeInfoService binanceTradeInfoService;
+    @Resource
+    private BinanceFuturesTradeInfoMapper binanceFuturesTradeInfoMapper;
+    @Resource
+    private BinanceUsdFuturesUtil binanceUsdFuturesUtil;
+    @Resource
+    private BinanceSpotUtil binanceSpotUtil;
+    @Resource
+    private BinanceAccountInfoService binanceAccountInfoService;
+    @Resource
+    private RedisUtils redisUtils;
+    @Resource
+    private BinanceTradeInfoExtService binanceTradeInfoExtService;
+    @Resource
+    private BinanceTradeInfoService binanceTradeInfoService;
 
     @Override
     public PageResult<BinanceFuturesTradeInfo> queryAll(BinanceFuturesTradeInfoQueryCriteria criteria, Page<Object> page){
@@ -253,15 +261,36 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
                     matched -> {
                         // 亏损单找现货做对冲止损
                         if (matched.getNetPnl().compareTo(BigDecimal.ZERO) <= 0) {
+                            BigDecimal totalHedgedAmount = BigDecimal.ZERO;
+
+                            BigDecimal qty = matched.getQty();
                             // 查询现货止损单
-                            List<BinanceTradeInfo> binanceTradeInfos = binanceTradeInfoService.list4hedge(matched.getOpenPrice(), matched.getOpenPrice().add(new BigDecimal("1000")), matched.getQty());
-                            if (CollectionUtils.isNotEmpty(binanceTradeInfos)) {
-                                BinanceTradeInfo buy = binanceTradeInfos.get(0);
-                                matched.setClosePrice(buy.getPrice());
-                                binanceTradeInfoExtService.changeHedgedFlag(buy.getOrderId());
+                            List<BinanceTradeInfo> spotInfos = binanceTradeInfoService.list4hedge(matched.getOpenPrice(), matched.getOpenPrice().add(new BigDecimal("1000")), qty);
+                            for (BinanceTradeInfo spot : spotInfos) {
+                                // 对冲数量
+                                BigDecimal matchQty = spot.getNetQty().min(qty);
+                                if (matchQty.compareTo(BigDecimal.ZERO) <= 0) {
+                                    continue;
+                                }
+
+                                // 记录对冲价格 和 对冲数量
+                                totalHedgedAmount = totalHedgedAmount.add(spot.getPrice().multiply(matchQty));
+                                // 标记对冲
+                                binanceTradeInfoExtService.changeHedgedFlag(spot.getId(), matchQty);
+                                // 扣减数量
+                                qty = qty.subtract(matchQty);
+                                if (qty.compareTo(BigDecimal.ZERO) <= 0) {
+                                    break;
+                                }
+                            }
+
+                            BigDecimal hedgedQty = matched.getQty().subtract(qty);
+                            if (hedgedQty.compareTo(BigDecimal.ZERO) > 0) {
+                                matched.setClosePrice(totalHedgedAmount.divide(hedgedQty, 8, RoundingMode.HALF_UP));
                             } else {
                                 matched.setClosePrice(BigDecimal.ZERO);
                             }
+
                         }
                     });
 
@@ -280,9 +309,9 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
             List<BinanceTradeInfo> hedgedTradeInfo = binanceTradeInfoService.queryAll(criteria);
             if (CollectionUtils.isNotEmpty(hedgedTradeInfo)) {
                 // 锁仓总额
-                statsInfoVO.setHedgedAmount(hedgedTradeInfo.stream().map(BinanceTradeInfo::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
+                statsInfoVO.setHedgedAmount(hedgedTradeInfo.stream().map(BinanceTradeInfo::getHedgedAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
                 // 锁仓数量
-                statsInfoVO.setHedgedQty(hedgedTradeInfo.stream().map(BinanceTradeInfo::getQty).reduce(BigDecimal.ZERO, BigDecimal::add));
+                statsInfoVO.setHedgedQty(hedgedTradeInfo.stream().map(BinanceTradeInfo::getHedgedQty).reduce(BigDecimal.ZERO, BigDecimal::add));
                 // 锁仓均价
                 statsInfoVO.setHedgedAvgPrice(NumberUtil.div(statsInfoVO.getHedgedAmount(), statsInfoVO.getHedgedQty()));
             }
