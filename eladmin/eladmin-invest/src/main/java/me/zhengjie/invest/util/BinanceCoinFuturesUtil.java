@@ -9,6 +9,7 @@ import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson.JSON;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
+import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
 import me.zhengjie.invest.domain.dto.BinanceFundingRate;
 import me.zhengjie.utils.StringUtils;
 import org.slf4j.Logger;
@@ -58,6 +59,19 @@ public class BinanceCoinFuturesUtil {
         params.put("limit", 1000);
         return JSON.parseArray(this.doRequest("/dapi/v1/fundingRate", params, false, true), BinanceFundingRate.class);
 
+    }
+
+    public List<BinanceCoinFuturesTradeInfo> userTrades(BinanceEnum.SYMBOL symbol, Long startTime, Long endTime) {
+        Map<String, Object> parmasMap = new HashMap<>();
+        parmasMap.put("symbol", symbol);
+        parmasMap.put("limit", "1000");
+        if (null != startTime) {
+            parmasMap.put("startTime", startTime);
+        }
+        if (null != endTime) {
+            parmasMap.put("endTime", endTime);
+        }
+        return JSON.parseArray(this.doRequest("/dapi/v1/userTrades", parmasMap, true, true)).toJavaList(BinanceCoinFuturesTradeInfo.class);
     }
 
     private String doRequest(String url, Map<String, Object> params, Boolean signFlag, Boolean getFlag) {

@@ -2,11 +2,19 @@ package me.zhengjie;
 
 import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateUtil;
+import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import me.zhengjie.invest.constants.BinanceEnum;
+import me.zhengjie.invest.domain.BinanceAccountInfo;
+import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
+import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
 import me.zhengjie.invest.domain.InvestKlinesRecord;
 import me.zhengjie.invest.domain.dto.BinanceFundingRate;
 import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
+import me.zhengjie.invest.service.BinanceAccountInfoService;
+import me.zhengjie.invest.service.BinanceCoinFuturesTradeInfoService;
 import me.zhengjie.invest.service.InvestKlinesRecordService;
+import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceCoinFuturesUtil;
 import me.zhengjie.invest.util.BinanceSpotUtil;
 import me.zhengjie.invest.util.BinanceUsdFuturesUtil;
@@ -18,10 +26,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -29,6 +35,10 @@ public class BinanceCoinFuturesUtilTests {
 
     @Resource
     private BinanceCoinFuturesUtil binanceCoinFuturesUtil;
+    @Resource
+    private BinanceAccountInfoService binanceAccountInfoService;
+    @Resource
+    private BinanceCoinFuturesTradeInfoService binanceCoinFuturesTradeInfoService;
 
     @Test
     void fundingRate() {
@@ -60,6 +70,44 @@ public class BinanceCoinFuturesUtilTests {
         totalFundingRateByYear.forEach((year, total) ->
                 System.err.println(year + " 年总资金费率：" + total)
         );
+
+    }
+
+    @Test
+    void userTrades() {
+        Set<Long> orderIdSet = binanceCoinFuturesTradeInfoService.list(
+                Wrappers.lambdaQuery(BinanceCoinFuturesTradeInfo.class)
+                        .select(BinanceCoinFuturesTradeInfo::getOrderId)
+        ).stream().map(BinanceCoinFuturesTradeInfo::getOrderId).collect(Collectors.toSet());
+        Date now = new Date();
+        BinanceAccountInfo accountInfo = binanceAccountInfoService.getAccountByIdCardName("耿辉");
+        BinanceAccountContextHolder.runWith(accountInfo, () -> {
+            BinanceEnum.SYMBOL symbol = BinanceEnum.SYMBOL.BTCUSD_PERP;
+            Date startTime = DateUtil.parse("2025-09-01", DatePattern.NORM_DATE_PATTERN);
+            while (true) {
+                if (startTime.getTime() > now.getTime()) {
+                    break;
+                }
+                Date endTime = DateUtil.offsetDay(startTime, 7);
+                if (endTime.getTime() > now.getTime()) {
+                    endTime = now;
+                }
+                List<BinanceCoinFuturesTradeInfo> tradeInfos = binanceCoinFuturesUtil.userTrades(symbol, startTime.getTime(), endTime.getTime());
+                tradeInfos.removeIf(v -> orderIdSet.contains(v.getOrderId()));
+                if (!tradeInfos.isEmpty()) {
+                    tradeInfos.forEach(v -> v.setUid(accountInfo.getUid()));
+                    binanceCoinFuturesTradeInfoService.saveBatch(tradeInfos);
+                    System.err.println(tradeInfos);
+                }
+                startTime = endTime;
+                try {
+                    TimeUnit.SECONDS.sleep(1);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+        });
 
     }
 
