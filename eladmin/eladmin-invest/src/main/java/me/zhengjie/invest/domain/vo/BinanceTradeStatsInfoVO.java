@@ -43,11 +43,11 @@ public class BinanceTradeStatsInfoVO implements Serializable {
     //收益率
     private BigDecimal roi;
     //剩余未平仓总金额
-    private BigDecimal totalWaitSellAmount;
+    private BigDecimal posAmount;
     //剩余未平仓总数量
-    private BigDecimal totalWaitSellQty;
+    private BigDecimal posQty;
     //剩余未平仓均价
-    private BigDecimal totalWaitAvgSellPrice;
+    private BigDecimal posAvgPrice;
     //手续费
     private BigDecimal fee = BigDecimal.ZERO;
     // 持仓盈利

@@ -16,16 +16,13 @@
 package me.zhengjie.invest.service.impl;
 
 import cn.hutool.core.util.NumberUtil;
-import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
-import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
-import me.zhengjie.invest.domain.BinanceTradeInfoExt;
 import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
 import me.zhengjie.invest.domain.vo.BinanceSpotHedgedTradeStatsInfoVO;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
@@ -218,15 +215,15 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
         // 剩余未平仓总金额
         BigDecimal totalWaitSellAmount = openList.stream().map(b -> b.getQty().multiply(b.getPrice())).reduce(BigDecimal.ZERO, BigDecimal::add);
-        statsInfoVO.setTotalWaitSellAmount(totalWaitSellAmount);
+        statsInfoVO.setPosAmount(totalWaitSellAmount);
         // 剩余未平仓总数量
         BigDecimal totalWaitSellQty = openList.stream()
                 .map(BinanceTradeInfo::getQty)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        statsInfoVO.setTotalWaitSellQty(totalWaitSellQty);
+        statsInfoVO.setPosQty(totalWaitSellQty);
         // 剩余未平仓均价
         BigDecimal totalWaitAvgSellPrice = totalWaitSellAmount.divide(totalWaitSellQty, 8, RoundingMode.HALF_UP);
-        statsInfoVO.setTotalWaitAvgSellPrice(totalWaitAvgSellPrice);
+        statsInfoVO.setPosAvgPrice(totalWaitAvgSellPrice);
 
         // 剩余待平仓交易
         openList.sort(Comparator.comparing(BinanceTradeInfo::getPrice).reversed());
@@ -289,11 +286,11 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         List<BinanceTradeInfo> hedgedTradeInfo = this.queryAll(criteria);
         if (CollectionUtils.isNotEmpty(hedgedTradeInfo)) {
             // 锁仓总额
-            statsInfo.setHedgedAmount(hedgedTradeInfo.stream().map(BinanceTradeInfo::getHedgedAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
+            statsInfo.setPosAmount(hedgedTradeInfo.stream().map(BinanceTradeInfo::getHedgedAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
             // 锁仓数量
-            statsInfo.setHedgedQty(hedgedTradeInfo.stream().map(BinanceTradeInfo::getHedgedQty).reduce(BigDecimal.ZERO, BigDecimal::add));
+            statsInfo.setPosQty(hedgedTradeInfo.stream().map(BinanceTradeInfo::getHedgedQty).reduce(BigDecimal.ZERO, BigDecimal::add));
             // 锁仓均价
-            statsInfo.setHedgedAvgPrice(NumberUtil.div(statsInfo.getHedgedAmount(), statsInfo.getHedgedQty()));
+            statsInfo.setPosAvgPrice(NumberUtil.div(statsInfo.getPosAmount(), statsInfo.getPosQty()));
         }
 
         return statsInfo;

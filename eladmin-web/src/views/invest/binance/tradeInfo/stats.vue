@@ -83,6 +83,7 @@
       <div>
         <el-descriptions
           v-for="description in statsDescriptions"
+          v-show="description.data.posQty && description.data.posQty !== 0"
           :key="description.title"
           :title="description.title"
           :column="3"
@@ -197,9 +198,9 @@ export default {
             { label: '盈亏', key: 'pnl' },
             { label: '手续费', key: 'fee' },
             { label: '净盈亏', key: 'netPnl', showType: 'diff', diffKey: 'lastNetPnl' },
-            { label: '持仓均价', key: 'totalWaitAvgSellPrice' },
-            { label: '持仓数量', key: 'totalWaitSellQty' },
-            { label: '持仓总额', key: 'totalWaitSellAmount' },
+            { label: '持仓均价', key: 'posAvgPrice' },
+            { label: '持仓数量', key: 'posQty' },
+            { label: '持仓总额', key: 'posAmount' },
             { label: '持仓盈利', key: 'holdingProfit' },
             { label: '持仓亏损', key: 'holdingLoss' },
             { label: '持仓盈亏', key: 'holdingProfitLoss' },
@@ -248,9 +249,9 @@ export default {
           title: '对冲统计',
           data: (this.statsInfo && this.statsInfo.spotHedgedTradeStatsInfo) || {},
           descriptionsItems: [
-            { label: '锁仓均价', key: 'hedgedAvgPrice' },
-            { label: '锁仓数量', key: 'hedgedQty' },
-            { label: '锁仓总额', key: 'hedgedAmount' }
+            { label: '锁仓均价', key: 'posAvgPrice' },
+            { label: '锁仓数量', key: 'posQty' },
+            { label: '锁仓总额', key: 'posAmount' }
           ]
         }
       ]

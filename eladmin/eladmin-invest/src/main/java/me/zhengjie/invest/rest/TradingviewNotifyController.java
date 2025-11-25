@@ -1,7 +1,6 @@
 package me.zhengjie.invest.rest;
 
 
-import com.alibaba.fastjson.JSONObject;
 import io.swagger.annotations.Api;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,7 +8,6 @@ import me.zhengjie.annotation.AnonymousAccess;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
-import me.zhengjie.invest.domain.BinanceTradeInfoExt;
 import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
@@ -107,7 +105,7 @@ public class TradingviewNotifyController {
                             criteria.setTradePairingLogic("FIFO");
                             BinanceTradeStatsInfoVO stats = binanceTradeInfoService.stats(criteria);
                             // 当前开仓价格大于剩余未平仓均价 并且 当前未平仓价格已经大于1000u，不调用接口进行操作
-                            if (apiDto.getPrice().compareTo(stats.getTotalWaitAvgSellPrice()) > 0 && stats.getTotalWaitSellAmount().compareTo(new BigDecimal("1000")) > 0) {
+                            if (apiDto.getPrice().compareTo(stats.getPosAvgPrice()) > 0 && stats.getPosAmount().compareTo(new BigDecimal("1000")) > 0) {
                                 dingdingUtil.sendMsg("剩余未平仓已大于1000u");
                                 return;
                             }
