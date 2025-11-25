@@ -37,6 +37,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
@@ -51,10 +52,14 @@ import java.util.List;
 @RequestMapping("/api/binanceTradeInfo")
 public class BinanceTradeInfoController {
 
-    private final BinanceTradeInfoService binanceTradeInfoService;
-    private final BinanceFuturesTradeInfoService binanceFuturesTradeInfoService;
-    private final BinanceCoinFuturesTradeInfoService binanceCoinFuturesTradeInfoService;
-    private final BinanceTradeInfoExtService binanceTradeInfoExtService;
+    @Resource
+    private BinanceTradeInfoService binanceTradeInfoService;
+    @Resource
+    private BinanceFuturesTradeInfoService binanceFuturesTradeInfoService;
+    @Resource
+    private BinanceCoinFuturesTradeInfoService binanceCoinFuturesTradeInfoService;
+    @Resource
+    private BinanceTradeInfoExtService binanceTradeInfoExtService;
 
     @Log("导出数据")
     @ApiOperation("导出数据")
@@ -111,10 +116,13 @@ public class BinanceTradeInfoController {
         );
         // U本位合约统计
         BinanceFuturesTradeStatsInfoVO binanceFuturesTradeStatsInfoVO = binanceFuturesTradeInfoService.syncFuturesHedge();
+        // 币本位合约统计
+        BinanceFuturesTradeStatsInfoVO coinFuturesStats = binanceCoinFuturesTradeInfoService.stats();
         // 现货仓位分布
         BinanceTradeStatsInfoVO stats = binanceTradeInfoService.stats(criteria);
 
         stats.setFuturesTradeStatsInfo(binanceFuturesTradeStatsInfoVO);
+        stats.setCoinFuturesTradeStatsInfo(coinFuturesStats);
         stats.setSpotHedgedTradeStatsInfo(binanceTradeInfoService.hedgedStats());
 
         return new ResponseEntity<>(stats,HttpStatus.OK);

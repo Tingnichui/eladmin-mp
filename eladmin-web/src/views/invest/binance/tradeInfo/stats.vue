@@ -209,8 +209,26 @@ export default {
           ]
         },
         {
-          title: '合约统计',
+          title: 'U本位-合约统计',
           data: (this.statsInfo && this.statsInfo.futuresTradeStatsInfo) || {},
+          descriptionsItems: [
+            { label: '持仓均价', key: 'posAvgPrice' },
+            { label: '持仓数量', key: 'posQty' },
+            { label: '持仓金额', key: 'posAmount' },
+            { label: '盈亏', key: 'pnl' },
+            { label: '手续费', key: 'fee' },
+            { label: '净盈亏', key: 'netPnl' },
+            { label: '', key: '' },
+            { label: '', key: '' },
+            { label: '对冲止损', key: 'stopLossAmount' },
+            { label: '', key: '' },
+            { label: '', key: '' },
+            { label: '持仓订单', key: 'openTradeList', type: 'length', showType: 'link' }
+          ]
+        },
+        {
+          title: '币本位-合约统计',
+          data: (this.statsInfo && this.statsInfo.coinFuturesTradeStatsInfo) || {},
           descriptionsItems: [
             { label: '持仓均价', key: 'posAvgPrice' },
             { label: '持仓数量', key: 'posQty' },

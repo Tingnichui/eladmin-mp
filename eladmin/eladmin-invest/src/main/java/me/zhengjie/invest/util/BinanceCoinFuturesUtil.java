@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.nio.charset.StandardCharsets;
@@ -130,6 +131,12 @@ public class BinanceCoinFuturesUtil {
         }
 
         return body;
+    }
+
+    public BigDecimal price(BinanceEnum.SYMBOL symbol) {
+        Map<String, Object> parmasMap = new HashMap<>();
+        parmasMap.put("symbol", symbol);
+        return JSON.parseArray(this.doRequest("/dapi/v1/ticker/price", parmasMap, false, true)).getJSONObject(0).getBigDecimal("price");
     }
 
 }

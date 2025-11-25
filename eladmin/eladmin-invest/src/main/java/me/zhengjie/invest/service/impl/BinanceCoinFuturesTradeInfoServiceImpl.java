@@ -16,33 +16,39 @@
 package me.zhengjie.invest.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.RequiredArgsConstructor;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
-import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
+import me.zhengjie.invest.domain.BinanceTradeInfo;
+import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
+import me.zhengjie.invest.domain.vo.BinanceCoinFuturesTradeInfoQueryCriteria;
+import me.zhengjie.invest.domain.vo.BinanceFuturesTradeStatsInfoVO;
+import me.zhengjie.invest.mapper.BinanceCoinFuturesTradeInfoMapper;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
+import me.zhengjie.invest.service.BinanceCoinFuturesTradeInfoService;
+import me.zhengjie.invest.service.BinanceTradeInfoExtService;
+import me.zhengjie.invest.service.BinanceTradeInfoService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceCoinFuturesUtil;
+import me.zhengjie.invest.util.TradeMatcherUtil;
 import me.zhengjie.utils.FileUtil;
-import lombok.RequiredArgsConstructor;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import me.zhengjie.invest.service.BinanceCoinFuturesTradeInfoService;
-import me.zhengjie.invest.domain.vo.BinanceCoinFuturesTradeInfoQueryCriteria;
-import me.zhengjie.invest.mapper.BinanceCoinFuturesTradeInfoMapper;
+import me.zhengjie.utils.PageResult;
+import me.zhengjie.utils.PageUtil;
 import me.zhengjie.utils.RedisUtils;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import me.zhengjie.utils.PageUtil;
 
-import java.math.BigDecimal;
-import java.util.*;
-import java.io.IOException;
-import java.util.stream.Collectors;
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
-
-import me.zhengjie.utils.PageResult;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author genghui
@@ -53,10 +59,18 @@ import me.zhengjie.utils.PageResult;
 @RequiredArgsConstructor
 public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceCoinFuturesTradeInfoMapper, BinanceCoinFuturesTradeInfo> implements BinanceCoinFuturesTradeInfoService {
 
-    private final BinanceCoinFuturesTradeInfoMapper binanceCoinFuturesTradeInfoMapper;
-    private final BinanceAccountInfoService binanceAccountInfoService;
-    private final BinanceCoinFuturesUtil binanceCoinFuturesUtil;
-    private final RedisUtils redisUtils;
+    @Resource
+    private BinanceCoinFuturesTradeInfoMapper binanceCoinFuturesTradeInfoMapper;
+    @Resource
+    private BinanceAccountInfoService binanceAccountInfoService;
+    @Resource
+    private BinanceCoinFuturesUtil binanceCoinFuturesUtil;
+    @Resource
+    private RedisUtils redisUtils;
+    @Resource
+    private BinanceTradeInfoService binanceTradeInfoService;
+    @Resource
+    private BinanceTradeInfoExtService binanceTradeInfoExtService;
 
     @Override
     public PageResult<BinanceCoinFuturesTradeInfo> queryAll(BinanceCoinFuturesTradeInfoQueryCriteria criteria, Page<Object> page) {
@@ -169,6 +183,120 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
         }
 
         return (Date) redisUtils.get(key);
+    }
+
+    @Override
+    public BinanceFuturesTradeStatsInfoVO stats() {
+        BinanceFuturesTradeStatsInfoVO statsInfoVO = new BinanceFuturesTradeStatsInfoVO();
+
+        // 当前仓位
+        Date lastPosCloseTime = this.getLastPosCloseTime();
+        final boolean side = false;
+
+
+        // 开仓 做空空单
+        List<BinanceCoinFuturesTradeInfo> openList = this.list(
+                Wrappers.lambdaQuery(BinanceCoinFuturesTradeInfo.class)
+                        .gt(BinanceCoinFuturesTradeInfo::getTime, lastPosCloseTime)
+                        .eq(BinanceCoinFuturesTradeInfo::getSide, "SELL")
+                        .eq(BinanceCoinFuturesTradeInfo::getPositionSide, "SHORT")
+                        .orderByAsc(BinanceCoinFuturesTradeInfo::getTime)
+        );
+
+        // 平仓 做空多单
+        List<BinanceCoinFuturesTradeInfo> closeList = this.list(
+                Wrappers.lambdaQuery(BinanceCoinFuturesTradeInfo.class)
+                        .gt(BinanceCoinFuturesTradeInfo::getTime, lastPosCloseTime)
+                        .eq(BinanceCoinFuturesTradeInfo::getSide, "BUY")
+                        .eq(BinanceCoinFuturesTradeInfo::getPositionSide, "SHORT")
+                        .orderByAsc(BinanceCoinFuturesTradeInfo::getTime)
+        );
+
+        // 盈利交易匹配
+        {
+
+            List<MatchedTradeInfo> matchedList = TradeMatcherUtil.matchTrades(
+                    side,
+                    "0.0005",
+                    openList,
+                    closeList,
+                    BinanceCoinFuturesTradeInfo::getBaseQty,
+                    BinanceCoinFuturesTradeInfo::setBaseQty,
+                    BinanceCoinFuturesTradeInfo::getPrice,
+                    BinanceCoinFuturesTradeInfo::getTime,
+                    match -> {
+                        return match.getNetPnl().compareTo(BigDecimal.ZERO) >= 0;
+                    }
+            );
+
+            // 盈亏
+            statsInfoVO.setPnl(matchedList.stream().map(MatchedTradeInfo::getPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
+            // 手续费
+            statsInfoVO.setFee(matchedList.stream().map(MatchedTradeInfo::getFee).reduce(BigDecimal.ZERO, BigDecimal::add));
+            // 净盈亏
+            statsInfoVO.setNetPnl(matchedList.stream().map(MatchedTradeInfo::getNetPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
+
+            if (CollectionUtils.isNotEmpty(openList)) {
+                // 持仓金额
+                statsInfoVO.setPosAmount(openList.stream().map(v -> v.getBaseQty().multiply(v.getPrice())).reduce(BigDecimal.ZERO, BigDecimal::add));
+                // 持仓数量
+                statsInfoVO.setPosQty(openList.stream().map(BinanceCoinFuturesTradeInfo::getBaseQty).reduce(BigDecimal.ZERO, BigDecimal::add));
+                // 持仓均价
+                statsInfoVO.setPosAvgPrice(statsInfoVO.getPosAmount().divide(statsInfoVO.getPosQty(), 8, RoundingMode.HALF_UP));
+            }
+
+        }
+
+
+        // 现货止损交易匹配
+        {
+            // 获取当前合约价格
+            BigDecimal currentPrice = binanceCoinFuturesUtil.price(BinanceEnum.SYMBOL.BTCUSD_PERP);
+            List<MatchedTradeInfo> matchedList = TradeMatcherUtil.matchTrades(side, "0.001", openList, BinanceCoinFuturesTradeInfo::getBaseQty, BinanceCoinFuturesTradeInfo::getPrice, currentPrice,
+                    matched -> {
+                        // 亏损单找现货做对冲止损
+                        if (matched.getNetPnl().compareTo(BigDecimal.ZERO) <= 0) {
+                            BigDecimal totalHedgedAmount = BigDecimal.ZERO;
+
+                            BigDecimal qty = matched.getQty();
+                            // 查询现货止损单
+                            List<BinanceTradeInfo> spotInfos = binanceTradeInfoService.list4hedge(matched.getOpenPrice(), matched.getOpenPrice().add(new BigDecimal("1000")), qty);
+                            for (BinanceTradeInfo spot : spotInfos) {
+                                // 对冲数量
+                                BigDecimal matchQty = spot.getNetQty().min(qty);
+                                if (matchQty.compareTo(BigDecimal.ZERO) <= 0) {
+                                    continue;
+                                }
+
+                                // 记录对冲价格 和 对冲数量
+                                totalHedgedAmount = totalHedgedAmount.add(spot.getPrice().multiply(matchQty));
+                                // 标记对冲
+                                binanceTradeInfoExtService.changeHedgedFlag(spot.getId(), matchQty);
+                                // 扣减数量
+                                qty = qty.subtract(matchQty);
+                                if (qty.compareTo(BigDecimal.ZERO) <= 0) {
+                                    break;
+                                }
+                            }
+
+                            BigDecimal hedgedQty = matched.getQty().subtract(qty);
+                            if (hedgedQty.compareTo(BigDecimal.ZERO) > 0) {
+                                matched.setClosePrice(totalHedgedAmount.divide(hedgedQty, 8, RoundingMode.HALF_UP));
+                            } else {
+                                matched.setClosePrice(BigDecimal.ZERO);
+                            }
+
+                        }
+                    });
+
+            // 计算止损金额
+            statsInfoVO.setStopLossAmount(matchedList.stream().map(MatchedTradeInfo::getPnl).filter(v -> v.compareTo(BigDecimal.ZERO) <= 0).reduce(BigDecimal.ZERO, BigDecimal::add));
+            // 未平仓的交易
+            statsInfoVO.setOpenTradeList(matchedList.stream().sorted(Comparator.comparing(MatchedTradeInfo::getOpenPrice).reversed()).collect(Collectors.toList()));
+
+        }
+
+        return statsInfoVO;
     }
 
 }
