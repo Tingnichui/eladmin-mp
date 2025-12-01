@@ -135,7 +135,26 @@
       :visible.sync="showOpenTrades"
       width="80%"
     >
-      <el-table :data="openTradeList" border stripe>
+      <el-form inline :model="filterForm" class="mb-2">
+        <el-form-item label="方向">
+          <el-select v-model="filterForm.side">
+            <el-option label="全部" :value="null" />
+            <el-option label="做多" :value="true" />
+            <el-option label="做空" :value="false" />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="开仓价格">
+          <el-input v-model="filterForm.openPrice" clearable />
+        </el-form-item>
+
+        <el-form-item label="价格范围">
+          <el-input-number v-model="filterForm.priceRange" step="100" />
+        </el-form-item>
+
+      </el-form>
+
+      <el-table :data="filteredTrades" border stripe>
         <el-table-column
           v-for="(col, index) in tableColumns"
           :key="index"
@@ -182,7 +201,12 @@ export default {
         { prop: 'fee', label: '手续费' },
         { prop: 'netPnl', label: '净盈亏' },
         { prop: 'roi', label: '回报率', formatter: (row) => (numberUtil.formatByType(row.roi, 'percent')) }
-      ]
+      ],
+      filterForm: {
+        side: null,
+        minPrice: null,
+        priceRange: 500
+      }
     }
   },
   computed: {
@@ -255,6 +279,38 @@ export default {
           ]
         }
       ]
+    },
+    filteredTrades() {
+      return this.openTradeList.filter(item => {
+        // 按方向筛选
+        if (this.filterForm.side != null && item.side !== this.filterForm.side) {
+          return false
+        }
+
+        const base = Number(this.filterForm.openPrice)
+        const range = Number(this.filterForm.priceRange) || 500 // 默认 500
+
+        // 只有输入了 openPrice 时才筛选
+        if (!isNaN(base) && this.filterForm.openPrice) {
+          let min, max
+
+          if (item.side === true) {
+            // 做多 → openPrice + range
+            min = base
+            max = base + range
+          } else {
+            // 做空 → openPrice - range
+            min = base - range
+            max = base
+          }
+
+          if (!(item.openPrice >= min && item.openPrice <= max)) {
+            return false
+          }
+        }
+
+        return true
+      })
     }
   },
   mounted() {
