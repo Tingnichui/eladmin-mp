@@ -40,7 +40,9 @@ import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
 * @author genghui
@@ -108,24 +110,21 @@ public class BinanceTradeInfoController {
     @Log("查询交易汇总")
     @ApiOperation("查询交易汇总")
     @PreAuthorize("@el.check('binanceTradeInfo:list')")
-    public ResponseEntity<BinanceTradeStatsInfoVO> queryBinanceTradeInfo(BinanceTradeInfoQueryCriteria criteria){
+    public ResponseEntity<Object> queryBinanceTradeInfo(BinanceTradeInfoQueryCriteria criteria){
+
         // 移除所有锁仓
         binanceTradeInfoExtService.getBaseMapper().update(null,
                 Wrappers.lambdaUpdate(BinanceTradeInfoExt.class)
                         .set(BinanceTradeInfoExt::getHedgedQty, 0)
         );
-        // U本位合约统计
-        BinanceFuturesTradeStatsInfoVO binanceFuturesTradeStatsInfoVO = binanceFuturesTradeInfoService.syncFuturesHedge();
-        // 币本位合约统计
-        BinanceFuturesTradeStatsInfoVO coinFuturesStats = binanceCoinFuturesTradeInfoService.stats();
-        // 现货仓位分布
-        BinanceTradeStatsInfoVO stats = binanceTradeInfoService.stats(criteria);
 
-        stats.setFuturesTradeStatsInfo(binanceFuturesTradeStatsInfoVO);
-        stats.setCoinFuturesTradeStatsInfo(coinFuturesStats);
-        stats.setSpotHedgedTradeStatsInfo(binanceTradeInfoService.hedgedStats());
+        Map<String, Object> resMap = new HashMap<>();
+        resMap.put("usdFuturesStatsInfo", binanceFuturesTradeInfoService.stats());
+        resMap.put("coinFuturesStatsInfo", binanceCoinFuturesTradeInfoService.stats());
+        resMap.put("spotFuturesStatsInfo", binanceTradeInfoService.stats(criteria));
+        resMap.put("spotHedgedFuturesStatsInfo", binanceTradeInfoService.hedgedStats());
 
-        return new ResponseEntity<>(stats,HttpStatus.OK);
+        return new ResponseEntity<>(resMap,HttpStatus.OK);
     }
 
     @PutMapping("/syncSpotTradeInfo")

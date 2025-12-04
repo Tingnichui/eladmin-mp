@@ -22,5 +22,7 @@ public class BinanceBaseStatsVO implements Serializable {
     private BigDecimal fee = BigDecimal.ZERO;
     // 净盈亏
     private BigDecimal netPnl = BigDecimal.ZERO;
+    // 交易
+    private List<MatchedTradeInfo> tradeList;
 
 }

@@ -96,7 +96,7 @@
             :label="item.label"
           >
             <div v-if="item.showType === 'link'">
-              <el-link type="primary" @click="showOpenTrades = true;openTradeList = description.data.openTradeList">
+              <el-link type="primary" @click="showOpenTrades = true;tradeList = description.data.tradeList">
                 {{ formatValue(description.data, item.key, item.type) }}
               </el-link>
             </div>
@@ -123,7 +123,7 @@
           </el-descriptions-item>
         </el-descriptions>
         <div>
-          <trade-position-distribution-bar :row-data="statsInfo.waitSellTradeInfoList" :symbol="query.symbol" height="400px" style="margin-top: 20px" />
+          <trade-position-distribution-bar :row-data="statsInfo.spotFuturesStatsInfo.tradeList" :symbol="query.symbol" height="400px" style="margin-top: 20px" />
           <!--          <trade-profit-rate-scatter :row-data="statsInfo.matchedTradeInfoList" height="400px" style="margin-top: 20px" />-->
         </div>
       </div>
@@ -149,7 +149,7 @@
         </el-form-item>
 
         <el-form-item label="价格范围">
-          <el-input-number v-model="filterForm.priceRange" step="100" />
+          <el-input-number v-model="filterForm.priceRange" :step="100" />
         </el-form-item>
 
       </el-form>
@@ -187,7 +187,7 @@ export default {
       accountList: [],
       syncLoading: false,
       showOpenTrades: false,
-      openTradeList: [],
+      tradeList: [],
       query: {
         symbol: 'BTCUSDT'
       },
@@ -214,7 +214,7 @@ export default {
       return [
         {
           title: '现货统计',
-          data: this.statsInfo || {},
+          data: (this.statsInfo && this.statsInfo.spotFuturesStatsInfo) || {},
           descriptionsItems: [
             { label: '买入总额', key: 'totalBuyAmount' },
             { label: '卖出总额', key: 'totalSellAmount' },
@@ -230,12 +230,12 @@ export default {
             { label: '持仓盈亏', key: 'holdingProfitLoss' },
             { label: '', key: '' },
             { label: '', key: '' },
-            { label: '持仓订单', key: 'openTradeList', type: 'length', showType: 'link' }
+            { label: '持仓订单', key: 'tradeList', type: 'length', showType: 'link' }
           ]
         },
         {
           title: 'U本位-合约统计',
-          data: (this.statsInfo && this.statsInfo.futuresTradeStatsInfo) || {},
+          data: (this.statsInfo && this.statsInfo.usdFuturesStatsInfo) || {},
           descriptionsItems: [
             { label: '持仓均价', key: 'posAvgPrice' },
             { label: '持仓数量', key: 'posQty' },
@@ -248,12 +248,12 @@ export default {
             { label: '对冲止损', key: 'stopLossAmount' },
             { label: '', key: '' },
             { label: '', key: '' },
-            { label: '持仓订单', key: 'openTradeList', type: 'length', showType: 'link' }
+            { label: '持仓订单', key: 'tradeList', type: 'length', showType: 'link' }
           ]
         },
         {
           title: '币本位-合约统计',
-          data: (this.statsInfo && this.statsInfo.coinFuturesTradeStatsInfo) || {},
+          data: (this.statsInfo && this.statsInfo.coinFuturesStatsInfo) || {},
           descriptionsItems: [
             { label: '持仓均价', key: 'posAvgPrice' },
             { label: '持仓数量', key: 'posQty' },
@@ -266,12 +266,12 @@ export default {
             { label: '对冲止损', key: 'stopLossAmount' },
             { label: '', key: '' },
             { label: '', key: '' },
-            { label: '持仓订单', key: 'openTradeList', type: 'length', showType: 'link' }
+            { label: '持仓订单', key: 'tradeList', type: 'length', showType: 'link' }
           ]
         },
         {
           title: '对冲统计',
-          data: (this.statsInfo && this.statsInfo.spotHedgedTradeStatsInfo) || {},
+          data: (this.statsInfo && this.statsInfo.spotHedgedFuturesStatsInfo) || {},
           descriptionsItems: [
             { label: '锁仓均价', key: 'posAvgPrice' },
             { label: '锁仓数量', key: 'posQty' },
@@ -281,7 +281,7 @@ export default {
       ]
     },
     filteredTrades() {
-      return this.openTradeList.filter(item => {
+      return this.tradeList.filter(item => {
         // 按方向筛选
         if (this.filterForm.side != null && item.side !== this.filterForm.side) {
           return false

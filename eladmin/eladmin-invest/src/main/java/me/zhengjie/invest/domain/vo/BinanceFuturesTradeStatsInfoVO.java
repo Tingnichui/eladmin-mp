@@ -19,7 +19,5 @@ public class BinanceFuturesTradeStatsInfoVO extends BinanceBaseStatsVO implement
     private BigDecimal hedgedAvgPrice = BigDecimal.ZERO;
     // 止损金额
     private BigDecimal stopLossAmount = BigDecimal.ZERO;
-    // 开仓交易
-    private List<MatchedTradeInfo> openTradeList;
 
 }

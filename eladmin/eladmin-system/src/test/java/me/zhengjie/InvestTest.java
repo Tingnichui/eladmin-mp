@@ -22,6 +22,6 @@ public class InvestTest {
 
     @Test
     void stats() {
-        binanceFuturesTradeInfoService.syncFuturesHedge();
+        binanceFuturesTradeInfoService.stats();
     }
 }

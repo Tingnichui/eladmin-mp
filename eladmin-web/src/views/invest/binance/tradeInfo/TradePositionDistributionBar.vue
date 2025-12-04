@@ -5,9 +5,9 @@
       <input
         v-model.number="priceInterval"
         type="range"
-        min="100"
-        max="2000"
-        step="100"
+        :min="100"
+        :max="2000"
+        :step="100"
         style="width: 300px;"
         @input="updateChart"
       >
@@ -95,15 +95,15 @@ export default {
 
       this.totalWaitSellQty = trades.reduce((sum, t) => addAmount(sum, t.qty), 0)
 
-      this.totalWaitAvgSellPrice = trades.reduce((sum, t) => addAmount(sum, mulAmount(t.price, t.qty)), 0)
+      this.totalWaitAvgSellPrice = trades.reduce((sum, t) => addAmount(sum, t.openAmount), 0)
 
       this.totalWaitAvgSellPrice = divAmount(this.totalWaitAvgSellPrice, this.totalWaitSellQty, 2)
 
-      const maxPrice = Math.ceil(Math.max(...trades.map(t => t.price)) / 1000) * 1000
+      const maxPrice = Math.ceil(Math.max(...trades.map(t => t.openPrice)) / 1000) * 1000
       const bucketsMap = {}
 
       trades.forEach(trade => {
-        const diff = Math.floor((maxPrice - trade.price) / this.priceInterval)
+        const diff = Math.floor((maxPrice - trade.openPrice) / this.priceInterval)
         const lower = maxPrice - (diff + 1) * this.priceInterval
         const upper = maxPrice - diff * this.priceInterval
         const key = `${lower}-${upper}`
@@ -112,7 +112,7 @@ export default {
           bucketsMap[key] = { range: key, totalQty: 0, totalAmount: 0 }
         }
         bucketsMap[key].totalQty = addAmount(bucketsMap[key].totalQty, trade.qty)
-        bucketsMap[key].totalAmount = addAmount(bucketsMap[key].totalAmount, mulAmount(trade.price, trade.qty))
+        bucketsMap[key].totalAmount = addAmount(bucketsMap[key].totalAmount, trade.openAmount)
       })
 
       return Object.values(bucketsMap).map(bucket => {

@@ -47,16 +47,4 @@ public class BinanceTradeStatsInfoVO extends BinanceBaseStatsVO implements Seria
     // 当前现货价格
     private BigDecimal currentSpotPrice = BigDecimal.ZERO;
 
-    // 剩余未平仓交易
-    private List<BinanceTradeInfo> waitSellTradeInfoList;
-
-    private List<MatchedTradeInfo> openTradeList;
-
-    private BinanceFuturesTradeStatsInfoVO futuresTradeStatsInfo;
-
-    private BinanceFuturesTradeStatsInfoVO coinFuturesTradeStatsInfo;
-
-    private BinanceSpotHedgedTradeStatsInfoVO spotHedgedTradeStatsInfo;
-
-
 }

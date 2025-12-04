@@ -227,7 +227,6 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
         // 剩余待平仓交易
         openList.sort(Comparator.comparing(BinanceTradeInfo::getPrice).reversed());
-        statsInfoVO.setWaitSellTradeInfoList(openList);
 
         try {
             BigDecimal currentPrice = binanceSpotUtil.getPrice(BinanceEnum.SYMBOL.valueOf(criteria.getSymbol()));
@@ -242,7 +241,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             // 持仓盈亏
             statsInfoVO.setHoldingProfitLoss(matchedTradeInfos.stream().map(MatchedTradeInfo::getNetPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
             // 持仓订单
-            statsInfoVO.setOpenTradeList(
+            statsInfoVO.setTradeList(
                     matchedTradeInfos.stream().collect(Collectors.groupingBy(MatchedTradeInfo::getOpenPrice))
                             .entrySet()
                             .stream().map(v -> {
