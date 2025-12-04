@@ -160,7 +160,7 @@ other:
     url: ENC(5Spo+mBS6zUIOX2iOBaVxGPt7//XolJp1l9RNmf6oXd/gYyI05Bxi3qZf/HzTTxvtsv3B/I0AKHEYVLTp2pfcg/Swbzkax9BjHAYG8Ey7mdGXma4Pm0l/mfB21l8l+aF)
 proxy:
   host: 127.0.0.1
-  port: 7890
+  port: 25203
 
 # 爬虫服务器配置
 media:
