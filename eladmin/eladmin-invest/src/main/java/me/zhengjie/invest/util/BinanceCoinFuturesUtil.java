@@ -7,6 +7,7 @@ import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
@@ -138,5 +139,17 @@ public class BinanceCoinFuturesUtil {
         parmasMap.put("symbol", symbol);
         return JSON.parseArray(this.doRequest("/dapi/v1/ticker/price", parmasMap, false, true)).getJSONObject(0).getBigDecimal("price");
     }
+
+    public List<JSONObject> listIncome(BinanceEnum.SYMBOL symbol, Long startTime, String incomeType) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("symbol", symbol);
+        params.put("incomeType", incomeType);
+        if (null != startTime) {
+            params.put("startTime", startTime);
+        }
+        params.put("limit", 1000);
+        return JSON.parseArray(this.doRequest("/dapi/v1/income", params, true, true), JSONObject.class);
+    }
+
 
 }

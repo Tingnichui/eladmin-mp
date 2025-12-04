@@ -15,6 +15,8 @@
  */
 package me.zhengjie.invest.service.impl;
 
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -297,6 +299,14 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
         }
 
         return statsInfoVO;
+    }
+
+    @Override
+    public BigDecimal calculatePositionFundingFee(BinanceEnum.SYMBOL symbol) {
+        Date startTime = getLastPosCloseTime();
+        String incomeType = "FUNDING_FEE";
+        List<JSONObject> list = binanceCoinFuturesUtil.listIncome(symbol, startTime.getTime(), incomeType);
+        return list.stream().map(v -> v.getBigDecimal("income")).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
 }

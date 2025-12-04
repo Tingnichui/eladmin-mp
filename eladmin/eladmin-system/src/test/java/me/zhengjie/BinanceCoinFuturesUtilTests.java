@@ -2,6 +2,7 @@ package me.zhengjie;
 
 import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateUtil;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import me.zhengjie.invest.constants.BinanceEnum;
@@ -71,6 +72,29 @@ public class BinanceCoinFuturesUtilTests {
                 System.err.println(year + " 年总资金费率：" + total)
         );
 
+    }
+
+    @Test
+    void listIncome() {
+        BinanceEnum.SYMBOL symbol = BinanceEnum.SYMBOL.BTCUSD_PERP;
+        long startTime = DateUtil.parse("2025-12-01 00:00:00", DatePattern.NORM_DATETIME_PATTERN).getTime();
+        String incomeType = "FUNDING_FEE";
+
+        BinanceAccountInfo accountInfo = binanceAccountInfoService.getAccountByIdCardName("耿辉");
+        BinanceAccountContextHolder.runWith(accountInfo, () -> {
+            List<JSONObject> jsonObjects = binanceCoinFuturesUtil.listIncome(symbol, startTime, incomeType);
+            System.err.println(jsonObjects);
+        });
+    }
+
+    @Test
+    void calculatePositionFundingFee() {
+        BinanceAccountInfo accountInfo = binanceAccountInfoService.getAccountByIdCardName("耿辉");
+        BinanceAccountContextHolder.runWith(accountInfo, () -> {
+            BinanceEnum.SYMBOL symbol = BinanceEnum.SYMBOL.BTCUSD_PERP;
+            BigDecimal income = binanceCoinFuturesTradeInfoService.calculatePositionFundingFee(symbol);
+            System.err.println(income);
+        });
     }
 
     @Test

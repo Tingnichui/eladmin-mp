@@ -15,9 +15,11 @@
 */
 package me.zhengjie.invest.service;
 
+import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
 import me.zhengjie.invest.domain.vo.BinanceCoinFuturesTradeInfoQueryCriteria;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Map;
 import java.util.List;
@@ -81,5 +83,7 @@ public interface BinanceCoinFuturesTradeInfoService extends IService<BinanceCoin
     Date getLastPosCloseTime();
 
     BinanceFuturesTradeStatsInfoVO stats();
+
+    BigDecimal calculatePositionFundingFee(BinanceEnum.SYMBOL symbol);
 
 }
