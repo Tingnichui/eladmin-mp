@@ -8,19 +8,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @Data
-public class BinanceFuturesTradeStatsInfoVO implements Serializable {
-    // 持仓数量
-    private BigDecimal posQty;
-    // 持仓均价
-    private BigDecimal posAvgPrice;
-    // 持仓金额
-    private BigDecimal posAmount;
-    // 盈亏
-    private BigDecimal pnl = BigDecimal.ZERO;
-    // 手续费
-    private BigDecimal fee = BigDecimal.ZERO;
-    // 净盈亏
-    private BigDecimal netPnl = BigDecimal.ZERO;
+public class BinanceFuturesTradeStatsInfoVO extends BinanceBaseStatsVO implements Serializable {
     //上一次净盈亏
     private BigDecimal lastNetPnl;
     //锁仓总金额

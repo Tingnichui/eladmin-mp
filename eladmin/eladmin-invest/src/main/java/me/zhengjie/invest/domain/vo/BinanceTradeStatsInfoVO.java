@@ -29,27 +29,15 @@ import java.util.List;
  * @date 2025-07-05
  **/
 @Data
-public class BinanceTradeStatsInfoVO implements Serializable {
+public class BinanceTradeStatsInfoVO extends BinanceBaseStatsVO implements Serializable {
     //买入总金额
     private BigDecimal totalBuyAmount;
     //卖出总金额
     private BigDecimal totalSellAmount;
-    //盈亏
-    private BigDecimal pnl;
-    //净盈亏
-    private BigDecimal netPnl;
     //上一次净盈亏
     private BigDecimal lastNetPnl;
     //收益率
     private BigDecimal roi;
-    //剩余未平仓总金额
-    private BigDecimal posAmount;
-    //剩余未平仓总数量
-    private BigDecimal posQty;
-    //剩余未平仓均价
-    private BigDecimal posAvgPrice;
-    //手续费
-    private BigDecimal fee = BigDecimal.ZERO;
     // 持仓盈利
     private BigDecimal holdingProfit = BigDecimal.ZERO;
     // 持仓亏损
