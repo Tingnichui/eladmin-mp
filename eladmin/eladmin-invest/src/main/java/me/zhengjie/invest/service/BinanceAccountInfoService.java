@@ -81,4 +81,6 @@ public interface BinanceAccountInfoService extends IService<BinanceAccountInfo> 
 
     void changeAutoTradeFlag(Integer id);
 
+    BinanceAccountInfo getAccountByUid(Integer uid);
+
 }

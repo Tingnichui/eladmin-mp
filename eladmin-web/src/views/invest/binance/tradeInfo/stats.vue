@@ -123,7 +123,7 @@
           </el-descriptions-item>
         </el-descriptions>
         <div>
-          <trade-position-distribution-bar :row-data="statsInfo.spotFuturesStatsInfo.tradeList" :symbol="query.symbol" height="400px" style="margin-top: 20px" />
+          <trade-position-distribution-bar :row-data="statsDescriptions[0].data.tradeList" :symbol="query.symbol" height="400px" style="margin-top: 20px" />
           <!--          <trade-profit-rate-scatter :row-data="statsInfo.matchedTradeInfoList" height="400px" style="margin-top: 20px" />-->
         </div>
       </div>
@@ -189,7 +189,8 @@ export default {
       showOpenTrades: false,
       tradeList: [],
       query: {
-        symbol: 'BTCUSDT'
+        symbol: 'BTCUSDT',
+        uid: '1014564231'
       },
       tableColumns: [
         { prop: 'side', label: '方向', formatter: (row) => (row.side ? '做多' : '做空') },
@@ -262,7 +263,7 @@ export default {
             { label: '手续费', key: 'fee' },
             { label: '净盈亏', key: 'netPnl' },
             { label: '', key: '' },
-            { label: '', key: '' },
+            { label: '资金费', key: 'fundingFee' },
             { label: '对冲止损', key: 'stopLossAmount' },
             { label: '', key: '' },
             { label: '', key: '' },

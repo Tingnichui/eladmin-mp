@@ -187,4 +187,14 @@ public class BinanceAccountInfoServiceImpl extends ServiceImpl<BinanceAccountInf
         );
 
     }
+
+    @Override
+    public BinanceAccountInfo getAccountByUid(Integer uid) {
+        BinanceAccountInfo accountInfo = this.getOne(
+                Wrappers.lambdaQuery(BinanceAccountInfo.class)
+                        .eq(BinanceAccountInfo::getUid, uid)
+        );
+
+        return this.decryptApiInfo(accountInfo);
+    }
 }

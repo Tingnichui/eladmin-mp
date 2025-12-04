@@ -21,15 +21,14 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import me.zhengjie.annotation.Log;
+import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfoExt;
 import me.zhengjie.invest.domain.vo.BinanceFuturesTradeStatsInfoVO;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
-import me.zhengjie.invest.service.BinanceCoinFuturesTradeInfoService;
-import me.zhengjie.invest.service.BinanceFuturesTradeInfoService;
-import me.zhengjie.invest.service.BinanceTradeInfoExtService;
-import me.zhengjie.invest.service.BinanceTradeInfoService;
+import me.zhengjie.invest.service.*;
+import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.utils.PageResult;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -62,6 +61,8 @@ public class BinanceTradeInfoController {
     private BinanceCoinFuturesTradeInfoService binanceCoinFuturesTradeInfoService;
     @Resource
     private BinanceTradeInfoExtService binanceTradeInfoExtService;
+    @Resource
+    private BinanceAccountInfoService binanceAccountInfoService;
 
     @Log("导出数据")
     @ApiOperation("导出数据")
@@ -119,10 +120,13 @@ public class BinanceTradeInfoController {
         );
 
         Map<String, Object> resMap = new HashMap<>();
-        resMap.put("usdFuturesStatsInfo", binanceFuturesTradeInfoService.stats());
-        resMap.put("coinFuturesStatsInfo", binanceCoinFuturesTradeInfoService.stats());
-        resMap.put("spotFuturesStatsInfo", binanceTradeInfoService.stats(criteria));
-        resMap.put("spotHedgedFuturesStatsInfo", binanceTradeInfoService.hedgedStats());
+        BinanceAccountInfo accountInfo = binanceAccountInfoService.getAccountByUid(criteria.getUid());
+        BinanceAccountContextHolder.runWith(accountInfo, () -> {
+            resMap.put("usdFuturesStatsInfo", binanceFuturesTradeInfoService.stats());
+            resMap.put("coinFuturesStatsInfo", binanceCoinFuturesTradeInfoService.stats());
+            resMap.put("spotFuturesStatsInfo", binanceTradeInfoService.stats(criteria));
+            resMap.put("spotHedgedFuturesStatsInfo", binanceTradeInfoService.hedgedStats());
+        });
 
         return new ResponseEntity<>(resMap,HttpStatus.OK);
     }
