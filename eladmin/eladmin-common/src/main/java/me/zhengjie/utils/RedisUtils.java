@@ -26,6 +26,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.stereotype.Component;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /**
  * @author /
@@ -89,6 +90,25 @@ public class RedisUtils {
      */
     public long getExpire(Object key) {
         return redisTemplate.getExpire(key, TimeUnit.SECONDS);
+    }
+
+
+    public <T> T getOrLoad(String key, long expireSeconds, boolean cacheFlag, Supplier<T> loader) {
+
+        T value = null;
+        if (cacheFlag) {
+            value = (T) this.get(key);
+            if (value != null) {
+                return value;
+            }
+        }
+
+        value = loader.get();
+        if (value != null) {
+            this.set(key, value, expireSeconds, TimeUnit.SECONDS);
+        }
+
+        return value;
     }
 
     /**

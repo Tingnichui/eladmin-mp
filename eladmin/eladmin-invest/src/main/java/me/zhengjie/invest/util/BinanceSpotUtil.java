@@ -1,5 +1,8 @@
 package me.zhengjie.invest.util;
 
+import cn.hutool.core.date.DatePattern;
+import cn.hutool.core.date.DateTime;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.net.URLEncodeUtil;
 import cn.hutool.crypto.digest.HMac;
 import cn.hutool.crypto.digest.HmacAlgorithm;
@@ -14,6 +17,7 @@ import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.domain.InvestKlinesRecord;
 import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
 import me.zhengjie.utils.DingdingUtil;
+import me.zhengjie.utils.RedisUtils;
 import me.zhengjie.utils.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +26,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.nio.charset.StandardCharsets;
@@ -41,6 +46,8 @@ public class BinanceSpotUtil {
     private String apiHost;
     @Resource
     private DingdingUtil dingdingUtil;
+    @Resource
+    private RedisUtils redisUtils;
 
     public List<BinanceTradeInfo> getMyTrades(String symbol) {
         Map<String, Object> params = new HashMap<>();
@@ -207,5 +214,45 @@ public class BinanceSpotUtil {
             throw new RuntimeException("币安接口调用失败" + resJson.getString("message"));
         }
         return resJson.getJSONArray("data").toJavaList(JSONObject.class);
+    }
+
+    public Object usdStats(boolean cacheFlag) {
+
+        BinanceAccountInfo accountInfo = BinanceAccountContextHolder.get();
+        return redisUtils.getOrLoad("BINANCE:USTSTATS:" + accountInfo.getUid(), -1, cacheFlag, () -> {
+
+            Date now = new Date();
+            DateTime startTime = DateUtil.parse("2024-10-01", DatePattern.NORM_DATE_PATTERN);
+
+            List<JSONObject> allRecord = new ArrayList<>();
+            while (startTime.isBefore(now)) {
+                startTime = DateUtil.beginOfMonth(startTime);
+                DateTime endTime = DateUtil.endOfMonth(startTime);
+                List<JSONObject> jsonObjects = this.listUserOrderHistory(startTime.getTime(), endTime.getTime());
+                allRecord.addAll(jsonObjects);
+
+                startTime = DateUtil.offsetMonth(startTime, 1);
+            }
+
+            List<JSONObject> successRecord = allRecord.stream()
+                    .filter(v -> v.getString("orderStatus").equals("COMPLETED"))
+                    .collect(Collectors.toList());
+
+            Map<String, Object> resMap = new HashMap<>();
+            BigDecimal rmbAmount = successRecord
+                    .stream().map(v -> v.getBigDecimal("totalPrice"))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            resMap.put("rmbAmount", rmbAmount);
+
+            BigDecimal usdAmount = successRecord
+                    .stream().map(v -> v.getBigDecimal("takerAmount"))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            resMap.put("usdAmount", usdAmount);
+
+            resMap.put("rmbToUsdRate", rmbAmount.divide(usdAmount, 4, RoundingMode.HALF_UP));
+
+            return resMap;
+        });
+
     }
 }

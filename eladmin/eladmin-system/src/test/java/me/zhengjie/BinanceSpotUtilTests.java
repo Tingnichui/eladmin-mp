@@ -23,6 +23,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
@@ -79,30 +80,9 @@ public class BinanceSpotUtilTests {
 
     @Test
     void listUserOrderHistory() {
-
         BinanceAccountContextHolder.runWith(binanceAccountInfoService.getAccountByIdCardName("耿辉"), () -> {
-
-            Date now = new Date();
-            DateTime startTime = DateUtil.parse("2024-10-01", DatePattern.NORM_DATE_PATTERN);
-
-            List<JSONObject> allRecord = new ArrayList<>();
-            while (startTime.isBefore(now)) {
-                startTime = DateUtil.beginOfMonth(startTime);
-                DateTime endTime = DateUtil.endOfMonth(startTime);
-                List<JSONObject> jsonObjects = binanceSpotUtil.listUserOrderHistory(startTime.getTime(), endTime.getTime());
-                allRecord.addAll(jsonObjects);
-
-                startTime = DateUtil.offsetMonth(startTime, 1);
-            }
-
-            List<JSONObject> successRecord = allRecord.stream()
-                    .filter(v -> v.getString("orderStatus").equals("COMPLETED")).collect(Collectors.toList());
-            BigDecimal reduce = successRecord
-                    .stream().map(v -> v.getBigDecimal("amount"))
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            System.err.println(reduce.subtract(new BigDecimal("1000")));
-
+            Object o = binanceSpotUtil.usdStats(false);
+            System.err.println(o);
         });
     }
 

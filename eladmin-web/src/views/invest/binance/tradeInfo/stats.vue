@@ -83,7 +83,7 @@
       <div>
         <el-descriptions
           v-for="description in statsDescriptions"
-          v-show="description.data.posQty && description.data.posQty !== 0"
+          v-show="description.showFlag || (description.data.posQty && description.data.posQty !== 0)"
           :key="description.title"
           :title="description.title"
           :column="3"
@@ -123,7 +123,7 @@
           </el-descriptions-item>
         </el-descriptions>
         <div>
-          <trade-position-distribution-bar :row-data="statsDescriptions[0].data.tradeList" :symbol="query.symbol" height="400px" style="margin-top: 20px" />
+          <trade-position-distribution-bar :row-data="statsInfo.spotFuturesStatsInfo.tradeList" :symbol="query.symbol" height="400px" style="margin-top: 20px" />
           <!--          <trade-profit-rate-scatter :row-data="statsInfo.matchedTradeInfoList" height="400px" style="margin-top: 20px" />-->
         </div>
       </div>
@@ -183,14 +183,16 @@ export default {
   dicts: ['invest_binance_trade_pairing_logic', 'invest_binance_symbol'],
   data() {
     return {
-      statsInfo: {},
+      statsInfo: {
+        spotFuturesStatsInfo: {}
+      },
       accountList: [],
       syncLoading: false,
       showOpenTrades: false,
       tradeList: [],
       query: {
         symbol: 'BTCUSDT',
-        uid: '1014564231'
+        uid: 1014564231
       },
       tableColumns: [
         { prop: 'side', label: '方向', formatter: (row) => (row.side ? '做多' : '做空') },
@@ -213,6 +215,16 @@ export default {
   computed: {
     statsDescriptions() {
       return [
+        {
+          title: '账户统计',
+          showFlag: true,
+          data: (this.statsInfo && this.statsInfo.accountInfo) || {},
+          descriptionsItems: [
+            { label: '汇率', key: 'rmbToUsdRate' },
+            { label: 'RMB总额', key: 'rmbAmount' },
+            { label: 'USD总额', key: 'usdAmount' }
+          ]
+        },
         {
           title: '现货统计',
           data: (this.statsInfo && this.statsInfo.spotFuturesStatsInfo) || {},

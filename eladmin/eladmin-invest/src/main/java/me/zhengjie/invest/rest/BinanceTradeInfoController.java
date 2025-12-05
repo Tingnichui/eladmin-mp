@@ -29,6 +29,7 @@ import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.service.*;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
+import me.zhengjie.invest.util.BinanceSpotUtil;
 import me.zhengjie.utils.PageResult;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -63,6 +64,8 @@ public class BinanceTradeInfoController {
     private BinanceTradeInfoExtService binanceTradeInfoExtService;
     @Resource
     private BinanceAccountInfoService binanceAccountInfoService;
+    @Resource
+    private BinanceSpotUtil binanceSpotUtil;
 
     @Log("导出数据")
     @ApiOperation("导出数据")
@@ -126,6 +129,7 @@ public class BinanceTradeInfoController {
             resMap.put("coinFuturesStatsInfo", binanceCoinFuturesTradeInfoService.stats());
             resMap.put("spotFuturesStatsInfo", binanceTradeInfoService.stats(criteria));
             resMap.put("spotHedgedFuturesStatsInfo", binanceTradeInfoService.hedgedStats());
+            resMap.put("accountInfo", binanceSpotUtil.usdStats(true));
         });
 
         return new ResponseEntity<>(resMap,HttpStatus.OK);
@@ -139,6 +143,12 @@ public class BinanceTradeInfoController {
         binanceTradeInfoService.syncAll();
         binanceFuturesTradeInfoService.sync();
         binanceCoinFuturesTradeInfoService.sync();
+        List<BinanceAccountInfo> accountInfoList = binanceAccountInfoService.listUseApiAccount();
+        for (BinanceAccountInfo accountInfo : accountInfoList) {
+            BinanceAccountContextHolder.runWith(accountInfo, () -> {
+                binanceSpotUtil.usdStats(false);
+            });
+        }
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
