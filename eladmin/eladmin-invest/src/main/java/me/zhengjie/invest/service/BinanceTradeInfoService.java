@@ -16,6 +16,7 @@
 package me.zhengjie.invest.service;
 
 import me.zhengjie.invest.domain.BinanceTradeInfo;
+import me.zhengjie.invest.domain.vo.BinanceOrderVO;
 import me.zhengjie.invest.domain.vo.BinanceSpotHedgedTradeStatsInfoVO;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 
@@ -85,5 +86,7 @@ public interface BinanceTradeInfoService extends IService<BinanceTradeInfo> {
     List<BinanceTradeInfo> list4hedge(BigDecimal lowPrice, BigDecimal highPrice, BigDecimal qty);
 
     BinanceSpotHedgedTradeStatsInfoVO hedgedStats();
+
+    void createPos(BinanceOrderVO posInfo);
 
 }

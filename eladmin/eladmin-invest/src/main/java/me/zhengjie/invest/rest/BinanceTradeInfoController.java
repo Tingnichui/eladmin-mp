@@ -21,10 +21,13 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import me.zhengjie.annotation.Log;
+import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfoExt;
+import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
 import me.zhengjie.invest.domain.vo.BinanceFuturesTradeStatsInfoVO;
+import me.zhengjie.invest.domain.vo.BinanceOrderVO;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.service.*;
@@ -40,6 +43,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -150,6 +154,15 @@ public class BinanceTradeInfoController {
             });
         }
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+
+    @PostMapping("/createPos")
+    @Log("建仓")
+    @PreAuthorize("@el.check('binanceTradeInfo:createPos')")
+    public ResponseEntity<Object> createPos(@Validated @RequestBody BinanceOrderVO posInfo){
+        binanceTradeInfoService.createPos(posInfo);
+        return new ResponseEntity<>(HttpStatus.CREATED);
     }
 
 }

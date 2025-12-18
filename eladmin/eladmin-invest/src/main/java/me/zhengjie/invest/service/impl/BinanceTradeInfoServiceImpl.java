@@ -23,7 +23,9 @@ import lombok.RequiredArgsConstructor;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
+import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
 import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
+import me.zhengjie.invest.domain.vo.BinanceOrderVO;
 import me.zhengjie.invest.domain.vo.BinanceSpotHedgedTradeStatsInfoVO;
 import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
@@ -293,6 +295,32 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         }
 
         return statsInfo;
+    }
+
+    @Override
+    public void createPos(BinanceOrderVO posInfo) {
+        // 现货请求体
+        BinanceOrderApiDto apiDto = new BinanceOrderApiDto();
+        apiDto.setSymbol(BinanceEnum.SYMBOL.BTCUSDT.name());
+        apiDto.setQuantity(posInfo.getPosQty());
+        apiDto.setStopPrice(posInfo.getOpenPrice());
+
+        // 做多
+        if (posInfo.getPosDir()) {
+            // 现货做多
+            apiDto.setType(BinanceEnum.TYPE.STOP_LOSS);
+            apiDto.setSide(BinanceEnum.SIDE.BUY);
+            Long openOrderId = binanceSpotUtil.order(apiDto, 3);
+            System.err.println(openOrderId);
+            // 合约止损
+
+        }
+        // 做空
+        else {
+            // 合约做空
+            // 现货止损
+
+        }
     }
 
 }
