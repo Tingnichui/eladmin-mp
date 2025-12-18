@@ -108,7 +108,12 @@
             LEFT JOIN binance_account_info t2 on t2.uid = t1.uid
             LEFT JOIN binance_trade_info_ext t3 on t3.id = t1.id
         WHERE t1.is_buyer = 1
-            AND t1.price BETWEEN #{lowPrice} AND #{highPrice}
+        <if test="lowPrice != null">
+            AND t1.price >= #{lowPrice}
+        </if>
+        <if test="lowPrice != null">
+            AND t1.price &lt;= #{highPrice}
+        </if>
         HAVING netQty > 0
         ORDER BY t1.price ASC
     </select>
