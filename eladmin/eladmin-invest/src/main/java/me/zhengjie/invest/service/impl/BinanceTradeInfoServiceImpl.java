@@ -274,8 +274,8 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
     }
 
     @Override
-    public List<BinanceTradeInfo> list4hedge(BigDecimal lowPrice, BigDecimal highPrice, BigDecimal qty) {
-        return binanceTradeInfoMapper.list4hedge(lowPrice, highPrice, qty);
+    public List<BinanceTradeInfo> list4hedge(BigDecimal lowPrice, BigDecimal highPrice, BigDecimal qty, Integer limit) {
+        return binanceTradeInfoMapper.list4hedge(lowPrice, highPrice, qty, limit);
     }
 
     @Override

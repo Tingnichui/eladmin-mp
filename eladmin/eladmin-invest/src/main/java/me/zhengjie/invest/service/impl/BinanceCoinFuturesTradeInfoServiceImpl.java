@@ -262,7 +262,7 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
 
                             BigDecimal qty = matched.getQty();
                             // 查询现货止损单
-                            List<BinanceTradeInfo> spotInfos = binanceTradeInfoService.list4hedge(matched.getOpenPrice(), matched.getOpenPrice().add(new BigDecimal("1000")), qty);
+                            List<BinanceTradeInfo> spotInfos = binanceTradeInfoService.list4hedge(matched.getOpenPrice(), matched.getOpenPrice().add(new BigDecimal("1000")), qty, 100);
                             for (BinanceTradeInfo spot : spotInfos) {
                                 // 对冲数量
                                 BigDecimal matchQty = spot.getNetQty().min(qty);

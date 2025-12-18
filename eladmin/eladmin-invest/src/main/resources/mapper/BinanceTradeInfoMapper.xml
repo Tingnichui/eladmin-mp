@@ -116,6 +116,9 @@
         </if>
         HAVING netQty > 0
         ORDER BY t1.price ASC
+        <if test="limit != null">
+            limit #{limit}
+        </if>
     </select>
 
 </mapper>
