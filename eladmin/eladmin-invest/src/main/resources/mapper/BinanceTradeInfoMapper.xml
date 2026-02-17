@@ -111,7 +111,7 @@
         <if test="lowPrice != null">
             AND t1.price >= #{lowPrice}
         </if>
-        <if test="lowPrice != null">
+        <if test="highPrice != null">
             AND t1.price &lt;= #{highPrice}
         </if>
         HAVING netQty > 0
