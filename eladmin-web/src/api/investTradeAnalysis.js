@@ -1,4 +1,6 @@
 import request from '@/utils/request'
+import axios from 'axios'
+import { getToken } from '@/utils/auth'
 
 export function add(data) {
   return request({
@@ -24,4 +26,12 @@ export function edit(data) {
   })
 }
 
-export default { add, edit, del }
+export function ocrRecognize(file) {
+  const data = new FormData()
+  data.append('file', file)
+  return axios.post('/api/investTradeAnalysis/ocr', data, {
+    headers: { 'Authorization': getToken() }
+  }).then(res => res.data)
+}
+
+export default { add, edit, del, ocrRecognize }

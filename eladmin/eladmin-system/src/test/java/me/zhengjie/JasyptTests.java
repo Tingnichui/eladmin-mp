@@ -3,8 +3,11 @@ package me.zhengjie;
 import org.jasypt.encryption.StringEncryptor;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
+import java.util.List;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class JasyptTests {
@@ -27,9 +30,22 @@ public class JasyptTests {
      */
     @Test
     void encryptTest() {
-        System.err.println(encryptor.encrypt("jdbc:log4jdbc:mysql://127.0.0.1:3306/media_crawler?serverTimezone=Asia/Shanghai&characterEncoding=utf8&useSSL=false"));
-        System.err.println(encryptor.encrypt("media_crawler"));
-        System.err.println(encryptor.encrypt("123123"));
+        List<String> values = new ArrayList<>();
+        addIfPresent(values, System.getProperty("jasypt.encrypt.value"));
+        addIfPresent(values, System.getenv("ALIYUN_OCR_ACCESS_KEY_ID"));
+        addIfPresent(values, System.getenv("ALIYUN_OCR_ACCESS_KEY_SECRET"));
+        if (values.isEmpty()) {
+            values.add("jdbc:log4jdbc:mysql://127.0.0.1:3306/media_crawler?serverTimezone=Asia/Shanghai&characterEncoding=utf8&useSSL=false");
+            values.add("media_crawler");
+            values.add("123123");
+        }
+        values.forEach(value -> System.err.println("ENC(" + encryptor.encrypt(value) + ")"));
+    }
+
+    private void addIfPresent(List<String> values, String value) {
+        if (StringUtils.hasText(value)) {
+            values.add(value);
+        }
     }
 
 }

@@ -77,8 +77,88 @@
       <!--如果想在工具栏加入更多按钮，可以使用插槽方式， slot = 'left' or 'right'-->
       <crudOperation :permission="permission" />
       <!--表单组件-->
-      <el-dialog class="trade-analysis-dialog" :close-on-click-modal="false" :before-close="crud.cancelCU" :visible.sync="crud.status.cu > 0" :title="crud.status.title" width="960px" @paste.native="handleDialogKlinePaste">
+      <el-dialog class="trade-analysis-dialog" :close-on-click-modal="false" :before-close="crud.cancelCU" :visible.sync="crud.status.cu > 0" :title="crud.status.title" width="960px" @paste.native="handleDialogPaste">
         <el-form ref="form" :model="form" :rules="rules" size="small" label-width="88px">
+          <div class="form-section order-ocr-section">
+            <div class="section-title">订单识别</div>
+            <el-row :gutter="16">
+              <el-col :span="8">
+                <el-form-item label="订单截图" class="order-ocr-upload-item">
+                  <div
+                    class="order-ocr-upload"
+                    tabindex="0"
+                    @click="selectOrderOcrFile"
+                    @focus="setOrderPasteTarget"
+                    @mouseenter="setOrderPasteTarget"
+                    @mouseleave="clearPasteTarget('order')"
+                  >
+                    <input ref="orderOcrFile" type="file" accept="image/*" class="order-ocr-file" @change="handleOrderOcrFileChange">
+                    <img v-if="orderOcr.previewUrl" :src="orderOcr.previewUrl" class="order-ocr-thumb">
+                    <div v-else class="order-ocr-empty">
+                      <i class="el-icon-upload" />
+                      <span>点击上传 / 粘贴截图</span>
+                    </div>
+                  </div>
+                  <div class="order-ocr-actions">
+                    <el-button size="mini" type="primary" :loading="orderOcr.recognizing" :disabled="!orderOcr.file || orderOcr.recognizing" @click="recognizeOrder">识别订单</el-button>
+                    <el-button size="mini" :disabled="!orderOcr.file && !hasOrderOcrResult" @click="clearOrderOcr">重新上传</el-button>
+                  </div>
+                </el-form-item>
+              </el-col>
+              <el-col :span="16">
+                <div class="order-ocr-result">
+                  <div class="order-ocr-result-title">
+                    <span>识别结果</span>
+                    <el-button size="mini" type="primary" :disabled="!hasOrderOcrResult" @click="applyOrderOcrToForm">应用到表单</el-button>
+                  </div>
+                  <el-row :gutter="12">
+                    <el-col :span="8">
+                      <el-form-item label="交易方向" label-width="72px">
+                        <el-select v-model="orderOcr.result.direction" clearable size="mini" placeholder="未识别" class="form-control">
+                          <el-option
+                            v-for="item in dict.invest_trade_analysis_direction"
+                            :key="item.value"
+                            :label="item.label"
+                            :value="item.value"
+                          />
+                        </el-select>
+                      </el-form-item>
+                    </el-col>
+                    <el-col :span="8">
+                      <el-form-item label="交易金额" label-width="72px">
+                        <el-input v-model="orderOcr.result.amount" size="mini" />
+                      </el-form-item>
+                    </el-col>
+                    <el-col :span="8">
+                      <el-form-item label="盈亏金额" label-width="72px">
+                        <el-input v-model="orderOcr.result.netProfit" size="mini" />
+                      </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                      <el-form-item label="开仓价格" label-width="72px">
+                        <el-input v-model="orderOcr.result.openPrice" size="mini" />
+                      </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                      <el-form-item label="开仓时间" label-width="72px">
+                        <el-input v-model="orderOcr.result.openTime" size="mini" />
+                      </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                      <el-form-item label="平仓价格" label-width="72px">
+                        <el-input v-model="orderOcr.result.closePrice" size="mini" />
+                      </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                      <el-form-item label="平仓时间" label-width="72px">
+                        <el-input v-model="orderOcr.result.closeTime" size="mini" />
+                      </el-form-item>
+                    </el-col>
+                  </el-row>
+                </div>
+              </el-col>
+            </el-row>
+          </div>
           <div class="form-section">
             <div class="section-title">基础信息</div>
             <el-row :gutter="16">
@@ -131,9 +211,9 @@
                   tabindex="0"
                   @click="activateKlineSlot('openKlineImages', period)"
                   @dblclick="selectKlineFile('openKlineImages', period)"
-                  @focus="setActiveKlineTarget('openKlineImages', period)"
-                  @mouseenter="setActiveKlineTarget('openKlineImages', period)"
-                  @paste="handleKlinePaste($event, 'openKlineImages', period)"
+                  @focus="setKlinePasteTarget('openKlineImages', period, true)"
+                  @mouseenter="setKlinePasteTarget('openKlineImages', period)"
+                  @mouseleave="clearKlinePasteTarget('openKlineImages', period)"
                 >
                   <input
                     :ref="klineInputRef('openKlineImages', period)"
@@ -203,9 +283,9 @@
                   tabindex="0"
                   @click="activateKlineSlot('closeKlineImages', period)"
                   @dblclick="selectKlineFile('closeKlineImages', period)"
-                  @focus="setActiveKlineTarget('closeKlineImages', period)"
-                  @mouseenter="setActiveKlineTarget('closeKlineImages', period)"
-                  @paste="handleKlinePaste($event, 'closeKlineImages', period)"
+                  @focus="setKlinePasteTarget('closeKlineImages', period, true)"
+                  @mouseenter="setKlinePasteTarget('closeKlineImages', period)"
+                  @mouseleave="clearKlinePasteTarget('closeKlineImages', period)"
                 >
                   <input
                     :ref="klineInputRef('closeKlineImages', period)"
@@ -335,9 +415,24 @@ export default {
       openKlineImagesMap: {},
       closeKlineImagesMap: {},
       activeKlineTarget: null,
+      pasteTarget: null,
       imagePreview: {
         visible: false,
         url: ''
+      },
+      orderOcr: {
+        file: null,
+        previewUrl: '',
+        recognizing: false,
+        result: {
+          direction: null,
+          amount: '',
+          openPrice: '',
+          openTime: '',
+          closePrice: '',
+          closeTime: '',
+          netProfit: ''
+        }
       },
       permission: {
         add: ['admin', 'investTradeAnalysis:add'],
@@ -360,18 +455,161 @@ export default {
     ...mapGetters([
       'imagesUploadApi',
       'baseApi'
-    ])
+    ]),
+    hasOrderOcrResult() {
+      const result = this.orderOcr.result
+      return Object.keys(result).some(key => !!result[key])
+    }
   },
   cruds() {
     return CRUD({ title: '交易分析', url: 'api/investTradeAnalysis', idField: 'id', sort: 'id,desc', crudMethod: { ...crudInvestTradeAnalysis }})
+  },
+  mounted() {
+    document.addEventListener('paste', this.handleGlobalPaste, true)
+  },
+  beforeDestroy() {
+    document.removeEventListener('paste', this.handleGlobalPaste, true)
   },
   methods: {
     // 钩子：在获取表格数据之前执行，false 则代表不获取数据
     [CRUD.HOOK.beforeRefresh]() {
       return true
     },
+    getEmptyOrderOcrResult() {
+      return {
+        direction: null,
+        amount: '',
+        openPrice: '',
+        openTime: '',
+        closePrice: '',
+        closeTime: '',
+        netProfit: ''
+      }
+    },
+    resetOrderOcr() {
+      if (this.orderOcr.previewUrl) {
+        URL.revokeObjectURL(this.orderOcr.previewUrl)
+      }
+      this.orderOcr = {
+        file: null,
+        previewUrl: '',
+        recognizing: false,
+        result: this.getEmptyOrderOcrResult()
+      }
+      const input = this.$refs.orderOcrFile
+      if (input) {
+        input.value = ''
+      }
+    },
+    selectOrderOcrFile() {
+      const input = this.$refs.orderOcrFile
+      if (input) {
+        input.click()
+      }
+    },
+    handleOrderOcrFileChange(event) {
+      const file = event.target.files && event.target.files[0]
+      event.target.value = ''
+      if (file) {
+        this.setOrderOcrFile(file, true)
+      }
+    },
+    handleOrderOcrPaste(event) {
+      const file = this.getImageFileFromClipboard(event)
+      if (file) {
+        event.preventDefault()
+        event.stopPropagation()
+        this.setOrderOcrFile(file, true)
+        return true
+      }
+      return false
+    },
+    getImageFileFromClipboard(event) {
+      const clipboardData = event.clipboardData
+      if (!clipboardData) {
+        return null
+      }
+      const files = Array.from(clipboardData.files || [])
+      let file = files.find(item => item.type && item.type.indexOf('image/') === 0)
+      if (!file) {
+        const items = clipboardData.items || []
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i]
+          if (item.kind === 'file' && item.type.indexOf('image/') === 0) {
+            file = item.getAsFile()
+            break
+          }
+        }
+      }
+      return file || null
+    },
+    setOrderOcrFile(file, autoRecognize) {
+      if (this.orderOcr.previewUrl) {
+        URL.revokeObjectURL(this.orderOcr.previewUrl)
+      }
+      this.orderOcr.file = file
+      this.orderOcr.previewUrl = URL.createObjectURL(file)
+      this.orderOcr.result = this.getEmptyOrderOcrResult()
+      if (autoRecognize) {
+        this.$nextTick(() => {
+          this.recognizeOrder()
+        })
+      }
+    },
+    clearOrderOcr() {
+      this.resetOrderOcr()
+    },
+    recognizeOrder() {
+      if (!this.orderOcr.file || this.orderOcr.recognizing) {
+        return
+      }
+      this.orderOcr.recognizing = true
+      crudInvestTradeAnalysis.ocrRecognize(this.orderOcr.file).then(data => {
+        this.orderOcr.result = this.normalizeOrderOcrResult(data)
+        this.$notify({
+          title: this.hasOrderOcrResult ? '订单识别完成' : '未识别到可用字段',
+          type: this.hasOrderOcrResult ? CRUD.NOTIFICATION_TYPE.SUCCESS : CRUD.NOTIFICATION_TYPE.WARNING,
+          duration: 2000
+        })
+      }).finally(() => {
+        this.orderOcr.recognizing = false
+      })
+    },
+    normalizeOrderOcrResult(data) {
+      const result = this.getEmptyOrderOcrResult()
+      if (!data || typeof data !== 'object') {
+        return result
+      }
+      Object.keys(result).forEach(key => {
+        result[key] = data[key] || ''
+      })
+      return result
+    },
+    applyOrderOcrToForm() {
+      const result = this.orderOcr.result
+      const mapping = {
+        direction: 'direction',
+        amount: 'amount',
+        openPrice: 'openPrice',
+        openTime: 'openTime',
+        closePrice: 'closePrice',
+        closeTime: 'closeTime',
+        netProfit: 'netProfit'
+      }
+      Object.keys(mapping).forEach(key => {
+        if (result[key] !== null && result[key] !== undefined && result[key] !== '') {
+          this.$set(this.form, mapping[key], result[key])
+        }
+      })
+      this.$notify({
+        title: '已应用到表单',
+        type: CRUD.NOTIFICATION_TYPE.SUCCESS,
+        duration: 2000
+      })
+    },
     [CRUD.HOOK.afterToCU]() {
       this.syncKlineMapsFromForm()
+      this.resetOrderOcr()
     },
     [CRUD.HOOK.beforeSubmit]() {
       this.syncKlineMapsToForm()
@@ -379,12 +617,15 @@ export default {
     },
     [CRUD.HOOK.afterSubmit]() {
       this.resetKlineMaps()
+      this.resetOrderOcr()
     },
     [CRUD.HOOK.afterAddCancel]() {
       this.resetKlineMaps()
+      this.resetOrderOcr()
     },
     [CRUD.HOOK.afterEditCancel]() {
       this.resetKlineMaps()
+      this.resetOrderOcr()
     },
     parseKlineImages(value) {
       if (!value) {
@@ -424,6 +665,7 @@ export default {
       this.openKlineImagesMap = {}
       this.closeKlineImagesMap = {}
       this.activeKlineTarget = null
+      this.pasteTarget = null
       this.imagePreview = {
         visible: false,
         url: ''
@@ -446,8 +688,28 @@ export default {
       const map = this.getKlineMap(field)
       this.$delete(map, period)
     },
+    setOrderPasteTarget() {
+      this.activeKlineTarget = null
+      this.pasteTarget = { type: 'order' }
+    },
+    clearPasteTarget(type) {
+      if (this.pasteTarget && this.pasteTarget.type === type) {
+        this.pasteTarget = null
+      }
+    },
+    setKlinePasteTarget(field, period, rememberActive) {
+      if (rememberActive) {
+        this.activeKlineTarget = { field, period }
+      }
+      this.pasteTarget = { type: 'kline', field, period }
+    },
+    clearKlinePasteTarget(field, period) {
+      if (this.pasteTarget && this.pasteTarget.type === 'kline' && this.pasteTarget.field === field && this.pasteTarget.period === period) {
+        this.pasteTarget = null
+      }
+    },
     setActiveKlineTarget(field, period) {
-      this.activeKlineTarget = { field, period }
+      this.setKlinePasteTarget(field, period, true)
     },
     isActiveKlineTarget(field, period) {
       return !!this.activeKlineTarget && this.activeKlineTarget.field === field && this.activeKlineTarget.period === period
@@ -460,7 +722,7 @@ export default {
       }
     },
     activateKlineSlot(field, period) {
-      this.setActiveKlineTarget(field, period)
+      this.setKlinePasteTarget(field, period, true)
       const url = this.getKlineUrl(field, period)
       if (url) {
         this.imagePreview = {
@@ -487,6 +749,53 @@ export default {
         this.uploadKlineFile(file, field, period)
       }
     },
+    isTradeDialogOpen() {
+      return !!(this.crud && this.crud.status && this.crud.status.cu > 0)
+    },
+    handleGlobalPaste(event) {
+      if (!this.isTradeDialogOpen() || event._tradeAnalysisPasteHandled) {
+        return
+      }
+      const target = event.target
+      const isInDialog = target && target.closest && target.closest('.trade-analysis-dialog')
+      if (!this.pasteTarget && !isInDialog) {
+        return
+      }
+      this.handleDialogPaste(event)
+    },
+    handleDialogPaste(event) {
+      if (event._tradeAnalysisPasteHandled) {
+        return
+      }
+      const target = event.target
+      const isOrderOcrTarget = target && target.closest && target.closest('.order-ocr-section')
+      let handled = false
+      if (isOrderOcrTarget || (this.pasteTarget && this.pasteTarget.type === 'order')) {
+        handled = this.handleOrderOcrPaste(event)
+        if (handled) {
+          event._tradeAnalysisPasteHandled = true
+          return
+        }
+      }
+      if (this.pasteTarget && this.pasteTarget.type === 'kline') {
+        handled = this.handleKlinePaste(event, this.pasteTarget.field, this.pasteTarget.period)
+        if (handled) {
+          event._tradeAnalysisPasteHandled = true
+        }
+        return
+      }
+      if (this.activeKlineTarget) {
+        handled = this.handleKlinePaste(event, this.activeKlineTarget.field, this.activeKlineTarget.period)
+        if (handled) {
+          event._tradeAnalysisPasteHandled = true
+        }
+        return
+      }
+      handled = this.handleOrderOcrPaste(event)
+      if (handled) {
+        event._tradeAnalysisPasteHandled = true
+      }
+    },
     handleDialogKlinePaste(event) {
       if (!this.activeKlineTarget) {
         return
@@ -496,7 +805,7 @@ export default {
     handleKlinePaste(event, field, period) {
       const clipboardData = event.clipboardData
       if (!clipboardData) {
-        return
+        return false
       }
       const files = Array.from(clipboardData.files || [])
       const file = files.find(item => item.type && item.type.indexOf('image/') === 0)
@@ -504,7 +813,7 @@ export default {
         event.preventDefault()
         event.stopPropagation()
         this.uploadKlineFile(file, field, period)
-        return
+        return true
       }
       const items = clipboardData.items || []
       for (let i = 0; i < items.length; i++) {
@@ -513,9 +822,10 @@ export default {
           event.preventDefault()
           event.stopPropagation()
           this.uploadKlineFile(item.getAsFile(), field, period)
-          return
+          return true
         }
       }
+      return false
     },
     uploadKlineFile(file, field, period) {
       if (!file) {
@@ -578,6 +888,80 @@ export default {
 
 .form-control {
   width: 100%;
+}
+
+.order-ocr-section {
+  padding-bottom: 2px;
+}
+
+.order-ocr-upload-item {
+  margin-bottom: 0;
+}
+
+.order-ocr-upload {
+  position: relative;
+  height: 126px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #fafafa;
+  border: 1px dashed #dcdfe6;
+  border-radius: 4px;
+  outline: none;
+}
+
+.order-ocr-upload:hover,
+.order-ocr-upload:focus {
+  background: #f5faff;
+  border-color: #409eff;
+}
+
+.order-ocr-file {
+  display: none;
+}
+
+.order-ocr-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 12px;
+  color: #909399;
+}
+
+.order-ocr-empty i {
+  margin-bottom: 8px;
+  font-size: 24px;
+}
+
+.order-ocr-thumb {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.order-ocr-actions {
+  margin-top: 8px;
+}
+
+.order-ocr-result {
+  min-height: 166px;
+}
+
+.order-ocr-result-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 28px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #606266;
+}
+
+::v-deep .order-ocr-result .el-form-item {
+  margin-bottom: 10px;
 }
 
 .kline-grid {
