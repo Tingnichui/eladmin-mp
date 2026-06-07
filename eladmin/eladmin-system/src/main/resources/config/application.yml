@@ -74,6 +74,11 @@ tradingview:
     secret: ENC(ewlbFjZaqaSlt4R5B62redFCkI2g7cwnFSHGlXdMqqawghNLbH1HUgzosZBFr+yaVZ32rhpaqL5NDAlVcSjWASafAdD/TAVn5EPIL6EvZqg=)
 
 aliyun:
+  ocr:
+    accessKey:
+      id: ENC(n2qNt7+yiCf910GWL1ksqVV9kyqzlOmdnTdN4D8i6U+riRPfkirmqZQby0XkjxCl9977nUTdFUgICZmM0tkf8Q==)
+      secret: ENC(elanvxCCUcwvk/jm6ftD/DstlukjzneYkLgxMfWzyoofhRiJ/AqXvFGG8tOu7Q4SCH8SyBERanrj0c4t0VqQaw==)
+    endpoint: ocr-api.cn-hangzhou.aliyuncs.com
   dingding:
     notify:
       webhook: ENC(dttWSAgpAR4TYtxeWtnj4bSfGN2RhcrAFEeRjjrVWWTDFBXHIoPSEWoPFpq/Db3Uimz5zgiWfqTtcKD2gyijXQSovOxqIeGBEDKAGShQSV6YB2fDL3AnR71zV6HYr0nMSpPcQv5AKUNzp10CWrlCvz+M3HoK/Mz87uevLRKrHbM/w6Ed/2iiHWnVs81wo9dEVXNmq1btwN40EN1ySRaEQw==)

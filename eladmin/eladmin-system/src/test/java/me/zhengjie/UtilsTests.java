@@ -9,12 +9,14 @@ import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
 import me.zhengjie.invest.service.InvestKlinesRecordService;
 import me.zhengjie.invest.util.BinanceUsdFuturesUtil;
 import me.zhengjie.invest.util.BinanceSpotUtil;
+import me.zhengjie.utils.AliyunOcrUtil;
 import me.zhengjie.utils.DingdingUtil;
 import org.apache.commons.collections4.CollectionUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import javax.annotation.Resource;
+import java.io.File;
 import java.math.BigDecimal;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -34,6 +36,15 @@ public class UtilsTests {
     private BinanceUsdFuturesUtil binanceUsdFuturesUtil;
     @Resource
     private InvestKlinesRecordService investKlinesRecordService;
+    @Resource
+    private AliyunOcrUtil aliyunOcrUtil;
+
+    @Test
+    void recognizeGeneral() {
+        File file = new File("C:\\Users\\chunhui\\Pictures\\Saved Pictures\\open.png");
+        String res = aliyunOcrUtil.recognizeDocumentStructure(file);
+        System.err.println(res);
+    }
 
     @Test
     void sendMsg() {

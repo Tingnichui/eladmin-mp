@@ -14,6 +14,7 @@
 
     <properties>
         <jjwt.version>0.11.5</jjwt.version>
+        <skipTests>true</skipTests>
         <!-- oshi监控需要指定jna版本, 问题详见 https://github.com/oshi/oshi/issues/1040 -->
         <jna.version>5.8.0</jna.version>
     </properties>
@@ -153,7 +154,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <skipTests>true</skipTests>
+                    <skip>${skipTests}</skip>
+                    <skipTests>${skipTests}</skipTests>
                 </configuration>
             </plugin>
         </plugins>

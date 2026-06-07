@@ -20,12 +20,17 @@ import me.zhengjie.invest.domain.InvestTradeAnalysis;
 import me.zhengjie.invest.service.InvestTradeAnalysisService;
 import me.zhengjie.invest.domain.vo.InvestTradeAnalysisQueryCriteria;
 import lombok.RequiredArgsConstructor;
+
+import java.io.File;
 import java.util.List;
+
+import me.zhengjie.utils.AliyunOcrUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import io.swagger.annotations.*;
 import java.io.IOException;
 import javax.servlet.http.HttpServletResponse;
@@ -43,6 +48,7 @@ import me.zhengjie.utils.PageResult;
 public class InvestTradeAnalysisController {
 
     private final InvestTradeAnalysisService investTradeAnalysisService;
+    private final AliyunOcrUtil aliyunOcrUtil;
 
     @Log("导出数据")
     @ApiOperation("导出数据")
@@ -58,6 +64,22 @@ public class InvestTradeAnalysisController {
     @PreAuthorize("@el.check('investTradeAnalysis:list')")
     public ResponseEntity<PageResult<InvestTradeAnalysis>> queryInvestTradeAnalysis(InvestTradeAnalysisQueryCriteria criteria, Page<Object> page){
         return new ResponseEntity<>(investTradeAnalysisService.queryAll(criteria,page),HttpStatus.OK);
+    }
+
+    @PostMapping(value = "/ocr/debug")
+    @Log("交易分析OCR调试")
+    @ApiOperation("交易分析OCR调试")
+    @PreAuthorize("@el.check('investTradeAnalysis:add','investTradeAnalysis:edit')")
+    public ResponseEntity<String> debugOcr(@RequestParam MultipartFile file) throws IOException {
+        File tempFile = File.createTempFile("trade-analysis-ocr-", ".tmp");
+        try {
+            file.transferTo(tempFile);
+            return new ResponseEntity<>(aliyunOcrUtil.recognizeGeneral(tempFile), HttpStatus.OK);
+        } finally {
+            if (tempFile.exists()) {
+                tempFile.delete();
+            }
+        }
     }
 
     @PostMapping
