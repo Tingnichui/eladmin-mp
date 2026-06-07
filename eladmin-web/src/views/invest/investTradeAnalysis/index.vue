@@ -126,17 +126,17 @@
                     </el-col>
                     <el-col :span="8">
                       <el-form-item label="交易金额" label-width="72px">
-                        <el-input v-model="orderOcr.result.amount" size="mini" />
+                        <el-input v-model="orderOcr.result.amount" size="mini" inputmode="decimal" @input="setNumericField(orderOcr.result, 'amount', $event)" @blur="normalizeNumericField(orderOcr.result, 'amount')" />
                       </el-form-item>
                     </el-col>
                     <el-col :span="8">
                       <el-form-item label="盈亏金额" label-width="72px">
-                        <el-input v-model="orderOcr.result.netProfit" size="mini" />
+                        <el-input v-model="orderOcr.result.netProfit" size="mini" inputmode="decimal" @input="setNumericField(orderOcr.result, 'netProfit', $event, true)" @blur="normalizeNumericField(orderOcr.result, 'netProfit', true)" />
                       </el-form-item>
                     </el-col>
                     <el-col :span="12">
                       <el-form-item label="开仓价格" label-width="72px">
-                        <el-input v-model="orderOcr.result.openPrice" size="mini" />
+                        <el-input v-model="orderOcr.result.openPrice" size="mini" inputmode="decimal" @input="setNumericField(orderOcr.result, 'openPrice', $event)" @blur="normalizeNumericField(orderOcr.result, 'openPrice')" />
                       </el-form-item>
                     </el-col>
                     <el-col :span="12">
@@ -146,7 +146,7 @@
                     </el-col>
                     <el-col :span="12">
                       <el-form-item label="平仓价格" label-width="72px">
-                        <el-input v-model="orderOcr.result.closePrice" size="mini" />
+                        <el-input v-model="orderOcr.result.closePrice" size="mini" inputmode="decimal" @input="setNumericField(orderOcr.result, 'closePrice', $event)" @blur="normalizeNumericField(orderOcr.result, 'closePrice')" />
                       </el-form-item>
                     </el-col>
                     <el-col :span="12">
@@ -176,7 +176,7 @@
               </el-col>
               <el-col :span="6">
                 <el-form-item label="交易金额">
-                  <el-input v-model="form.amount" class="form-control" />
+                  <el-input v-model="form.amount" class="form-control" inputmode="decimal" @input="setNumericField(form, 'amount', $event)" @blur="normalizeNumericField(form, 'amount')" />
                 </el-form-item>
               </el-col>
               <el-col :span="6">
@@ -245,7 +245,7 @@
             <el-row :gutter="16">
               <el-col :span="8">
                 <el-form-item label="开仓价格">
-                  <el-input v-model="form.openPrice" class="form-control" />
+                  <el-input v-model="form.openPrice" class="form-control" inputmode="decimal" @input="setNumericField(form, 'openPrice', $event)" @blur="normalizeNumericField(form, 'openPrice')" />
                 </el-form-item>
               </el-col>
               <el-col :span="8">
@@ -317,7 +317,7 @@
             <el-row :gutter="16">
               <el-col :span="8">
                 <el-form-item label="平仓价格">
-                  <el-input v-model="form.closePrice" class="form-control" />
+                  <el-input v-model="form.closePrice" class="form-control" inputmode="decimal" @input="setNumericField(form, 'closePrice', $event)" @blur="normalizeNumericField(form, 'closePrice')" />
                 </el-form-item>
               </el-col>
               <el-col :span="8">
@@ -327,7 +327,7 @@
               </el-col>
               <el-col :span="8">
                 <el-form-item label="盈亏金额">
-                  <el-input v-model="form.netProfit" class="form-control" />
+                  <el-input v-model="form.netProfit" class="form-control" inputmode="decimal" @input="setNumericField(form, 'netProfit', $event, true)" @blur="normalizeNumericField(form, 'netProfit', true)" />
                 </el-form-item>
               </el-col>
             </el-row>
@@ -475,6 +475,45 @@ export default {
     [CRUD.HOOK.beforeRefresh]() {
       return true
     },
+    cleanDecimalValue(value, allowSign) {
+      if (value === null || value === undefined) {
+        return ''
+      }
+      let text = String(value)
+      let sign = ''
+      if (allowSign && /^[+-]/.test(text)) {
+        sign = text.charAt(0)
+      }
+      text = text.replace(allowSign ? /[^\d.]/g : /[^\d.]/g, '')
+      const dotIndex = text.indexOf('.')
+      if (dotIndex !== -1) {
+        text = text.slice(0, dotIndex + 1) + text.slice(dotIndex + 1).replace(/\./g, '')
+      }
+      return sign + text
+    },
+    setNumericField(target, field, value, allowSign) {
+      this.$set(target, field, this.cleanDecimalValue(value, allowSign))
+    },
+    normalizeNumericField(target, field, allowSign) {
+      let value = this.cleanDecimalValue(target[field], allowSign)
+      if (!value || /^[+-]?$/.test(value) || /^[+-]?\.$/.test(value)) {
+        this.$set(target, field, '')
+        return
+      }
+      if (/^[+-]?\d+\.$/.test(value)) {
+        value = value.slice(0, -1)
+      }
+      if (/^[+-]?\.\d+$/.test(value)) {
+        value = value.replace('.', '0.')
+      }
+      this.$set(target, field, value)
+    },
+    normalizeTradeNumericFields() {
+      this.normalizeNumericField(this.form, 'amount')
+      this.normalizeNumericField(this.form, 'openPrice')
+      this.normalizeNumericField(this.form, 'closePrice')
+      this.normalizeNumericField(this.form, 'netProfit', true)
+    },
     getEmptyOrderOcrResult() {
       return {
         direction: null,
@@ -612,6 +651,7 @@ export default {
       this.resetOrderOcr()
     },
     [CRUD.HOOK.beforeSubmit]() {
+      this.normalizeTradeNumericFields()
       this.syncKlineMapsToForm()
       return true
     },
