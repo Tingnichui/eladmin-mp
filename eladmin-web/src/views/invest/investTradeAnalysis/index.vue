@@ -4,12 +4,12 @@
     <div class="head-container">
       <div v-if="crud.props.searchToggle">
         <!-- 搜索 -->
-        <label class="el-form-item-label">方向</label>
+        <label class="el-form-item-label">交易方向</label>
         <el-select
           v-model="query.direction"
           clearable
           size="small"
-          placeholder="方向"
+          placeholder="交易方向"
           class="filter-item"
           style="width: 120px"
           @change="crud.toQuery"
@@ -79,7 +79,7 @@
       <!--表单组件-->
       <el-dialog :close-on-click-modal="false" :before-close="crud.cancelCU" :visible.sync="crud.status.cu > 0" :title="crud.status.title" width="500px">
         <el-form ref="form" :model="form" :rules="rules" size="small" label-width="80px">
-          <el-form-item label="方向" prop="direction">
+          <el-form-item label="交易方向" prop="direction">
             <el-select v-model="form.direction" filterable placeholder="请选择" style="width: 370px;">
               <el-option
                 v-for="item in dict.invest_trade_analysis_direction"
@@ -89,8 +89,20 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="数量(USDT)">
+          <el-form-item label="交易金额">
             <el-input v-model="form.amount" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="开仓K线">
+            <el-input v-model="form.openKlineImages" :rows="3" type="textarea" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="开仓价格">
+            <el-input v-model="form.openPrice" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="开仓时间">
+            <el-date-picker v-model="form.openTime" type="datetime" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="开仓原因">
+            <el-input v-model="form.openReason" :rows="3" type="textarea" style="width: 370px;" />
           </el-form-item>
           <el-form-item label="入场类型">
             <el-select v-model="form.entryType" filterable placeholder="请选择" style="width: 370px;">
@@ -102,34 +114,22 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="开仓时间">
-            <el-date-picker v-model="form.openTime" type="datetime" style="width: 370px;" />
+          <el-form-item label="平仓K线">
+            <el-input v-model="form.closeKlineImages" :rows="3" type="textarea" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="平仓价格">
+            <el-input v-model="form.closePrice" style="width: 370px;" />
           </el-form-item>
           <el-form-item label="平仓时间">
             <el-date-picker v-model="form.closeTime" type="datetime" style="width: 370px;" />
           </el-form-item>
-          <el-form-item label="开仓价">
-            <el-input v-model="form.openPrice" style="width: 370px;" />
-          </el-form-item>
-          <el-form-item label="平仓价">
-            <el-input v-model="form.closePrice" style="width: 370px;" />
-          </el-form-item>
-          <el-form-item label="净盈亏">
+          <el-form-item label="盈亏金额">
             <el-input v-model="form.netProfit" style="width: 370px;" />
-          </el-form-item>
-          <el-form-item label="开仓原因">
-            <el-input v-model="form.openReason" :rows="3" type="textarea" style="width: 370px;" />
-          </el-form-item>
-          <el-form-item label="开仓K线图">
-            <el-input v-model="form.openKlineImages" :rows="3" type="textarea" style="width: 370px;" />
-          </el-form-item>
-          <el-form-item label="平仓K线图">
-            <el-input v-model="form.closeKlineImages" :rows="3" type="textarea" style="width: 370px;" />
           </el-form-item>
           <el-form-item label="开仓评分">
             <el-input v-model="form.score" style="width: 370px;" />
           </el-form-item>
-          <el-form-item label="复盘结论">
+          <el-form-item label="平仓复盘">
             <el-input v-model="form.reviewConclusion" :rows="3" type="textarea" style="width: 370px;" />
           </el-form-item>
           <el-form-item label="交易质量">
@@ -142,7 +142,7 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="备注">
+          <el-form-item label="交易备注">
             <el-input v-model="form.remark" :rows="3" type="textarea" style="width: 370px;" />
           </el-form-item>
         </el-form>
@@ -154,12 +154,12 @@
       <!--表格渲染-->
       <el-table ref="table" v-loading="crud.loading" :data="crud.data" size="small" style="width: 100%;" @selection-change="crud.selectionChangeHandler">
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="direction" label="方向">
+        <el-table-column prop="direction" label="交易方向">
           <template slot-scope="scope">
             {{ dict.label.invest_trade_analysis_direction[scope.row.direction] || scope.row.direction }}
           </template>
         </el-table-column>
-        <el-table-column prop="amount" label="数量(USDT)" />
+        <el-table-column prop="amount" label="交易金额" />
         <el-table-column prop="entryType" label="入场类型">
           <template slot-scope="scope">
             {{ dict.label.invest_trade_analysis_entry_type[scope.row.entryType] || scope.row.entryType }}
@@ -167,9 +167,9 @@
         </el-table-column>
         <el-table-column prop="openTime" label="开仓时间" />
         <el-table-column prop="closeTime" label="平仓时间" />
-        <el-table-column prop="openPrice" label="开仓价" />
-        <el-table-column prop="closePrice" label="平仓价" />
-        <el-table-column prop="netProfit" label="净盈亏" />
+        <el-table-column prop="openPrice" label="开仓价格" />
+        <el-table-column prop="closePrice" label="平仓价格" />
+        <el-table-column prop="netProfit" label="盈亏金额" />
         <el-table-column prop="score" label="开仓评分" />
         <el-table-column prop="qualityLevel" label="交易质量">
           <template slot-scope="scope">
@@ -223,7 +223,7 @@ export default {
         ]
       },
       queryTypeOptions: [
-        { key: 'direction', display_name: '方向' },
+        { key: 'direction', display_name: '交易方向' },
         { key: 'entryType', display_name: '入场类型' },
         { key: 'qualityLevel', display_name: '交易质量' }
       ]
