@@ -268,7 +268,7 @@
           <el-button :loading="crud.status.cu === 2" type="primary" @click="crud.submitCU">保存</el-button>
         </div>
       </el-dialog>
-      <el-dialog append-to-body :visible.sync="imagePreview.visible" width="760px" class="kline-preview-dialog">
+      <el-dialog append-to-body :visible.sync="imagePreview.visible" :close-on-click-modal="true" width="760px" class="kline-preview-dialog" @click.native="imagePreview.visible = false">
         <img v-if="imagePreview.url" :src="imagePreview.url" class="kline-preview-image">
       </el-dialog>
       <!--表格渲染-->
