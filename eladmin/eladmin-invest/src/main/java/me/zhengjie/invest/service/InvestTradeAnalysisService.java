@@ -16,6 +16,7 @@
 package me.zhengjie.invest.service;
 
 import me.zhengjie.invest.domain.InvestTradeAnalysis;
+import me.zhengjie.invest.domain.vo.InvestTradeAnalysisOcrVO;
 import me.zhengjie.invest.domain.vo.InvestTradeAnalysisQueryCriteria;
 import java.util.Map;
 import java.util.List;
@@ -24,6 +25,7 @@ import javax.servlet.http.HttpServletResponse;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import me.zhengjie.utils.PageResult;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
 * @description 服务接口
@@ -64,6 +66,14 @@ public interface InvestTradeAnalysisService extends IService<InvestTradeAnalysis
     * @param ids /
     */
     void deleteAll(List<Long> ids);
+
+    /**
+    * 交易分析订单OCR识别
+    * @param file 订单截图
+    * @return 识别后的业务字段
+    * @throws IOException /
+    */
+    InvestTradeAnalysisOcrVO ocr(MultipartFile file) throws IOException;
 
     /**
     * 导出数据
