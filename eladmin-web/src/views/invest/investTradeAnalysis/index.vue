@@ -1,0 +1,158 @@
+<template>
+  <div class="app-container">
+    <!--工具栏-->
+    <div class="head-container">
+      <div v-if="crud.props.searchToggle">
+        <!-- 搜索 -->
+        <label class="el-form-item-label">方向</label>
+        <el-input v-model="query.direction" clearable placeholder="方向" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+        <label class="el-form-item-label">入场类型</label>
+        <el-input v-model="query.entryType" clearable placeholder="入场类型" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+        <label class="el-form-item-label">交易质量</label>
+        <el-input v-model="query.qualityLevel" clearable placeholder="交易质量" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+        <date-range-picker
+          v-model="query.openTime"
+          start-placeholder="openTimeStart"
+          end-placeholder="openTimeStart"
+          class="date-item"
+        />
+        <date-range-picker
+          v-model="query.closeTime"
+          start-placeholder="closeTimeStart"
+          end-placeholder="closeTimeStart"
+          class="date-item"
+        />
+        <rrOperation :crud="crud" />
+      </div>
+      <!--如果想在工具栏加入更多按钮，可以使用插槽方式， slot = 'left' or 'right'-->
+      <crudOperation :permission="permission" />
+      <!--表单组件-->
+      <el-dialog :close-on-click-modal="false" :before-close="crud.cancelCU" :visible.sync="crud.status.cu > 0" :title="crud.status.title" width="500px">
+        <el-form ref="form" :model="form" :rules="rules" size="small" label-width="80px">
+          <el-form-item label="方向" prop="direction">
+            <el-input v-model="form.direction" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="数量(USDT)">
+            <el-input v-model="form.amount" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="入场类型">
+            <el-input v-model="form.entryType" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="开仓时间">
+            <el-date-picker v-model="form.openTime" type="datetime" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="平仓时间">
+            <el-date-picker v-model="form.closeTime" type="datetime" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="开仓价">
+            <el-input v-model="form.openPrice" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="平仓价">
+            <el-input v-model="form.closePrice" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="净盈亏">
+            <el-input v-model="form.netProfit" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="开仓原因">
+            <el-input v-model="form.openReason" :rows="3" type="textarea" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="开仓K线图">
+            <el-input v-model="form.openKlineImages" :rows="3" type="textarea" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="平仓K线图">
+            <el-input v-model="form.closeKlineImages" :rows="3" type="textarea" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="开仓评分">
+            <el-input v-model="form.score" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="复盘结论">
+            <el-input v-model="form.reviewConclusion" :rows="3" type="textarea" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="交易质量">
+            <el-input v-model="form.qualityLevel" style="width: 370px;" />
+          </el-form-item>
+          <el-form-item label="备注">
+            <el-input v-model="form.remark" :rows="3" type="textarea" style="width: 370px;" />
+          </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+          <el-button type="text" @click="crud.cancelCU">取消</el-button>
+          <el-button :loading="crud.status.cu === 2" type="primary" @click="crud.submitCU">确认</el-button>
+        </div>
+      </el-dialog>
+      <!--表格渲染-->
+      <el-table ref="table" v-loading="crud.loading" :data="crud.data" size="small" style="width: 100%;" @selection-change="crud.selectionChangeHandler">
+        <el-table-column type="selection" width="55" />
+        <el-table-column prop="direction" label="方向" />
+        <el-table-column prop="amount" label="数量(USDT)" />
+        <el-table-column prop="entryType" label="入场类型" />
+        <el-table-column prop="openTime" label="开仓时间" />
+        <el-table-column prop="closeTime" label="平仓时间" />
+        <el-table-column prop="openPrice" label="开仓价" />
+        <el-table-column prop="closePrice" label="平仓价" />
+        <el-table-column prop="netProfit" label="净盈亏" />
+        <el-table-column prop="score" label="开仓评分" />
+        <el-table-column prop="qualityLevel" label="交易质量" />
+        <el-table-column prop="createTime" label="创建时间" />
+        <el-table-column v-if="checkPer(['admin','investTradeAnalysis:edit','investTradeAnalysis:del'])" label="操作" width="150px" align="center">
+          <template slot-scope="scope">
+            <udOperation
+              :data="scope.row"
+              :permission="permission"
+            />
+          </template>
+        </el-table-column>
+      </el-table>
+      <!--分页组件-->
+      <pagination />
+    </div>
+  </div>
+</template>
+
+<script>
+import crudInvestTradeAnalysis from '@/api/investTradeAnalysis'
+import CRUD, { presenter, header, form, crud } from '@crud/crud'
+import rrOperation from '@crud/RR.operation'
+import crudOperation from '@crud/CRUD.operation'
+import udOperation from '@crud/UD.operation'
+import pagination from '@crud/Pagination'
+
+const defaultForm = { id: null, direction: null, amount: null, entryType: null, openTime: null, closeTime: null, openPrice: null, closePrice: null, netProfit: null, openReason: null, openKlineImages: null, closeKlineImages: null, score: null, reviewConclusion: null, qualityLevel: null, remark: null, createBy: null, updateBy: null, createTime: null, updateTime: null }
+export default {
+  name: 'InvestTradeAnalysis',
+  components: { pagination, crudOperation, rrOperation, udOperation },
+  mixins: [presenter(), header(), form(defaultForm), crud()],
+  cruds() {
+    return CRUD({ title: '交易分析', url: 'api/investTradeAnalysis', idField: 'id', sort: 'id,desc', crudMethod: { ...crudInvestTradeAnalysis }})
+  },
+  data() {
+    return {
+      permission: {
+        add: ['admin', 'investTradeAnalysis:add'],
+        edit: ['admin', 'investTradeAnalysis:edit'],
+        del: ['admin', 'investTradeAnalysis:del']
+      },
+      rules: {
+        direction: [
+          { required: true, message: '方向不能为空', trigger: 'blur' }
+        ]
+      },
+      queryTypeOptions: [
+        { key: 'direction', display_name: '方向' },
+        { key: 'entryType', display_name: '入场类型' },
+        { key: 'qualityLevel', display_name: '交易质量' }
+      ]
+    }
+  },
+  methods: {
+    // 钩子：在获取表格数据之前执行，false 则代表不获取数据
+    [CRUD.HOOK.beforeRefresh]() {
+      return true
+    }
+  }
+}
+</script>
+
+<style scoped>
+
+</style>

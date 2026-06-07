@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="me.zhengjie.invest.mapper.InvestTradeAnalysisMapper">
+    <resultMap id="BaseResultMap" type="me.zhengjie.invest.domain.InvestTradeAnalysis">
+        <id column="id" property="id"/>
+        <result column="direction" property="direction"/>
+        <result column="amount" property="amount"/>
+        <result column="entry_type" property="entryType"/>
+        <result column="open_time" property="openTime"/>
+        <result column="close_time" property="closeTime"/>
+        <result column="open_price" property="openPrice"/>
+        <result column="close_price" property="closePrice"/>
+        <result column="net_profit" property="netProfit"/>
+        <result column="open_reason" property="openReason"/>
+        <result column="open_kline_images" property="openKlineImages"/>
+        <result column="close_kline_images" property="closeKlineImages"/>
+        <result column="score" property="score"/>
+        <result column="review_conclusion" property="reviewConclusion"/>
+        <result column="quality_level" property="qualityLevel"/>
+        <result column="remark" property="remark"/>
+        <result column="create_by" property="createBy"/>
+        <result column="update_by" property="updateBy"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, direction, amount, entry_type, open_time, close_time, open_price, close_price, net_profit, open_reason, open_kline_images, close_kline_images, score, review_conclusion, quality_level, remark, create_by, update_by, create_time, update_time
+    </sql>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM invest_trade_analysis t1
+        WHERE 1 = 1
+            <if test="criteria.direction != null">
+                AND t1.direction = #{criteria.direction}
+            </if>
+            <if test="criteria.entryType != null">
+                AND t1.entry_type LIKE CONCAT('%',#{criteria.entryType},'%')
+            </if>
+            <if test="criteria.qualityLevel != null">
+                AND t1.quality_level = #{criteria.qualityLevel}
+            </if>
+            <if test="criteria.openTime != null and criteria.openTime.size() > 0">
+                AND t1.open_time BETWEEN #{criteria.openTime[0]} AND #{criteria.openTime[1]}
+            </if>
+            <if test="criteria.closeTime != null and criteria.closeTime.size() > 0">
+                AND t1.close_time BETWEEN #{criteria.closeTime[0]} AND #{criteria.closeTime[1]}
+            </if>
+        ORDER BY t1.id DESC
+    </select>
+</mapper>
