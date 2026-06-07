@@ -10,16 +10,18 @@
         <el-input v-model="query.entryType" clearable placeholder="入场类型" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
         <label class="el-form-item-label">交易质量</label>
         <el-input v-model="query.qualityLevel" clearable placeholder="交易质量" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+        <label class="el-form-item-label">开仓时间</label>
         <date-range-picker
           v-model="query.openTime"
-          start-placeholder="openTimeStart"
-          end-placeholder="openTimeStart"
+          start-placeholder="开始时间"
+          end-placeholder="结束时间"
           class="date-item"
         />
+        <label class="el-form-item-label">平仓时间</label>
         <date-range-picker
           v-model="query.closeTime"
-          start-placeholder="closeTimeStart"
-          end-placeholder="closeTimeStart"
+          start-placeholder="开始时间"
+          end-placeholder="结束时间"
           class="date-item"
         />
         <rrOperation :crud="crud" />
@@ -116,11 +118,12 @@ import rrOperation from '@crud/RR.operation'
 import crudOperation from '@crud/CRUD.operation'
 import udOperation from '@crud/UD.operation'
 import pagination from '@crud/Pagination'
+import DateRangePicker from '@/components/DateRangePicker'
 
 const defaultForm = { id: null, direction: null, amount: null, entryType: null, openTime: null, closeTime: null, openPrice: null, closePrice: null, netProfit: null, openReason: null, openKlineImages: null, closeKlineImages: null, score: null, reviewConclusion: null, qualityLevel: null, remark: null, createBy: null, updateBy: null, createTime: null, updateTime: null }
 export default {
   name: 'InvestTradeAnalysis',
-  components: { pagination, crudOperation, rrOperation, udOperation },
+  components: { pagination, crudOperation, rrOperation, udOperation, DateRangePicker },
   mixins: [presenter(), header(), form(defaultForm), crud()],
   cruds() {
     return CRUD({ title: '交易分析', url: 'api/investTradeAnalysis', idField: 'id', sort: 'id,desc', crudMethod: { ...crudInvestTradeAnalysis }})
