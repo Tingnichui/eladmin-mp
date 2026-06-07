@@ -5,17 +5,64 @@
       <div v-if="crud.props.searchToggle">
         <!-- 搜索 -->
         <label class="el-form-item-label">方向</label>
-        <el-input v-model="query.direction" clearable placeholder="方向" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+        <el-select
+          v-model="query.direction"
+          clearable
+          size="small"
+          placeholder="方向"
+          class="filter-item"
+          style="width: 120px"
+          @change="crud.toQuery"
+        >
+          <el-option
+            v-for="item in dict.invest_trade_analysis_direction"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
         <label class="el-form-item-label">入场类型</label>
-        <el-input v-model="query.entryType" clearable placeholder="入场类型" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+        <el-select
+          v-model="query.entryType"
+          clearable
+          filterable
+          size="small"
+          placeholder="入场类型"
+          class="filter-item"
+          style="width: 210px"
+          @change="crud.toQuery"
+        >
+          <el-option
+            v-for="item in dict.invest_trade_analysis_entry_type"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
         <label class="el-form-item-label">交易质量</label>
-        <el-input v-model="query.qualityLevel" clearable placeholder="交易质量" style="width: 185px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+        <el-select
+          v-model="query.qualityLevel"
+          clearable
+          size="small"
+          placeholder="交易质量"
+          class="filter-item"
+          style="width: 120px"
+          @change="crud.toQuery"
+        >
+          <el-option
+            v-for="item in dict.invest_trade_quality_level"
+            :key="item.value"
+            :label="item.label"
+            :value="parseInt(item.value)"
+          />
+        </el-select>
         <label class="el-form-item-label">开仓时间</label>
         <date-range-picker
           v-model="query.openTime"
           start-placeholder="开始时间"
           end-placeholder="结束时间"
           class="date-item"
+          @change="crud.toQuery"
         />
         <label class="el-form-item-label">平仓时间</label>
         <date-range-picker
@@ -23,6 +70,7 @@
           start-placeholder="开始时间"
           end-placeholder="结束时间"
           class="date-item"
+          @change="crud.toQuery"
         />
         <rrOperation :crud="crud" />
       </div>
@@ -32,13 +80,27 @@
       <el-dialog :close-on-click-modal="false" :before-close="crud.cancelCU" :visible.sync="crud.status.cu > 0" :title="crud.status.title" width="500px">
         <el-form ref="form" :model="form" :rules="rules" size="small" label-width="80px">
           <el-form-item label="方向" prop="direction">
-            <el-input v-model="form.direction" style="width: 370px;" />
+            <el-select v-model="form.direction" filterable placeholder="请选择" style="width: 370px;">
+              <el-option
+                v-for="item in dict.invest_trade_analysis_direction"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item label="数量(USDT)">
             <el-input v-model="form.amount" style="width: 370px;" />
           </el-form-item>
           <el-form-item label="入场类型">
-            <el-input v-model="form.entryType" style="width: 370px;" />
+            <el-select v-model="form.entryType" filterable placeholder="请选择" style="width: 370px;">
+              <el-option
+                v-for="item in dict.invest_trade_analysis_entry_type"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item label="开仓时间">
             <el-date-picker v-model="form.openTime" type="datetime" style="width: 370px;" />
@@ -71,7 +133,14 @@
             <el-input v-model="form.reviewConclusion" :rows="3" type="textarea" style="width: 370px;" />
           </el-form-item>
           <el-form-item label="交易质量">
-            <el-input v-model="form.qualityLevel" style="width: 370px;" />
+            <el-select v-model="form.qualityLevel" filterable placeholder="请选择" style="width: 370px;">
+              <el-option
+                v-for="item in dict.invest_trade_quality_level"
+                :key="item.value"
+                :label="item.label"
+                :value="parseInt(item.value)"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item label="备注">
             <el-input v-model="form.remark" :rows="3" type="textarea" style="width: 370px;" />
@@ -85,16 +154,28 @@
       <!--表格渲染-->
       <el-table ref="table" v-loading="crud.loading" :data="crud.data" size="small" style="width: 100%;" @selection-change="crud.selectionChangeHandler">
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="direction" label="方向" />
+        <el-table-column prop="direction" label="方向">
+          <template slot-scope="scope">
+            {{ dict.label.invest_trade_analysis_direction[scope.row.direction] || scope.row.direction }}
+          </template>
+        </el-table-column>
         <el-table-column prop="amount" label="数量(USDT)" />
-        <el-table-column prop="entryType" label="入场类型" />
+        <el-table-column prop="entryType" label="入场类型">
+          <template slot-scope="scope">
+            {{ dict.label.invest_trade_analysis_entry_type[scope.row.entryType] || scope.row.entryType }}
+          </template>
+        </el-table-column>
         <el-table-column prop="openTime" label="开仓时间" />
         <el-table-column prop="closeTime" label="平仓时间" />
         <el-table-column prop="openPrice" label="开仓价" />
         <el-table-column prop="closePrice" label="平仓价" />
         <el-table-column prop="netProfit" label="净盈亏" />
         <el-table-column prop="score" label="开仓评分" />
-        <el-table-column prop="qualityLevel" label="交易质量" />
+        <el-table-column prop="qualityLevel" label="交易质量">
+          <template slot-scope="scope">
+            {{ dict.label.invest_trade_quality_level[scope.row.qualityLevel] || scope.row.qualityLevel }}
+          </template>
+        </el-table-column>
         <el-table-column prop="createTime" label="创建时间" />
         <el-table-column v-if="checkPer(['admin','investTradeAnalysis:edit','investTradeAnalysis:del'])" label="操作" width="150px" align="center">
           <template slot-scope="scope">
@@ -125,6 +206,7 @@ export default {
   name: 'InvestTradeAnalysis',
   components: { pagination, crudOperation, rrOperation, udOperation, DateRangePicker },
   mixins: [presenter(), header(), form(defaultForm), crud()],
+  dicts: ['invest_trade_analysis_direction', 'invest_trade_analysis_entry_type', 'invest_trade_quality_level'],
   cruds() {
     return CRUD({ title: '交易分析', url: 'api/investTradeAnalysis', idField: 'id', sort: 'id,desc', crudMethod: { ...crudInvestTradeAnalysis }})
   },
