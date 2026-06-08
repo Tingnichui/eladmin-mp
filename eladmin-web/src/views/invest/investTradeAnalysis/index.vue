@@ -77,7 +77,11 @@
       <!--如果想在工具栏加入更多按钮，可以使用插槽方式， slot = 'left' or 'right'-->
       <crudOperation :permission="permission" />
       <!--表单组件-->
-      <el-dialog class="trade-analysis-dialog" :close-on-click-modal="false" :before-close="crud.cancelCU" :visible.sync="crud.status.cu > 0" :title="crud.status.title" width="960px" @paste.native="handleDialogPaste">
+      <el-dialog class="trade-analysis-dialog" :close-on-click-modal="false" :before-close="crud.cancelCU" :visible.sync="crud.status.cu > 0" width="960px" @paste.native="handleDialogPaste">
+        <div slot="title" class="trade-dialog-title">
+          <span>{{ crud.status.title }}</span>
+          <el-button size="mini" icon="el-icon-document-copy" @click="copyFormJson">复制JSON</el-button>
+        </div>
         <el-form ref="form" :model="form" :rules="rules" size="small" label-width="88px">
           <div class="form-section order-ocr-section">
             <div class="section-title">订单识别</div>
@@ -514,6 +518,99 @@ export default {
       this.normalizeNumericField(this.form, 'closePrice')
       this.normalizeNumericField(this.form, 'netProfit', true)
     },
+    getDictLabel(dictName, value) {
+      if (value === null || value === undefined || value === '') {
+        return null
+      }
+      const items = this.dict[dictName] || []
+      const item = items.find(item => String(item.value) === String(value))
+      return item ? item.label : value
+    },
+    formatJsonDateTime(value) {
+      if (!value) {
+        return null
+      }
+      if (typeof value === 'string') {
+        return value
+      }
+      const date = new Date(value)
+      if (Number.isNaN(date.getTime())) {
+        return value
+      }
+      const pad = number => String(number).padStart(2, '0')
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+    },
+    emptyToNull(value) {
+      return value === '' || value === undefined ? null : value
+    },
+    buildFormJsonPayload() {
+      this.normalizeTradeNumericFields()
+      const openKlineImages = this.cleanKlineMap(this.openKlineImagesMap)
+      const closeKlineImages = this.cleanKlineMap(this.closeKlineImagesMap)
+      return {
+        id: this.form.id,
+        direction: this.emptyToNull(this.form.direction),
+        directionLabel: this.getDictLabel('invest_trade_analysis_direction', this.form.direction),
+        amount: this.emptyToNull(this.form.amount),
+        score: this.emptyToNull(this.form.score),
+        qualityLevel: this.emptyToNull(this.form.qualityLevel),
+        qualityLevelLabel: this.getDictLabel('invest_trade_quality_level', this.form.qualityLevel),
+        openKlineImages,
+        openPrice: this.emptyToNull(this.form.openPrice),
+        openTime: this.formatJsonDateTime(this.form.openTime),
+        openReason: this.emptyToNull(this.form.openReason),
+        entryType: this.emptyToNull(this.form.entryType),
+        entryTypeLabel: this.getDictLabel('invest_trade_analysis_entry_type', this.form.entryType),
+        closeKlineImages,
+        closePrice: this.emptyToNull(this.form.closePrice),
+        closeTime: this.formatJsonDateTime(this.form.closeTime),
+        netProfit: this.emptyToNull(this.form.netProfit),
+        reviewConclusion: this.emptyToNull(this.form.reviewConclusion),
+        remark: this.emptyToNull(this.form.remark)
+      }
+    },
+    copyText(text) {
+      return this.copyTextByTextarea(text).catch(error => {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          return navigator.clipboard.writeText(text)
+        }
+        return Promise.reject(error)
+      })
+    },
+    copyTextByTextarea(text) {
+      return new Promise((resolve, reject) => {
+        const textarea = document.createElement('textarea')
+        textarea.value = text
+        textarea.setAttribute('readonly', 'readonly')
+        textarea.style.position = 'fixed'
+        textarea.style.left = '-9999px'
+        document.body.appendChild(textarea)
+        textarea.select()
+        try {
+          document.execCommand('copy') ? resolve() : reject(new Error('copy failed'))
+        } catch (error) {
+          reject(error)
+        } finally {
+          document.body.removeChild(textarea)
+        }
+      })
+    },
+    copyFormJson() {
+      const text = JSON.stringify(this.buildFormJsonPayload(), null, 2)
+      this.copyText(text).then(() => {
+        this.$notify({
+          title: 'JSON已复制',
+          type: CRUD.NOTIFICATION_TYPE.SUCCESS,
+          duration: 2000
+        })
+      }).catch(() => {
+        this.$notify({
+          title: '复制失败，请手动复制',
+          type: CRUD.NOTIFICATION_TYPE.ERROR,
+          duration: 2500
+        })
+      })
+    },
     getEmptyOrderOcrResult() {
       return {
         direction: null,
@@ -905,6 +1002,19 @@ export default {
   max-height: 70vh;
   padding: 12px 20px 8px;
   overflow-y: auto;
+}
+
+.trade-dialog-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 34px;
+}
+
+.trade-dialog-title span {
+  font-size: 16px;
+  font-weight: 500;
+  color: #303133;
 }
 
 .form-section {
