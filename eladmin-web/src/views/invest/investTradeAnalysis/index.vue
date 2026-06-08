@@ -352,8 +352,31 @@
           <el-button :loading="crud.status.cu === 2" type="primary" @click="crud.submitCU">保存</el-button>
         </div>
       </el-dialog>
-      <el-dialog append-to-body :visible.sync="imagePreview.visible" :close-on-click-modal="true" width="760px" class="kline-preview-dialog" @click.native="imagePreview.visible = false">
-        <img v-if="imagePreview.url" :src="imagePreview.url" class="kline-preview-image">
+      <el-dialog append-to-body :visible.sync="imagePreview.visible" :close-on-click-modal="true" width="92vw" class="kline-preview-dialog">
+        <div slot="title" class="kline-preview-title">
+          <span>{{ getKlinePreviewTitle() }}</span>
+          <small>{{ imagePreview.period }}</small>
+        </div>
+        <div class="kline-preview-body">
+          <el-button class="kline-preview-arrow left" icon="el-icon-arrow-left" circle :disabled="!getAdjacentKlinePeriod(-1)" @click="switchKlinePreviewByOffset(-1)" />
+          <div class="kline-preview-stage">
+            <img v-if="imagePreview.url" :src="imagePreview.url" class="kline-preview-image">
+            <div v-else class="kline-preview-empty">暂无图片</div>
+          </div>
+          <el-button class="kline-preview-arrow right" icon="el-icon-arrow-right" circle :disabled="!getAdjacentKlinePeriod(1)" @click="switchKlinePreviewByOffset(1)" />
+        </div>
+        <div class="kline-preview-periods">
+          <el-button
+            v-for="period in klinePeriods"
+            :key="'preview-' + period"
+            size="mini"
+            :type="imagePreview.period === period ? 'primary' : 'default'"
+            :disabled="!getKlineUrl(imagePreview.field, period)"
+            @click="switchKlinePreview(period)"
+          >
+            {{ period }}
+          </el-button>
+        </div>
       </el-dialog>
       <!--表格渲染-->
       <el-table ref="table" v-loading="crud.loading" :data="crud.data" size="small" style="width: 100%;" @selection-change="crud.selectionChangeHandler">
@@ -422,6 +445,8 @@ export default {
       pasteTarget: null,
       imagePreview: {
         visible: false,
+        field: null,
+        period: null,
         url: ''
       },
       orderOcr: {
@@ -805,11 +830,19 @@ export default {
       this.pasteTarget = null
       this.imagePreview = {
         visible: false,
+        field: null,
+        period: null,
         url: ''
       }
     },
     getKlineMap(field) {
-      return field === 'openKlineImages' ? this.openKlineImagesMap : this.closeKlineImagesMap
+      if (field === 'openKlineImages') {
+        return this.openKlineImagesMap
+      }
+      if (field === 'closeKlineImages') {
+        return this.closeKlineImagesMap
+      }
+      return {}
     },
     getKlineUrl(field, period) {
       return this.getKlineMap(field)[period]
@@ -862,10 +895,51 @@ export default {
       this.setKlinePasteTarget(field, period, true)
       const url = this.getKlineUrl(field, period)
       if (url) {
-        this.imagePreview = {
-          visible: true,
-          url
+        this.openKlinePreview(field, period)
+      }
+    },
+    openKlinePreview(field, period) {
+      this.imagePreview = {
+        visible: true,
+        field,
+        period,
+        url: this.getKlineUrl(field, period)
+      }
+    },
+    getKlinePreviewTitle() {
+      if (!this.imagePreview.field) {
+        return 'K线预览'
+      }
+      return this.imagePreview.field === 'openKlineImages' ? '开仓K线预览' : '平仓K线预览'
+    },
+    getAdjacentKlinePeriod(offset) {
+      if (!this.imagePreview.field || !this.imagePreview.period) {
+        return null
+      }
+      const currentIndex = this.klinePeriods.indexOf(this.imagePreview.period)
+      if (currentIndex === -1) {
+        return null
+      }
+      for (let index = currentIndex + offset; index >= 0 && index < this.klinePeriods.length; index += offset) {
+        const period = this.klinePeriods[index]
+        if (this.getKlineUrl(this.imagePreview.field, period)) {
+          return period
         }
+      }
+      return null
+    },
+    switchKlinePreview(period) {
+      const url = this.getKlineUrl(this.imagePreview.field, period)
+      if (!url) {
+        return
+      }
+      this.imagePreview.period = period
+      this.imagePreview.url = url
+    },
+    switchKlinePreviewByOffset(offset) {
+      const period = this.getAdjacentKlinePeriod(offset)
+      if (period) {
+        this.switchKlinePreview(period)
       }
     },
     promptKlineUrl(field, period) {
@@ -1200,16 +1274,92 @@ export default {
   display: none;
 }
 
+::v-deep .kline-preview-dialog .el-dialog {
+  max-width: 1280px;
+}
+
+::v-deep .kline-preview-dialog .el-dialog__body {
+  padding: 8px 18px 18px;
+}
+
+.kline-preview-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.kline-preview-title span {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.kline-preview-title small {
+  padding: 2px 8px;
+  font-size: 12px;
+  color: #409eff;
+  background: #ecf5ff;
+  border-radius: 3px;
+}
+
+.kline-preview-body {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  gap: 12px;
+  align-items: center;
+}
+
+.kline-preview-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: min(76vh, 760px);
+  min-height: 460px;
+  overflow: hidden;
+  background: #111827;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+}
+
 .kline-preview-image {
   display: block;
-  width: 100%;
-  max-height: 70vh;
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
+}
+
+.kline-preview-empty {
+  color: #c0c4cc;
+  font-size: 14px;
+}
+
+.kline-preview-arrow {
+  justify-self: center;
+}
+
+.kline-preview-periods {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 14px;
 }
 
 @media (max-width: 900px) {
   .kline-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .kline-preview-body {
+    grid-template-columns: 36px minmax(0, 1fr) 36px;
+    gap: 8px;
+  }
+
+  .kline-preview-stage {
+    min-height: 320px;
+  }
+
+  .kline-preview-periods {
+    flex-wrap: wrap;
   }
 }
 </style>
