@@ -697,6 +697,18 @@ export default {
         })
       }
     },
+    validate(callback) {
+      if (this.$refs.form) {
+        this.$refs.form.validate(callback)
+      } else if (callback) {
+        callback(false)
+      }
+    },
+    clearValidate() {
+      if (this.$refs.form) {
+        this.$refs.form.clearValidate()
+      }
+    },
     afterToCU() {
       this.syncKlineMapsFromForm()
       this.resetOrderOcr()

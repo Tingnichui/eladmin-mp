@@ -169,10 +169,25 @@ export default {
       'baseApi'
     ])
   },
+  mounted() {
+    this.bindFormRefProxy()
+  },
   cruds() {
     return CRUD({ title: '交易分析', url: 'api/investTradeAnalysis', idField: 'id', sort: 'id,desc', crudMethod: { ...crudInvestTradeAnalysis }})
   },
   methods: {
+    bindFormRefProxy() {
+      this.$nextTick(() => {
+        const formComponent = this.$refs.tradeAnalysisForm
+        if (!formComponent) {
+          return
+        }
+        this.$refs.form = {
+          validate: callback => formComponent.validate(callback),
+          clearValidate: () => formComponent.clearValidate()
+        }
+      })
+    },
     // 钩子：在获取表格数据之前执行，false 则代表不获取数据
     [CRUD.HOOK.beforeRefresh]() {
       return true
@@ -181,6 +196,7 @@ export default {
       this.$nextTick(() => {
         if (this.$refs.tradeAnalysisForm) {
           this.$refs.tradeAnalysisForm.afterToCU()
+          this.bindFormRefProxy()
         }
       })
     },
