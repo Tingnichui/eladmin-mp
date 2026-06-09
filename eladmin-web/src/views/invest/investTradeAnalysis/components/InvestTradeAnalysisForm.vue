@@ -3,7 +3,10 @@
     <el-dialog class="trade-analysis-dialog" :close-on-click-modal="false" :before-close="crud.cancelCU" :visible.sync="crud.status.cu > 0" width="960px" @paste.native="handleDialogPaste">
       <div slot="title" class="trade-dialog-title">
         <span>{{ crud.status.title }}</span>
-        <el-button size="mini" icon="el-icon-document-copy" @click="copyFormJson">复制JSON</el-button>
+        <div class="trade-dialog-actions">
+          <el-button size="mini" icon="el-icon-camera" :loading="orderOcr.recognizing" @click="recognizeClipboardOrder">识别剪贴板订单</el-button>
+          <el-button size="mini" icon="el-icon-document-copy" @click="copyFormJson">复制JSON</el-button>
+        </div>
       </div>
       <el-form ref="form" :model="form" :rules="rules" size="small" label-width="88px">
         <div class="form-section order-ocr-section">
@@ -580,6 +583,51 @@ export default {
       }
       return file || null
     },
+    getImageExtension(mimeType) {
+      const type = (mimeType || '').split('/')[1] || 'png'
+      return type === 'jpeg' ? 'jpg' : type
+    },
+    async getImageFileFromClipboardRead() {
+      if (!navigator.clipboard || !navigator.clipboard.read) {
+        return null
+      }
+      const items = await navigator.clipboard.read()
+      for (const item of items) {
+        const type = item.types.find(type => type.indexOf('image/') === 0)
+        if (type) {
+          const blob = await item.getType(type)
+          return new File([blob], `clipboard-order-${Date.now()}.${this.getImageExtension(type)}`, { type })
+        }
+      }
+      return null
+    },
+    recognizeClipboardOrder() {
+      if (this.orderOcr.recognizing) {
+        return
+      }
+      this.getImageFileFromClipboardRead().then(file => {
+        if (!file) {
+          this.$notify({
+            title: '剪贴板中没有图片',
+            message: '请先截图并复制订单信息，再点击识别剪贴板订单。',
+            type: CRUD.NOTIFICATION_TYPE.WARNING,
+            duration: 3000
+          })
+          return
+        }
+        this.setOrderOcrFile(file, false)
+        this.$nextTick(() => {
+          this.recognizeOrder(true)
+        })
+      }).catch(() => {
+        this.$notify({
+          title: '无法读取剪贴板图片',
+          message: '当前浏览器未允许读取剪贴板，请使用订单截图区域的粘贴上传。',
+          type: CRUD.NOTIFICATION_TYPE.WARNING,
+          duration: 3500
+        })
+      })
+    },
     setOrderOcrFile(file, autoRecognize) {
       if (this.orderOcr.previewUrl) {
         URL.revokeObjectURL(this.orderOcr.previewUrl)
@@ -596,15 +644,18 @@ export default {
     clearOrderOcr() {
       this.resetOrderOcr()
     },
-    recognizeOrder() {
+    recognizeOrder(autoApply) {
       if (!this.orderOcr.file || this.orderOcr.recognizing) {
         return
       }
       this.orderOcr.recognizing = true
       crudInvestTradeAnalysis.ocrRecognize(this.orderOcr.file).then(data => {
         this.orderOcr.result = this.normalizeOrderOcrResult(data)
+        if (autoApply && this.hasOrderOcrResult) {
+          this.applyOrderOcrToForm(false)
+        }
         this.$notify({
-          title: this.hasOrderOcrResult ? '订单识别完成' : '未识别到可用字段',
+          title: this.hasOrderOcrResult ? (autoApply ? '订单识别并填充完成' : '订单识别完成') : '未识别到可用字段',
           type: this.hasOrderOcrResult ? CRUD.NOTIFICATION_TYPE.SUCCESS : CRUD.NOTIFICATION_TYPE.WARNING,
           duration: 2000
         })
@@ -622,7 +673,7 @@ export default {
       })
       return result
     },
-    applyOrderOcrToForm() {
+    applyOrderOcrToForm(showNotify = true) {
       const result = this.orderOcr.result
       const mapping = {
         direction: 'direction',
@@ -638,11 +689,13 @@ export default {
           this.$set(this.form, mapping[key], result[key])
         }
       })
-      this.$notify({
-        title: '已应用到表单',
-        type: CRUD.NOTIFICATION_TYPE.SUCCESS,
-        duration: 2000
-      })
+      if (showNotify) {
+        this.$notify({
+          title: '已应用到表单',
+          type: CRUD.NOTIFICATION_TYPE.SUCCESS,
+          duration: 2000
+        })
+      }
     },
     afterToCU() {
       this.syncKlineMapsFromForm()
@@ -965,6 +1018,12 @@ export default {
   font-size: 16px;
   font-weight: 500;
   color: #303133;
+}
+
+.trade-dialog-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .form-section {
