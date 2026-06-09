@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vue-cli-service serve",
     "build:prod": "vue-cli-service build",
+    "zip:prod": "vue-cli-service build && powershell \"$date=Get-Date -Format yyyyMMddHHmmss; Compress-Archive -Path dist/* -DestinationPath ('dist-' + $date + '.zip') -Force\"",
     "build:stage": "vue-cli-service build --mode staging",
     "preview": "node build/index.js --preview",
     "lint": "eslint --ext .js,.vue src",
