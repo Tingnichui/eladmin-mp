@@ -16,7 +16,7 @@
 package me.zhengjie.invest.mapper;
 
 import me.zhengjie.invest.domain.InvestTradeAnalysis;
-import me.zhengjie.invest.domain.vo.InvestTradeAnalysisQueryCriteria;
+import me.zhengjie.invest.domain.dto.InvestTradeAnalysisQueryCriteria;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Mapper;

@@ -13,16 +13,20 @@
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
 */
-package me.zhengjie.invest.domain.vo;
+package me.zhengjie.gym.domain.dto;
 
 import lombok.Data;
 
+import java.util.List;
+
 /**
 * @author genghui
-* @date 2025-09-07
+* @date 2024-07-02
 **/
 @Data
-public class BinanceTradeInfoExtQueryCriteria{
-    private Integer hedgedFlag;
-    private String remark;
+public class GymContractOperateRecordQueryCriteria{
+    private String contractInfoId;
+    private List<String> contractInfoIdList;
+    private String contractOperateType;
+    private String operateStatus;
 }

@@ -33,9 +33,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <java.version>1.8</java.version>
-        <log4jdbc.version>1.16</log4jdbc.version>
         <swagger.version>2.9.2</swagger.version>
-        <fastjson.version>1.2.83</fastjson.version>
         <dynamic-datasource.version>4.3.1</dynamic-datasource.version>
         <fastjson2.version>2.0.54</fastjson2.version>
         <druid.version>1.2.19</druid.version>
@@ -45,7 +43,6 @@
         <aliyun-sdk-oss.version>3.18.1</aliyun-sdk-oss.version>
         <aliyun-sdk-ocr.version>3.1.3</aliyun-sdk-ocr.version>
         <pinyin4j.version>2.5.1</pinyin4j.version>
-        <playwright.version>1.48.0</playwright.version>
     </properties>
 
     <dependencies>
@@ -224,13 +221,6 @@
             <version>${fastjson2.version}</version>
         </dependency>
 
-        <!-- 业务扩展模块仍有 fastjson 1.x 引用，保留兼容依赖 -->
-        <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>fastjson</artifactId>
-            <version>${fastjson.version}</version>
-        </dependency>
-
         <!-- Java图形验证码 -->
         <dependency>
             <groupId>com.github.whvcse</groupId>
@@ -292,15 +282,6 @@
             <artifactId>pinyin4j</artifactId>
             <version>${pinyin4j.version}</version>
         </dependency>
-
-        <!-- https://mvnrepository.com/artifact/com.microsoft.playwright/playwright -->
-        <dependency>
-            <groupId>com.microsoft.playwright</groupId>
-            <artifactId>playwright</artifactId>
-            <version>${playwright.version}</version>
-        </dependency>
-
-
 
     </dependencies>
 

@@ -16,7 +16,7 @@
 package me.zhengjie.mediacrawler.service;
 
 import me.zhengjie.mediacrawler.domain.CrawlerCookiesAccount;
-import me.zhengjie.mediacrawler.domain.vo.CrawlerCookiesAccountQueryCriteria;
+import me.zhengjie.mediacrawler.domain.dto.CrawlerCookiesAccountQueryCriteria;
 import java.util.Map;
 import java.util.List;
 import java.io.IOException;

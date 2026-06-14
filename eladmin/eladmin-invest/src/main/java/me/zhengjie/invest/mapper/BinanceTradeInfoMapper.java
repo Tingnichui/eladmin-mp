@@ -16,7 +16,7 @@
 package me.zhengjie.invest.mapper;
 
 import me.zhengjie.invest.domain.BinanceTradeInfo;
-import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
+import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 
 import java.math.BigDecimal;
 import java.util.List;

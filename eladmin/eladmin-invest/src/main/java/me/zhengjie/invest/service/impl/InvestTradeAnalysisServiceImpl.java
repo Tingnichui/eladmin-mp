@@ -15,17 +15,17 @@
 */
 package me.zhengjie.invest.service.impl;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
 import me.zhengjie.invest.domain.InvestTradeAnalysis;
-import me.zhengjie.invest.domain.vo.InvestTradeAnalysisOcrVO;
+import me.zhengjie.invest.domain.dto.InvestTradeAnalysisOcrVO;
 import me.zhengjie.utils.FileUtil;
 import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import me.zhengjie.invest.service.InvestTradeAnalysisService;
-import me.zhengjie.invest.domain.vo.InvestTradeAnalysisQueryCriteria;
+import me.zhengjie.invest.domain.dto.InvestTradeAnalysisQueryCriteria;
 import me.zhengjie.invest.mapper.InvestTradeAnalysisMapper;
 import me.zhengjie.utils.AliyunOcrUtil;
 import org.springframework.stereotype.Service;

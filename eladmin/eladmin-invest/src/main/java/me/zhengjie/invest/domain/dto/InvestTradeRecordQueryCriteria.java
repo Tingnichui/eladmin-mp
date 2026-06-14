@@ -13,24 +13,28 @@
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
 */
-package me.zhengjie.gym.domain.vo;
+package me.zhengjie.invest.domain.dto;
 
 import lombok.Data;
 
+import javax.validation.constraints.Pattern;
 import java.sql.Timestamp;
 import java.util.List;
 
 /**
 * @author genghui
-* @date 2024-07-02
+* @date 2025-01-04
 **/
 @Data
-public class GymClassRecordQueryCriteria {
-    private String coachId;
-    private String memberId;
-    private String contractInfoId;
-    private String classRemark;
-    private List<Timestamp> classBeginTime;
-    private List<String> contractInfoIdList;
-
+public class InvestTradeRecordQueryCriteria{
+    private Integer id;
+    private Integer tradeType;
+    private Integer operateStatus;
+    private Integer productId;
+    private List<Timestamp> openTime;
+    private Integer score;
+    @Pattern(regexp = "|profit")
+    private String sortField;
+    @Pattern(regexp = "|asc|desc")
+    private String sortOrder;
 }

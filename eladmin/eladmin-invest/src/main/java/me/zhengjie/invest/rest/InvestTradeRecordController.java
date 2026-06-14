@@ -18,7 +18,7 @@ package me.zhengjie.invest.rest;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.invest.domain.InvestTradeRecord;
 import me.zhengjie.invest.service.InvestTradeRecordService;
-import me.zhengjie.invest.domain.vo.InvestTradeRecordQueryCriteria;
+import me.zhengjie.invest.domain.dto.InvestTradeRecordQueryCriteria;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
 import org.springframework.http.HttpStatus;

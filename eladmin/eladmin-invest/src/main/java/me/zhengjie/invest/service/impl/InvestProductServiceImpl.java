@@ -21,7 +21,7 @@ import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import me.zhengjie.invest.service.InvestProductService;
-import me.zhengjie.invest.domain.vo.InvestProductQueryCriteria;
+import me.zhengjie.invest.domain.dto.InvestProductQueryCriteria;
 import me.zhengjie.invest.mapper.InvestProductMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

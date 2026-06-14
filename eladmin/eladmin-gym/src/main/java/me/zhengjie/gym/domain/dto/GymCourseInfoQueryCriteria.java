@@ -13,18 +13,20 @@
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
 */
-package me.zhengjie.mediacrawler.domain.vo;
+package me.zhengjie.gym.domain.dto;
 
 import lombok.Data;
+import java.util.List;
 
 /**
 * @author genghui
-* @date 2024-08-17
+* @date 2024-06-30
 **/
 @Data
-public class XhsNoteQueryCriteria{
-    private String nickname;
-    private String type;
-    private String title;
-    private String desc;
+public class GymCourseInfoQueryCriteria {
+    private String courseName;
+    private String courseDescribe;
+    private String courseType;
+    private List<Integer> courseUsePeriodDays;
+    private List<Integer> courseAvailableQuantity;
 }

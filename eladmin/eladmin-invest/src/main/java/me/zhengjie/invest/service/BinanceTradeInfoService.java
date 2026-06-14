@@ -16,9 +16,9 @@
 package me.zhengjie.invest.service;
 
 import me.zhengjie.invest.domain.BinanceTradeInfo;
-import me.zhengjie.invest.domain.vo.BinanceOrderVO;
-import me.zhengjie.invest.domain.vo.BinanceSpotHedgedTradeStatsInfoVO;
-import me.zhengjie.invest.domain.vo.BinanceTradeInfoQueryCriteria;
+import me.zhengjie.invest.domain.dto.BinanceOrderVO;
+import me.zhengjie.invest.domain.dto.BinanceSpotHedgedTradeStatsInfoVO;
+import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -26,7 +26,7 @@ import java.io.IOException;
 import javax.servlet.http.HttpServletResponse;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
-import me.zhengjie.invest.domain.vo.BinanceTradeStatsInfoVO;
+import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
 import me.zhengjie.utils.PageResult;
 
 /**

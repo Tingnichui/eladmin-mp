@@ -16,7 +16,7 @@
 package me.zhengjie.invest.service;
 
 import me.zhengjie.invest.domain.BinanceTradeInfoExt;
-import me.zhengjie.invest.domain.vo.BinanceTradeInfoExtQueryCriteria;
+import me.zhengjie.invest.domain.dto.BinanceTradeInfoExtQueryCriteria;
 
 import java.math.BigDecimal;
 import java.util.List;

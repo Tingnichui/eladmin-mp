@@ -13,16 +13,14 @@
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
 */
-package me.zhengjie.gym.domain.vo;
+package me.zhengjie.invest.domain.dto;
 
 import lombok.Data;
 
 /**
 * @author genghui
-* @date 2024-06-30
+* @date 2025-10-17
 **/
 @Data
-public class GymCoachInfoQueryCriteria {
-    private String coachName;
-    private String coachPhoneNum;
+public class BinanceFuturesTradeInfoQueryCriteria{
 }

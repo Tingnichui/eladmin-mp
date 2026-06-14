@@ -18,7 +18,7 @@ package me.zhengjie.mediacrawler.mapper;
 import com.baomidou.dynamic.datasource.annotation.DS;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import me.zhengjie.mediacrawler.domain.CrawlerCookiesAccount;
-import me.zhengjie.mediacrawler.domain.vo.CrawlerTagStats;
+import me.zhengjie.mediacrawler.domain.dto.CrawlerTagStats;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.util.List;

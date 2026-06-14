@@ -15,8 +15,8 @@
  */
 package me.zhengjie.invest.service.impl;
 
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -26,8 +26,8 @@ import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
-import me.zhengjie.invest.domain.vo.BinanceCoinFuturesTradeInfoQueryCriteria;
-import me.zhengjie.invest.domain.vo.BinanceFuturesTradeStatsInfoVO;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesTradeInfoQueryCriteria;
+import me.zhengjie.invest.domain.dto.BinanceFuturesTradeStatsInfoVO;
 import me.zhengjie.invest.mapper.BinanceCoinFuturesTradeInfoMapper;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.service.BinanceCoinFuturesTradeInfoService;

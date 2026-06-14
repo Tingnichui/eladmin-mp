@@ -32,7 +32,7 @@ import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import me.zhengjie.gym.service.GymContractOperateRecordService;
-import me.zhengjie.gym.domain.vo.GymContractOperateRecordQueryCriteria;
+import me.zhengjie.gym.domain.dto.GymContractOperateRecordQueryCriteria;
 import me.zhengjie.gym.mapper.GymContractOperateRecordMapper;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;

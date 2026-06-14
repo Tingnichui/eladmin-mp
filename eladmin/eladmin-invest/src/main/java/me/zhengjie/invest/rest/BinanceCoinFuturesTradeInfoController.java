@@ -18,7 +18,7 @@ package me.zhengjie.invest.rest;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
 import me.zhengjie.invest.service.BinanceCoinFuturesTradeInfoService;
-import me.zhengjie.invest.domain.vo.BinanceCoinFuturesTradeInfoQueryCriteria;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesTradeInfoQueryCriteria;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
 import org.springframework.http.HttpStatus;

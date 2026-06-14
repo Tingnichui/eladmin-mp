@@ -18,7 +18,7 @@ package me.zhengjie.mediacrawler.rest;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.mediacrawler.domain.CrawlerRecord;
 import me.zhengjie.mediacrawler.service.CrawlerRecordService;
-import me.zhengjie.mediacrawler.domain.vo.CrawlerRecordQueryCriteria;
+import me.zhengjie.mediacrawler.domain.dto.CrawlerRecordQueryCriteria;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
 import org.springframework.http.HttpStatus;

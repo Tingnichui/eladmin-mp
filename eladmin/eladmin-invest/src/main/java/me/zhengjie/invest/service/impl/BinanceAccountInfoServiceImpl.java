@@ -15,14 +15,14 @@
  */
 package me.zhengjie.invest.service.impl;
 
-import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
-import me.zhengjie.invest.domain.vo.BinanceAccountInfoQueryCriteria;
+import me.zhengjie.invest.domain.dto.BinanceAccountInfoQueryCriteria;
 import me.zhengjie.invest.mapper.BinanceAccountInfoMapper;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;

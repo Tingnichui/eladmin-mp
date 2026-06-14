@@ -17,9 +17,9 @@ package me.zhengjie.invest.rest;
 
 import me.zhengjie.annotation.Log;
 import me.zhengjie.invest.domain.InvestTradeAnalysis;
-import me.zhengjie.invest.domain.vo.InvestTradeAnalysisOcrVO;
+import me.zhengjie.invest.domain.dto.InvestTradeAnalysisOcrVO;
 import me.zhengjie.invest.service.InvestTradeAnalysisService;
-import me.zhengjie.invest.domain.vo.InvestTradeAnalysisQueryCriteria;
+import me.zhengjie.invest.domain.dto.InvestTradeAnalysisQueryCriteria;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;

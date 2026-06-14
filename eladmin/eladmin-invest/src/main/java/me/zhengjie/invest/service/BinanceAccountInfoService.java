@@ -16,7 +16,7 @@
 package me.zhengjie.invest.service;
 
 import me.zhengjie.invest.domain.BinanceAccountInfo;
-import me.zhengjie.invest.domain.vo.BinanceAccountInfoQueryCriteria;
+import me.zhengjie.invest.domain.dto.BinanceAccountInfoQueryCriteria;
 import java.util.Map;
 import java.util.List;
 import java.io.IOException;

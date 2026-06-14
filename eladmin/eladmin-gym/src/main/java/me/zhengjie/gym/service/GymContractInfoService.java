@@ -17,7 +17,7 @@ package me.zhengjie.gym.service;
 
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.gym.domain.GymContractInfo;
-import me.zhengjie.gym.domain.vo.GymContractInfoQueryCriteria;
+import me.zhengjie.gym.domain.dto.GymContractInfoQueryCriteria;
 
 import java.util.List;
 import java.io.IOException;

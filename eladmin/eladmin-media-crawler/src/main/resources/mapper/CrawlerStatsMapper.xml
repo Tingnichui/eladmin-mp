@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="me.zhengjie.mediacrawler.mapper.CrawlerStatsMapper">
 
-    <select id="getTagListByKeyWord" resultType="me.zhengjie.mediacrawler.domain.vo.CrawlerTagStats">
+    <select id="getTagListByKeyWord" resultType="me.zhengjie.mediacrawler.domain.dto.CrawlerTagStats">
         <!-- 拆分 tag_list 为单个标签，创建一个临时表 -->
         WITH tempt AS (
             SELECT

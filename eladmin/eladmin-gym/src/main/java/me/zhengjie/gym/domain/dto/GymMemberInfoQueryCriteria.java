@@ -13,7 +13,7 @@
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
 */
-package me.zhengjie.gym.domain.vo;
+package me.zhengjie.gym.domain.dto;
 
 import lombok.Data;
 import java.util.List;
@@ -23,10 +23,10 @@ import java.util.List;
 * @date 2024-06-30
 **/
 @Data
-public class GymCourseInfoQueryCriteria {
-    private String courseName;
-    private String courseDescribe;
-    private String courseType;
-    private List<Integer> courseUsePeriodDays;
-    private List<Integer> courseAvailableQuantity;
+public class GymMemberInfoQueryCriteria {
+    private String memberName;
+    private String memberGender;
+    private String memberPhoneNum;
+    private String birthDay;
+    private List<String> memberAge;
 }

@@ -13,20 +13,24 @@
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
 */
-package me.zhengjie.mediacrawler.domain.vo;
+package me.zhengjie.gym.domain.dto;
 
 import lombok.Data;
+
+import java.sql.Timestamp;
 import java.util.List;
 
 /**
 * @author genghui
-* @date 2024-09-08
+* @date 2024-07-02
 **/
 @Data
-public class CrawlerCookiesAccountQueryCriteria{
-    private String accountName;
-    private String platformName;
-    private String cookies;
-    private Integer status;
-    private List<Long> invalidTimestamp;
+public class GymClassRecordQueryCriteria {
+    private String coachId;
+    private String memberId;
+    private String contractInfoId;
+    private String classRemark;
+    private List<Timestamp> classBeginTime;
+    private List<String> contractInfoIdList;
+
 }

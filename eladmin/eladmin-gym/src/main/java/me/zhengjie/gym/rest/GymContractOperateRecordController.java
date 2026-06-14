@@ -19,7 +19,7 @@ import me.zhengjie.annotation.Log;
 import me.zhengjie.gym.domain.GymContractOperateRecord;
 import me.zhengjie.gym.service.GymContractInfoService;
 import me.zhengjie.gym.service.GymContractOperateRecordService;
-import me.zhengjie.gym.domain.vo.GymContractOperateRecordQueryCriteria;
+import me.zhengjie.gym.domain.dto.GymContractOperateRecordQueryCriteria;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
 

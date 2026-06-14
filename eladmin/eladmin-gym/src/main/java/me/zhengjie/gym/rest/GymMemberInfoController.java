@@ -18,7 +18,7 @@ package me.zhengjie.gym.rest;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.gym.domain.GymMemberInfo;
 import me.zhengjie.gym.service.GymMemberInfoService;
-import me.zhengjie.gym.domain.vo.GymMemberInfoQueryCriteria;
+import me.zhengjie.gym.domain.dto.GymMemberInfoQueryCriteria;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
 import org.springframework.http.HttpStatus;

@@ -18,7 +18,7 @@ package me.zhengjie.mediacrawler.rest;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.mediacrawler.domain.XhsNote;
 import me.zhengjie.mediacrawler.service.XhsNoteService;
-import me.zhengjie.mediacrawler.domain.vo.XhsNoteQueryCriteria;
+import me.zhengjie.mediacrawler.domain.dto.XhsNoteQueryCriteria;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
 import org.springframework.http.HttpStatus;

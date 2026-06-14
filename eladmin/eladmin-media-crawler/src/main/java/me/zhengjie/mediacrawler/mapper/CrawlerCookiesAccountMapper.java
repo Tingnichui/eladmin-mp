@@ -17,7 +17,7 @@ package me.zhengjie.mediacrawler.mapper;
 
 import com.baomidou.dynamic.datasource.annotation.DS;
 import me.zhengjie.mediacrawler.domain.CrawlerCookiesAccount;
-import me.zhengjie.mediacrawler.domain.vo.CrawlerCookiesAccountQueryCriteria;
+import me.zhengjie.mediacrawler.domain.dto.CrawlerCookiesAccountQueryCriteria;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Mapper;

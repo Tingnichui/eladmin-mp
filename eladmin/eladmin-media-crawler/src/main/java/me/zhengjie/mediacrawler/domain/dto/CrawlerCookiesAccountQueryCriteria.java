@@ -13,20 +13,20 @@
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
 */
-package me.zhengjie.gym.domain.vo;
+package me.zhengjie.mediacrawler.domain.dto;
 
 import lombok.Data;
 import java.util.List;
 
 /**
 * @author genghui
-* @date 2024-06-30
+* @date 2024-09-08
 **/
 @Data
-public class GymMemberInfoQueryCriteria {
-    private String memberName;
-    private String memberGender;
-    private String memberPhoneNum;
-    private String birthDay;
-    private List<String> memberAge;
+public class CrawlerCookiesAccountQueryCriteria{
+    private String accountName;
+    private String platformName;
+    private String cookies;
+    private Integer status;
+    private List<Long> invalidTimestamp;
 }

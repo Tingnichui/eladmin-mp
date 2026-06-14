@@ -18,7 +18,7 @@ package me.zhengjie.invest.rest;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.invest.domain.InvestProduct;
 import me.zhengjie.invest.service.InvestProductService;
-import me.zhengjie.invest.domain.vo.InvestProductQueryCriteria;
+import me.zhengjie.invest.domain.dto.InvestProductQueryCriteria;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
 import org.springframework.http.HttpStatus;

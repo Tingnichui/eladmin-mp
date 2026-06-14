@@ -13,20 +13,16 @@
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
 */
-package me.zhengjie.invest.domain.vo;
+package me.zhengjie.invest.domain.dto;
 
 import lombok.Data;
-import java.util.List;
 
 /**
 * @author genghui
-* @date 2025-01-04
+* @date 2025-09-07
 **/
 @Data
-public class InvestProductQueryCriteria{
-    private Integer investType;
-    private String investProductCode;
-    private String investProductName;
-    private String measurementUnit;
-    private List<Integer> minSize;
+public class BinanceTradeInfoExtQueryCriteria{
+    private Integer hedgedFlag;
+    private String remark;
 }

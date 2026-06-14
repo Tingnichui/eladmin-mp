@@ -16,7 +16,7 @@
 package me.zhengjie.invest.service;
 
 import me.zhengjie.invest.domain.InvestTradeRecord;
-import me.zhengjie.invest.domain.vo.InvestTradeRecordQueryCriteria;
+import me.zhengjie.invest.domain.dto.InvestTradeRecordQueryCriteria;
 import java.util.Map;
 import java.util.List;
 import java.io.IOException;

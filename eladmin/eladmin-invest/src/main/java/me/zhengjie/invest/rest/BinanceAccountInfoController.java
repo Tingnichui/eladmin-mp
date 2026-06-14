@@ -18,7 +18,7 @@ package me.zhengjie.invest.rest;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
-import me.zhengjie.invest.domain.vo.BinanceAccountInfoQueryCriteria;
+import me.zhengjie.invest.domain.dto.BinanceAccountInfoQueryCriteria;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
 import org.springframework.http.HttpStatus;

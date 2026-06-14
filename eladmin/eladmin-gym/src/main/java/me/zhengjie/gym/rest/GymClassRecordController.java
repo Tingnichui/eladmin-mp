@@ -18,7 +18,7 @@ package me.zhengjie.gym.rest;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.gym.domain.GymClassRecord;
 import me.zhengjie.gym.service.GymClassRecordService;
-import me.zhengjie.gym.domain.vo.GymClassRecordQueryCriteria;
+import me.zhengjie.gym.domain.dto.GymClassRecordQueryCriteria;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
 

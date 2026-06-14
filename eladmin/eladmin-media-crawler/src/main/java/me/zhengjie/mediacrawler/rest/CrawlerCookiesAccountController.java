@@ -18,7 +18,7 @@ package me.zhengjie.mediacrawler.rest;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.mediacrawler.domain.CrawlerCookiesAccount;
 import me.zhengjie.mediacrawler.service.CrawlerCookiesAccountService;
-import me.zhengjie.mediacrawler.domain.vo.CrawlerCookiesAccountQueryCriteria;
+import me.zhengjie.mediacrawler.domain.dto.CrawlerCookiesAccountQueryCriteria;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
 import org.springframework.http.HttpStatus;

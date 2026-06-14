@@ -19,7 +19,7 @@ import me.zhengjie.annotation.Log;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.InvestKlinesRecord;
 import me.zhengjie.invest.service.InvestKlinesRecordService;
-import me.zhengjie.invest.domain.vo.InvestKlinesRecordQueryCriteria;
+import me.zhengjie.invest.domain.dto.InvestKlinesRecordQueryCriteria;
 import lombok.RequiredArgsConstructor;
 
 import java.math.BigDecimal;

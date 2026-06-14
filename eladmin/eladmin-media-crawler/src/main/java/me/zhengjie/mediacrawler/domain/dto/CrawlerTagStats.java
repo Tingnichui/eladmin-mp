@@ -1,4 +1,4 @@
-package me.zhengjie.mediacrawler.domain.vo;
+package me.zhengjie.mediacrawler.domain.dto;
 
 import lombok.Data;
 

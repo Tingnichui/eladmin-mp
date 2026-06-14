@@ -16,8 +16,8 @@
 package me.zhengjie.invest.service;
 
 import me.zhengjie.invest.domain.InvestTradeAnalysis;
-import me.zhengjie.invest.domain.vo.InvestTradeAnalysisOcrVO;
-import me.zhengjie.invest.domain.vo.InvestTradeAnalysisQueryCriteria;
+import me.zhengjie.invest.domain.dto.InvestTradeAnalysisOcrVO;
+import me.zhengjie.invest.domain.dto.InvestTradeAnalysisQueryCriteria;
 import java.util.Map;
 import java.util.List;
 import java.io.IOException;

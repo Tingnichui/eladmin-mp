@@ -1,4 +1,4 @@
-package me.zhengjie.gym.domain.vo;
+package me.zhengjie.gym.domain.dto;
 
 import lombok.Data;
 

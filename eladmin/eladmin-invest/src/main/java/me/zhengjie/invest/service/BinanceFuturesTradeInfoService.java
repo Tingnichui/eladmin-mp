@@ -16,7 +16,7 @@
 package me.zhengjie.invest.service;
 
 import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
-import me.zhengjie.invest.domain.vo.BinanceFuturesTradeInfoQueryCriteria;
+import me.zhengjie.invest.domain.dto.BinanceFuturesTradeInfoQueryCriteria;
 
 import java.util.Date;
 import java.util.List;
@@ -24,7 +24,7 @@ import java.io.IOException;
 import javax.servlet.http.HttpServletResponse;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
-import me.zhengjie.invest.domain.vo.BinanceFuturesTradeStatsInfoVO;
+import me.zhengjie.invest.domain.dto.BinanceFuturesTradeStatsInfoVO;
 import me.zhengjie.utils.PageResult;
 
 /**

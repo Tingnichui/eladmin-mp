@@ -4,7 +4,7 @@ package me.zhengjie.other.task;
 import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.RandomUtil;
-import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson2.JSON;
 import lombok.extern.slf4j.Slf4j;
 import me.zhengjie.utils.RedisUtils;
 import me.zhengjie.utils.enums.RedisKeyEnum;

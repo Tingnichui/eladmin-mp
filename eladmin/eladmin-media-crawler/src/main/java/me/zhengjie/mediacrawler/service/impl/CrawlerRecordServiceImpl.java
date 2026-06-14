@@ -22,7 +22,7 @@ import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import me.zhengjie.mediacrawler.service.CrawlerRecordService;
-import me.zhengjie.mediacrawler.domain.vo.CrawlerRecordQueryCriteria;
+import me.zhengjie.mediacrawler.domain.dto.CrawlerRecordQueryCriteria;
 import me.zhengjie.mediacrawler.mapper.CrawlerRecordMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

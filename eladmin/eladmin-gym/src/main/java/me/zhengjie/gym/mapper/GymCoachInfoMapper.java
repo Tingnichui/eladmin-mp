@@ -16,7 +16,7 @@
 package me.zhengjie.gym.mapper;
 
 import me.zhengjie.gym.domain.GymCoachInfo;
-import me.zhengjie.gym.domain.vo.GymCoachInfoQueryCriteria;
+import me.zhengjie.gym.domain.dto.GymCoachInfoQueryCriteria;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Mapper;

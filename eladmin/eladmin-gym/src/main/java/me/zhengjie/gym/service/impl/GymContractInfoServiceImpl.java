@@ -29,7 +29,7 @@ import me.zhengjie.utils.FileUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import me.zhengjie.gym.service.GymContractInfoService;
-import me.zhengjie.gym.domain.vo.GymContractInfoQueryCriteria;
+import me.zhengjie.gym.domain.dto.GymContractInfoQueryCriteria;
 import me.zhengjie.gym.mapper.GymContractInfoMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

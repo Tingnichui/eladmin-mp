@@ -13,20 +13,20 @@
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
 */
-package me.zhengjie.invest.domain.vo;
+package me.zhengjie.invest.domain.dto;
 
 import lombok.Data;
-import java.sql.Timestamp;
 import java.util.List;
 
 /**
 * @author genghui
-* @date 2025-07-30
+* @date 2025-01-04
 **/
 @Data
-public class InvestKlinesRecordQueryCriteria{
-    private String symbol;
-    private Integer period;
-    private List<Timestamp> openTime;
-    private List<Timestamp> closeTime;
+public class InvestProductQueryCriteria{
+    private Integer investType;
+    private String investProductCode;
+    private String investProductName;
+    private String measurementUnit;
+    private List<Integer> minSize;
 }

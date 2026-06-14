@@ -24,7 +24,7 @@ import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import me.zhengjie.invest.service.InvestKlinesRecordService;
-import me.zhengjie.invest.domain.vo.InvestKlinesRecordQueryCriteria;
+import me.zhengjie.invest.domain.dto.InvestKlinesRecordQueryCriteria;
 import me.zhengjie.invest.mapper.InvestKlinesRecordMapper;
 import me.zhengjie.utils.RedisUtils;
 import org.apache.commons.collections4.CollectionUtils;

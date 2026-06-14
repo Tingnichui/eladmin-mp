@@ -1,6 +1,6 @@
 package me.zhengjie;
 
-import me.zhengjie.invest.domain.vo.BinanceOrderVO;
+import me.zhengjie.invest.domain.dto.BinanceOrderVO;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.service.BinanceFuturesTradeInfoService;
 import me.zhengjie.invest.service.BinanceTradeInfoService;

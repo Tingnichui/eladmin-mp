@@ -13,14 +13,23 @@
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
 */
-package me.zhengjie.invest.domain.vo;
+package me.zhengjie.invest.domain.dto;
 
 import lombok.Data;
+import java.math.BigDecimal;
+import java.util.List;
 
 /**
 * @author genghui
-* @date 2025-10-17
+* @date 2025-08-02
 **/
 @Data
-public class BinanceFuturesTradeInfoQueryCriteria{
+public class BinanceAccountInfoQueryCriteria{
+    private String idCardName;
+    private Integer uid;
+    private String phoneNumber;
+    private String email;
+    private List<BigDecimal> totalInvestment;
+    private Integer autoTradeFlag;
+    private Integer apiValidFlag;
 }

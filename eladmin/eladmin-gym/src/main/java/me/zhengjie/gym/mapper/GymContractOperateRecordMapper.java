@@ -16,7 +16,7 @@
 package me.zhengjie.gym.mapper;
 
 import me.zhengjie.gym.domain.GymContractOperateRecord;
-import me.zhengjie.gym.domain.vo.GymContractOperateRecordQueryCriteria;
+import me.zhengjie.gym.domain.dto.GymContractOperateRecordQueryCriteria;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Mapper;

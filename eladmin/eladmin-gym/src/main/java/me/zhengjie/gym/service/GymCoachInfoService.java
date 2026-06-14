@@ -16,7 +16,7 @@
 package me.zhengjie.gym.service;
 
 import me.zhengjie.gym.domain.GymCoachInfo;
-import me.zhengjie.gym.domain.vo.GymCoachInfoQueryCriteria;
+import me.zhengjie.gym.domain.dto.GymCoachInfoQueryCriteria;
 
 import java.util.List;
 import java.io.IOException;

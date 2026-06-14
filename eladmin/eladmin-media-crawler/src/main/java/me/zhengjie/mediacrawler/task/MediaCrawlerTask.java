@@ -15,7 +15,7 @@ import me.zhengjie.mediacrawler.constants.CrawlerCookiesAccountStatusEnum;
 import me.zhengjie.mediacrawler.constants.CrawlerRecordStatusEnum;
 import me.zhengjie.mediacrawler.domain.CrawlerCookiesAccount;
 import me.zhengjie.mediacrawler.domain.CrawlerRecord;
-import me.zhengjie.mediacrawler.domain.vo.CrawlerTagStats;
+import me.zhengjie.mediacrawler.domain.dto.CrawlerTagStats;
 import me.zhengjie.mediacrawler.mapper.CrawlerStatsMapper;
 import me.zhengjie.mediacrawler.service.CrawlerCookiesAccountService;
 import me.zhengjie.mediacrawler.service.CrawlerRecordService;

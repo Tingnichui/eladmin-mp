@@ -17,7 +17,7 @@ package me.zhengjie.mediacrawler.mapper;
 
 import com.baomidou.dynamic.datasource.annotation.DS;
 import me.zhengjie.mediacrawler.domain.XhsNote;
-import me.zhengjie.mediacrawler.domain.vo.XhsNoteQueryCriteria;
+import me.zhengjie.mediacrawler.domain.dto.XhsNoteQueryCriteria;
 import java.util.List;
 
 import me.zhengjie.utils.enums.DatasourceEnum;

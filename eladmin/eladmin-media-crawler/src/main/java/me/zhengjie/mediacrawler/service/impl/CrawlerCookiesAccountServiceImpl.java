@@ -22,7 +22,7 @@ import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import me.zhengjie.mediacrawler.service.CrawlerCookiesAccountService;
-import me.zhengjie.mediacrawler.domain.vo.CrawlerCookiesAccountQueryCriteria;
+import me.zhengjie.mediacrawler.domain.dto.CrawlerCookiesAccountQueryCriteria;
 import me.zhengjie.mediacrawler.mapper.CrawlerCookiesAccountMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

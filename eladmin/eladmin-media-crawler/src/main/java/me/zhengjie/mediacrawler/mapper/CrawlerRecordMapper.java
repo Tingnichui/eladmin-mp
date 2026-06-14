@@ -16,7 +16,7 @@
 package me.zhengjie.mediacrawler.mapper;
 
 import me.zhengjie.mediacrawler.domain.CrawlerRecord;
-import me.zhengjie.mediacrawler.domain.vo.CrawlerRecordQueryCriteria;
+import me.zhengjie.mediacrawler.domain.dto.CrawlerRecordQueryCriteria;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Mapper;

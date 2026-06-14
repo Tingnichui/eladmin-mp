@@ -1,4 +1,4 @@
-package me.zhengjie.invest.domain.vo;
+package me.zhengjie.invest.domain.dto;
 
 import lombok.Data;
 import me.zhengjie.invest.domain.dto.MatchedTradeInfo;

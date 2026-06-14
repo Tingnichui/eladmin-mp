@@ -16,7 +16,7 @@
 package me.zhengjie.mediacrawler.service;
 
 import me.zhengjie.mediacrawler.domain.CrawlerRecord;
-import me.zhengjie.mediacrawler.domain.vo.CrawlerRecordQueryCriteria;
+import me.zhengjie.mediacrawler.domain.dto.CrawlerRecordQueryCriteria;
 import java.util.Map;
 import java.util.List;
 import java.io.IOException;

@@ -21,7 +21,7 @@ import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import me.zhengjie.invest.service.InvestTradeRecordService;
-import me.zhengjie.invest.domain.vo.InvestTradeRecordQueryCriteria;
+import me.zhengjie.invest.domain.dto.InvestTradeRecordQueryCriteria;
 import me.zhengjie.invest.mapper.InvestTradeRecordMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

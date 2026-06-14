@@ -13,28 +13,18 @@
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
 */
-package me.zhengjie.invest.domain.vo;
+package me.zhengjie.mediacrawler.domain.dto;
 
 import lombok.Data;
 
-import javax.validation.constraints.Pattern;
-import java.sql.Timestamp;
-import java.util.List;
-
 /**
 * @author genghui
-* @date 2025-01-04
+* @date 2024-09-20
 **/
 @Data
-public class InvestTradeRecordQueryCriteria{
-    private Integer id;
-    private Integer tradeType;
-    private Integer operateStatus;
-    private Integer productId;
-    private List<Timestamp> openTime;
-    private Integer score;
-    @Pattern(regexp = "|profit")
-    private String sortField;
-    @Pattern(regexp = "|asc|desc")
-    private String sortOrder;
+public class CrawlerRecordQueryCriteria{
+    private String platform;
+    private String crawlerType;
+    private String keywords;
+    private String crawlerStatus;
 }

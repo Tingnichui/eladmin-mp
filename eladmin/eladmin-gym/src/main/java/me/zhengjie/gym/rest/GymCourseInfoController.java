@@ -18,7 +18,7 @@ package me.zhengjie.gym.rest;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.gym.domain.GymCourseInfo;
 import me.zhengjie.gym.service.GymCourseInfoService;
-import me.zhengjie.gym.domain.vo.GymCourseInfoQueryCriteria;
+import me.zhengjie.gym.domain.dto.GymCourseInfoQueryCriteria;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
 import org.springframework.http.HttpStatus;

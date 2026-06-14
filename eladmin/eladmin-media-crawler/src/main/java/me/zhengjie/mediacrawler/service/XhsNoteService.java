@@ -16,7 +16,7 @@
 package me.zhengjie.mediacrawler.service;
 
 import me.zhengjie.mediacrawler.domain.XhsNote;
-import me.zhengjie.mediacrawler.domain.vo.XhsNoteQueryCriteria;
+import me.zhengjie.mediacrawler.domain.dto.XhsNoteQueryCriteria;
 import java.util.Map;
 import java.util.List;
 import java.io.IOException;

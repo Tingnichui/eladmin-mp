@@ -1,6 +1,6 @@
 package me.zhengjie.gym.rest;
 
-import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.toolkit.SqlRunner;
@@ -13,10 +13,10 @@ import me.zhengjie.gym.domain.GymClassRecord;
 import me.zhengjie.gym.domain.GymContractInfo;
 import me.zhengjie.gym.domain.GymContractOperateRecord;
 import me.zhengjie.gym.domain.GymMemberInfo;
-import me.zhengjie.gym.domain.vo.GymClassRecordQueryCriteria;
-import me.zhengjie.gym.domain.vo.GymContractInfoQueryCriteria;
-import me.zhengjie.gym.domain.vo.GymContractOperateRecordQueryCriteria;
-import me.zhengjie.gym.domain.vo.GymUserHomeFuncConfig;
+import me.zhengjie.gym.domain.dto.GymClassRecordQueryCriteria;
+import me.zhengjie.gym.domain.dto.GymContractInfoQueryCriteria;
+import me.zhengjie.gym.domain.dto.GymContractOperateRecordQueryCriteria;
+import me.zhengjie.gym.domain.dto.GymUserHomeFuncConfig;
 import me.zhengjie.gym.service.GymClassRecordService;
 import me.zhengjie.gym.service.GymContractInfoService;
 import me.zhengjie.gym.service.GymContractOperateRecordService;

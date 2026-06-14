@@ -16,7 +16,7 @@
 package me.zhengjie.invest.mapper;
 
 import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
-import me.zhengjie.invest.domain.vo.BinanceCoinFuturesTradeInfoQueryCriteria;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesTradeInfoQueryCriteria;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Mapper;

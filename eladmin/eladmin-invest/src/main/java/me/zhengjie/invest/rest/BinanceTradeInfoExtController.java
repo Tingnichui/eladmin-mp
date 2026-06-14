@@ -21,7 +21,7 @@ import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.invest.domain.BinanceTradeInfoExt;
-import me.zhengjie.invest.domain.vo.BinanceTradeInfoExtQueryCriteria;
+import me.zhengjie.invest.domain.dto.BinanceTradeInfoExtQueryCriteria;
 import me.zhengjie.invest.service.BinanceTradeInfoExtService;
 import me.zhengjie.utils.PageResult;
 import org.springframework.http.HttpStatus;

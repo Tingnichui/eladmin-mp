@@ -13,18 +13,20 @@
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
 */
-package me.zhengjie.mediacrawler.domain.vo;
+package me.zhengjie.invest.domain.dto;
 
 import lombok.Data;
+import java.sql.Timestamp;
+import java.util.List;
 
 /**
 * @author genghui
-* @date 2024-09-20
+* @date 2025-07-30
 **/
 @Data
-public class CrawlerRecordQueryCriteria{
-    private String platform;
-    private String crawlerType;
-    private String keywords;
-    private String crawlerStatus;
+public class InvestKlinesRecordQueryCriteria{
+    private String symbol;
+    private Integer period;
+    private List<Timestamp> openTime;
+    private List<Timestamp> closeTime;
 }

@@ -22,7 +22,7 @@ import lombok.RequiredArgsConstructor;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfoExt;
-import me.zhengjie.invest.domain.vo.BinanceTradeInfoExtQueryCriteria;
+import me.zhengjie.invest.domain.dto.BinanceTradeInfoExtQueryCriteria;
 import me.zhengjie.invest.mapper.BinanceTradeInfoExtMapper;
 import me.zhengjie.invest.service.BinanceTradeInfoExtService;
 import me.zhengjie.invest.service.BinanceTradeInfoService;

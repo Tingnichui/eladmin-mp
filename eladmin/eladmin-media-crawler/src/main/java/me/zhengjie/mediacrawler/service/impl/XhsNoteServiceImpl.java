@@ -21,7 +21,7 @@ import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import me.zhengjie.mediacrawler.service.XhsNoteService;
-import me.zhengjie.mediacrawler.domain.vo.XhsNoteQueryCriteria;
+import me.zhengjie.mediacrawler.domain.dto.XhsNoteQueryCriteria;
 import me.zhengjie.mediacrawler.mapper.XhsNoteMapper;
 import me.zhengjie.utils.enums.DatasourceEnum;
 import org.springframework.stereotype.Service;

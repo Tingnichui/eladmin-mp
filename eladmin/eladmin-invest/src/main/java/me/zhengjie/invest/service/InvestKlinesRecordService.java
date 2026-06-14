@@ -17,7 +17,7 @@ package me.zhengjie.invest.service;
 
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.InvestKlinesRecord;
-import me.zhengjie.invest.domain.vo.InvestKlinesRecordQueryCriteria;
+import me.zhengjie.invest.domain.dto.InvestKlinesRecordQueryCriteria;
 import java.util.Map;
 import java.util.List;
 import java.io.IOException;

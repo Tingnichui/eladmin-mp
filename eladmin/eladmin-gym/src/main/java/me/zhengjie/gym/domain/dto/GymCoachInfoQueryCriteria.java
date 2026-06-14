@@ -13,21 +13,16 @@
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
 */
-package me.zhengjie.invest.domain.vo;
+package me.zhengjie.gym.domain.dto;
 
 import lombok.Data;
-import java.sql.Timestamp;
-import java.util.List;
 
 /**
 * @author genghui
-* @date 2026-06-07
+* @date 2024-06-30
 **/
 @Data
-public class InvestTradeAnalysisQueryCriteria{
-    private String direction;
-    private String entryType;
-    private Integer qualityLevel;
-    private List<Timestamp> openTime;
-    private List<Timestamp> closeTime;
+public class GymCoachInfoQueryCriteria {
+    private String coachName;
+    private String coachPhoneNum;
 }

@@ -21,7 +21,7 @@ import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import me.zhengjie.gym.service.GymCoachInfoService;
-import me.zhengjie.gym.domain.vo.GymCoachInfoQueryCriteria;
+import me.zhengjie.gym.domain.dto.GymCoachInfoQueryCriteria;
 import me.zhengjie.gym.mapper.GymCoachInfoMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
