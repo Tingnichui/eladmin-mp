@@ -34,10 +34,7 @@ import me.zhengjie.modules.security.security.TokenProvider;
 import me.zhengjie.modules.security.service.dto.AuthUserDto;
 import me.zhengjie.modules.security.service.dto.JwtUserDto;
 import me.zhengjie.modules.security.service.OnlineUserService;
-import me.zhengjie.utils.RsaUtils;
-import me.zhengjie.utils.RedisUtils;
-import me.zhengjie.utils.SecurityUtils;
-import me.zhengjie.utils.StringUtils;
+import me.zhengjie.utils.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -78,16 +75,20 @@ public class AuthorizationController {
     public ResponseEntity<Object> login(@Validated @RequestBody AuthUserDto authUser, HttpServletRequest request) throws Exception {
         // 密码解密
         String password = RsaUtils.decryptByPrivateKey(RsaProperties.privateKey, authUser.getPassword());
-        // 查询验证码
-        String code = (String) redisUtils.get(authUser.getUuid());
-        // 清除验证码
-        redisUtils.del(authUser.getUuid());
-        if (StringUtils.isBlank(code)) {
-            throw new BadRequestException("验证码不存在或已过期");
+
+        if (!SpringUtil.isDevEnv()) {
+            // 查询验证码
+            String code = (String) redisUtils.get(authUser.getUuid());
+            // 清除验证码
+            redisUtils.del(authUser.getUuid());
+            if (StringUtils.isBlank(code)) {
+                throw new BadRequestException("验证码不存在或已过期");
+            }
+            if (StringUtils.isBlank(authUser.getCode()) || !authUser.getCode().equalsIgnoreCase(code)) {
+                throw new BadRequestException("验证码错误");
+            }
         }
-        if (StringUtils.isBlank(authUser.getCode()) || !authUser.getCode().equalsIgnoreCase(code)) {
-            throw new BadRequestException("验证码错误");
-        }
+
         UsernamePasswordAuthenticationToken authenticationToken =
                 new UsernamePasswordAuthenticationToken(authUser.getUsername(), password);
         Authentication authentication = authenticationManagerBuilder.getObject().authenticate(authenticationToken);

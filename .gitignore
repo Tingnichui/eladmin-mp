@@ -1,4 +1,5 @@
 /eladmin/logs
 /.idea
 /application.pid
+/eladmin/eladmin-system/application.pid
 /runtime-logs
