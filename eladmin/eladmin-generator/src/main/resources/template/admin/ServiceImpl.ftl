@@ -1,5 +1,5 @@
 /*
-*  Copyright 2019-2023 Zheng Jie
+*  Copyright 2019-2025 Zheng Jie
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import ${package}.service.${className}Service;
-import ${package}.domain.vo.${className}QueryCriteria;
+import ${package}.domain.dto.${className}QueryCriteria;
 import ${package}.mapper.${className}Mapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,7 +67,7 @@ public class ${className}ServiceImpl extends ServiceImpl<${className}Mapper, ${c
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void create(${className} resources) {
-        save(resources);
+        ${changeClassName}Mapper.insert(resources);
     }
 
     @Override
@@ -75,13 +75,13 @@ public class ${className}ServiceImpl extends ServiceImpl<${className}Mapper, ${c
     public void update(${className} resources) {
         ${className} ${changeClassName} = getById(resources.get${pkCapitalColName}());
         ${changeClassName}.copy(resources);
-        saveOrUpdate(${changeClassName});
+        ${changeClassName}Mapper.updateById(${changeClassName});
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteAll(List<${pkColumnType}> ids) {
-        removeBatchByIds(ids);
+        ${changeClassName}Mapper.deleteBatchIds(ids);
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import me.zhengjie.modules.quartz.domain.QuartzJob;
 import me.zhengjie.modules.quartz.domain.QuartzLog;
-import me.zhengjie.modules.quartz.domain.vo.QuartzJobQueryCriteria;
+import me.zhengjie.modules.quartz.domain.dto.QuartzJobQueryCriteria;
 import me.zhengjie.utils.PageResult;
 
 import javax.servlet.http.HttpServletResponse;

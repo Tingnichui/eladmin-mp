@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import me.zhengjie.annotation.Log;
-import me.zhengjie.domain.vo.EmailVo;
+import me.zhengjie.domain.dto.EmailDto;
 import me.zhengjie.domain.EmailConfig;
 import me.zhengjie.service.EmailService;
 import org.springframework.http.HttpStatus;
@@ -56,8 +56,8 @@ public class EmailController {
     @Log("发送邮件")
     @PostMapping
     @ApiOperation("发送邮件")
-    public ResponseEntity<Object> sendEmail(@Validated @RequestBody EmailVo emailVo){
-        emailService.send(emailVo,emailService.find());
+    public ResponseEntity<Object> sendEmail(@Validated @RequestBody EmailDto emailDto){
+        emailService.send(emailDto,emailService.find());
         return new ResponseEntity<>(HttpStatus.OK);
     }
 }

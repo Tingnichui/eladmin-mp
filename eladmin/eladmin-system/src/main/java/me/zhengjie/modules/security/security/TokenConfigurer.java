@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,9 +16,8 @@
 package me.zhengjie.modules.security.security;
 
 import lombok.RequiredArgsConstructor;
-import me.zhengjie.modules.security.config.bean.SecurityProperties;
+import me.zhengjie.modules.security.config.SecurityProperties;
 import me.zhengjie.modules.security.service.OnlineUserService;
-import me.zhengjie.modules.security.service.UserCacheManager;
 import org.springframework.security.config.annotation.SecurityConfigurerAdapter;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.DefaultSecurityFilterChain;
@@ -33,11 +32,10 @@ public class TokenConfigurer extends SecurityConfigurerAdapter<DefaultSecurityFi
     private final TokenProvider tokenProvider;
     private final SecurityProperties properties;
     private final OnlineUserService onlineUserService;
-    private final UserCacheManager userCacheManager;
 
     @Override
     public void configure(HttpSecurity http) {
-        TokenFilter customFilter = new TokenFilter(tokenProvider, properties, onlineUserService, userCacheManager);
+        TokenFilter customFilter = new TokenFilter(tokenProvider, properties, onlineUserService);
         http.addFilterBefore(customFilter, UsernamePasswordAuthenticationFilter.class);
     }
 }

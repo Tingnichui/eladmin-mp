@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import me.zhengjie.domain.ColumnInfo;
-import me.zhengjie.domain.vo.TableInfo;
+import me.zhengjie.domain.dto.TableInfo;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.service.GenConfigService;
 import me.zhengjie.service.GeneratorService;
@@ -52,8 +52,8 @@ public class GeneratorController {
 
     @ApiOperation("查询数据库数据")
     @GetMapping(value = "/tables")
-    public ResponseEntity<PageResult<TableInfo>> queryTables(@RequestParam(defaultValue = "") String name, Page<Object> page){
-        return new ResponseEntity<>(generatorService.getTables(name, page), HttpStatus.OK);
+    public ResponseEntity<PageResult<TableInfo>> queryTables(@RequestParam(defaultValue = "") String name, @RequestParam(defaultValue = "1") Integer page, @RequestParam(defaultValue = "10") Integer size){
+        return new ResponseEntity<>(generatorService.getTables(name, new Page<>(page, size)), HttpStatus.OK);
     }
 
     @ApiOperation("查询字段数据")

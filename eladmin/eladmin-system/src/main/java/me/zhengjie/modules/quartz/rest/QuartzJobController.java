@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,9 +25,9 @@ import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.modules.quartz.domain.QuartzJob;
 import me.zhengjie.modules.quartz.domain.QuartzLog;
 import me.zhengjie.modules.quartz.service.QuartzJobService;
-import me.zhengjie.modules.quartz.domain.vo.QuartzJobQueryCriteria;
+import me.zhengjie.modules.quartz.domain.dto.QuartzJobQueryCriteria;
 import me.zhengjie.utils.PageResult;
-import me.zhengjie.utils.SpringContextHolder;
+import me.zhengjie.utils.SpringBeanHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -54,7 +54,8 @@ public class QuartzJobController {
     @ApiOperation("查询定时任务")
     @GetMapping
     @PreAuthorize("@el.check('timing:list')")
-    public ResponseEntity<PageResult<QuartzJob>> queryQuartzJob(QuartzJobQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<QuartzJob>> queryQuartzJob(QuartzJobQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(quartzJobService.queryAll(criteria,page), HttpStatus.OK);
     }
 
@@ -75,7 +76,8 @@ public class QuartzJobController {
     @ApiOperation("查询任务执行日志")
     @GetMapping(value = "/logs")
     @PreAuthorize("@el.check('timing:list')")
-    public ResponseEntity<PageResult<QuartzLog>> queryQuartzJobLog(QuartzJobQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<QuartzLog>> queryQuartzJobLog(QuartzJobQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(quartzJobService.queryAllLog(criteria,page), HttpStatus.OK);
     }
 
@@ -131,10 +133,14 @@ public class QuartzJobController {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
+    /**
+     * 验证Bean是不是合法的，合法的定时任务 Bean 需要用 @Service 定义
+     * @param beanName Bean名称
+     */
     private void checkBean(String beanName){
         // 避免调用攻击者可以从SpringContextHolder获得控制jdbcTemplate类
         // 并使用getDeclaredMethod调用jdbcTemplate的queryForMap函数，执行任意sql命令。
-        if(!SpringContextHolder.getAllServiceBeanName().contains(beanName)){
+        if(!SpringBeanHolder.getAllServiceBeanName().contains(beanName)){
             throw new BadRequestException("非法的 Bean，请重新输入！");
         }
     }

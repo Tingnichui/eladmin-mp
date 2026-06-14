@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -18,14 +18,12 @@ package me.zhengjie.service;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import me.zhengjie.domain.SysLog;
-import me.zhengjie.domain.vo.SysLogQueryCriteria;
+import me.zhengjie.domain.dto.SysLogQueryCriteria;
 import me.zhengjie.utils.PageResult;
 import org.aspectj.lang.ProceedingJoinPoint;
-import org.springframework.scheduling.annotation.Async;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 /**
  * @author Zheng Jie
@@ -65,7 +63,6 @@ public interface SysLogService extends IService<SysLog>{
      * @param joinPoint /
      * @param sysLog 日志实体
      */
-    @Async
     void save(String username, String browser, String ip, ProceedingJoinPoint joinPoint, SysLog sysLog);
 
     /**

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package me.zhengjie.modules.system.domain;
 
 import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModelProperty;
@@ -26,7 +25,6 @@ import me.zhengjie.base.BaseEntity;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.io.Serializable;
-import java.util.List;
 
 /**
 * @author Zheng Jie
@@ -41,9 +39,6 @@ public class Dict extends BaseEntity implements Serializable {
     @ApiModelProperty(value = "ID", hidden = true)
     @TableId(value = "dict_id", type = IdType.AUTO)
     private Long id;
-
-    @TableField(exist = false)
-    private List<DictDetail> dictDetails;
 
     @NotBlank
     @ApiModelProperty(value = "名称")

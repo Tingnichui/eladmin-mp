@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package me.zhengjie.modules.system.domain;
 
-import com.alibaba.fastjson.annotation.JSONField;
+import com.alibaba.fastjson2.annotation.JSONField;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -51,6 +51,7 @@ public class Dept extends BaseEntity implements Serializable {
     private Set<Role> roles;
 
     @TableField(exist = false)
+    @ApiModelProperty(value = "子部门")
     private List<Dept> children;
 
     @ApiModelProperty(value = "排序")
@@ -88,14 +89,18 @@ public class Dept extends BaseEntity implements Serializable {
         return Objects.hash(id, name);
     }
 
+    @ApiModelProperty(value = "是否有子节点")
     public Boolean getHasChildren() {
         return subCount > 0;
     }
 
+
+    @ApiModelProperty(value = "是否为叶子")
     public Boolean getLeaf() {
         return subCount <= 0;
     }
 
+    @ApiModelProperty(value = "标签名称")
     public String getLabel() {
         return name;
     }

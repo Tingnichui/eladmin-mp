@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,6 +28,11 @@ import java.util.stream.Collectors;
 @Service(value = "el")
 public class AuthorityConfig {
 
+    /**
+     * 判断接口是否有权限
+     * @param permissions 权限
+     * @return /
+     */
     public Boolean check(String ...permissions){
         // 获取当前用户的所有权限
         List<String> elPermissions = SecurityUtils.getCurrentUser().getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList());

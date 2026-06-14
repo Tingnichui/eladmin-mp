@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import me.zhengjie.annotation.Log;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.modules.system.domain.Job;
 import me.zhengjie.modules.system.service.JobService;
-import me.zhengjie.modules.system.domain.vo.JobQueryCriteria;
+import me.zhengjie.modules.system.domain.dto.JobQueryCriteria;
 import me.zhengjie.utils.PageResult;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -57,7 +57,8 @@ public class JobController {
     @ApiOperation("查询岗位")
     @GetMapping
     @PreAuthorize("@el.check('job:list','user:list')")
-    public ResponseEntity<PageResult<Job>> queryJob(JobQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<Job>> queryJob(JobQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(jobService.queryAll(criteria, page),HttpStatus.OK);
     }
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@ package me.zhengjie.modules.system.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import me.zhengjie.modules.system.domain.Menu;
-import me.zhengjie.modules.system.domain.vo.MenuQueryCriteria;
-import me.zhengjie.modules.system.domain.vo.MenuVo;
+import me.zhengjie.modules.system.domain.dto.MenuQueryCriteria;
+import me.zhengjie.modules.system.domain.dto.MenuVo;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;

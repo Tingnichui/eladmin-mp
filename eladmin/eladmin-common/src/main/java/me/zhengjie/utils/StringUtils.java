@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,7 +32,6 @@ import java.util.*;
  * 字符串工具类, 继承org.apache.commons.lang3.StringUtils类
  */
 @Slf4j
-@SuppressWarnings({"unchecked","all"})
 public class StringUtils extends org.apache.commons.lang3.StringUtils {
 
     private static final char SEPARATOR = '_';
@@ -41,7 +40,7 @@ public class StringUtils extends org.apache.commons.lang3.StringUtils {
     /**
      * 注入bean
      */
-    private final static Ip2regionSearcher IP_SEARCHER = SpringContextHolder.getBean(Ip2regionSearcher.class);
+    private final static Ip2regionSearcher IP_SEARCHER = SpringBeanHolder.getBean(Ip2regionSearcher.class);
 
     /**
      * 驼峰命名法工具
@@ -133,13 +132,13 @@ public class StringUtils extends org.apache.commons.lang3.StringUtils {
      */
     public static String getIp(HttpServletRequest request) {
         String ip = request.getHeader("x-forwarded-for");
-        if (ip == null || ip.length() == 0 || UNKNOWN.equalsIgnoreCase(ip)) {
+        if (ip == null || ip.isEmpty() || UNKNOWN.equalsIgnoreCase(ip)) {
             ip = request.getHeader("Proxy-Client-IP");
         }
-        if (ip == null || ip.length() == 0 || UNKNOWN.equalsIgnoreCase(ip)) {
+        if (ip == null || ip.isEmpty() || UNKNOWN.equalsIgnoreCase(ip)) {
             ip = request.getHeader("WL-Proxy-Client-IP");
         }
-        if (ip == null || ip.length() == 0 || UNKNOWN.equalsIgnoreCase(ip)) {
+        if (ip == null || ip.isEmpty() || UNKNOWN.equalsIgnoreCase(ip)) {
             ip = request.getRemoteAddr();
         }
         String comma = ",";
@@ -169,6 +168,9 @@ public class StringUtils extends org.apache.commons.lang3.StringUtils {
         return null;
     }
 
+    /**
+     * 获取浏览器
+     */
     public static String getBrowser(HttpServletRequest request) {
         UserAgent ua = UserAgentUtil.parse(request.getHeader("User-Agent"));
         String browser = ua.getBrowser().toString() + " " + ua.getVersion();
@@ -230,6 +232,7 @@ public class StringUtils extends org.apache.commons.lang3.StringUtils {
         }
     }
 
+    @SuppressWarnings({"unchecked","all"})
     public static List<Field> getAllFields(Class clazz, List<Field> fields) {
         if (clazz != null) {
             fields.addAll(Arrays.asList(clazz.getDeclaredFields()));

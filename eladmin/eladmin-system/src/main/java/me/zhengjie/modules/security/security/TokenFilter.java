@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,13 +16,10 @@
 package me.zhengjie.modules.security.security;
 
 import cn.hutool.core.util.StrUtil;
-import io.jsonwebtoken.ExpiredJwtException;
-import me.zhengjie.modules.security.config.bean.SecurityProperties;
-import me.zhengjie.modules.security.service.UserCacheManager;
+import lombok.extern.slf4j.Slf4j;
+import me.zhengjie.modules.security.config.SecurityProperties;
 import me.zhengjie.modules.security.service.dto.OnlineUserDto;
 import me.zhengjie.modules.security.service.OnlineUserService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
@@ -33,58 +30,44 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
-import java.util.Objects;
 
 /**
  * @author /
  */
+@Slf4j
 public class TokenFilter extends GenericFilterBean {
-    private static final Logger log = LoggerFactory.getLogger(TokenFilter.class);
-
 
     private final TokenProvider tokenProvider;
     private final SecurityProperties properties;
     private final OnlineUserService onlineUserService;
-    private final UserCacheManager userCacheManager;
 
     /**
      * @param tokenProvider     Token
      * @param properties        JWT
      * @param onlineUserService 用户在线
-     * @param userCacheManager    用户缓存工具
      */
-    public TokenFilter(TokenProvider tokenProvider, SecurityProperties properties, OnlineUserService onlineUserService, UserCacheManager userCacheManager) {
+    public TokenFilter(TokenProvider tokenProvider, SecurityProperties properties, OnlineUserService onlineUserService) {
         this.properties = properties;
         this.onlineUserService = onlineUserService;
         this.tokenProvider = tokenProvider;
-        this.userCacheManager = userCacheManager;
     }
 
     @Override
-    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
-            throws IOException, ServletException {
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws ServletException, IOException {
         HttpServletRequest httpServletRequest = (HttpServletRequest) servletRequest;
         String token = resolveToken(httpServletRequest);
         // 对于 Token 为空的不需要去查 Redis
-        if (StrUtil.isNotBlank(token)) {
-            OnlineUserDto onlineUserDto = null;
-            boolean cleanUserCache = false;
-            try {
-                String loginKey = tokenProvider.loginKey(token);
-                onlineUserDto = onlineUserService.getOne(loginKey);
-            } catch (ExpiredJwtException e) {
-                log.error(e.getMessage());
-                cleanUserCache = true;
-            } finally {
-                if (cleanUserCache || Objects.isNull(onlineUserDto)) {
-                    userCacheManager.cleanUserCache(String.valueOf(tokenProvider.getClaims(token).get(TokenProvider.AUTHORITIES_KEY)));
-                }
-            }
-            if (onlineUserDto != null && StringUtils.hasText(token)) {
+        if(StrUtil.isNotBlank(token)){
+            // 获取用户Token的Key
+            String loginKey = tokenProvider.loginKey(token);
+            OnlineUserDto onlineUserDto = onlineUserService.getOne(loginKey);
+            // 判断用户在线信息是否为空
+            if (onlineUserDto != null) {
+                // Token 续期判断
+                tokenProvider.checkRenewal(token);
+                // 获取认证信息，设置上下文
                 Authentication authentication = tokenProvider.getAuthentication(token);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                // Token 续期
-                tokenProvider.checkRenewal(token);
             }
         }
         filterChain.doFilter(servletRequest, servletResponse);

@@ -1,5 +1,11 @@
 /eladmin/logs
-/.idea
-/application.pid
-/eladmin/eladmin-system/application.pid
 /runtime-logs
+
+### IDEA ###
+/.idea
+.idea/*
+.DS_Store
+
+/application.pid
+/eladmin/application.pid
+/eladmin/eladmin-system/application.pid

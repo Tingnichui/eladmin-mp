@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import lombok.RequiredArgsConstructor;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.domain.SysLog;
 import me.zhengjie.service.SysLogService;
-import me.zhengjie.domain.vo.SysLogQueryCriteria;
+import me.zhengjie.domain.dto.SysLogQueryCriteria;
 import me.zhengjie.utils.PageResult;
 import me.zhengjie.utils.SecurityUtils;
 import org.springframework.http.HttpStatus;
@@ -61,27 +61,31 @@ public class SysLogController {
         criteria.setLogType("ERROR");
         sysLogService.download(sysLogService.queryAll(criteria), response);
     }
+
     @GetMapping
     @ApiOperation("日志查询")
     @PreAuthorize("@el.check()")
-    public ResponseEntity<PageResult<SysLog>> queryLog(SysLogQueryCriteria criteria, Page<SysLog> page){
+    public ResponseEntity<PageResult<SysLog>> queryLog(SysLogQueryCriteria criteria){
         criteria.setLogType("INFO");
+        Page<SysLog> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(sysLogService.queryAll(criteria,page), HttpStatus.OK);
     }
 
     @GetMapping(value = "/user")
     @ApiOperation("用户日志查询")
-    public ResponseEntity<PageResult<SysLog>> queryUserLog(SysLogQueryCriteria criteria, Page<SysLog> page){
+    public ResponseEntity<PageResult<SysLog>> queryUserLog(SysLogQueryCriteria criteria){
         criteria.setLogType("INFO");
         criteria.setUsername(SecurityUtils.getCurrentUsername());
+        Page<SysLog> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(sysLogService.queryAllByUser(criteria,page), HttpStatus.OK);
     }
 
     @GetMapping(value = "/error")
     @ApiOperation("错误日志查询")
     @PreAuthorize("@el.check()")
-    public ResponseEntity<PageResult<SysLog>> queryErrorLog(SysLogQueryCriteria criteria, Page<SysLog> page){
+    public ResponseEntity<PageResult<SysLog>> queryErrorLog(SysLogQueryCriteria criteria){
         criteria.setLogType("ERROR");
+        Page<SysLog> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(sysLogService.queryAll(criteria,page), HttpStatus.OK);
     }
 

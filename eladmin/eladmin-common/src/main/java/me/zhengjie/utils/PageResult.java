@@ -1,16 +1,21 @@
 package me.zhengjie.utils;
 
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-
+import lombok.*;
+import java.io.Serializable;
 import java.util.List;
 
-@Getter
-@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
-public class PageResult<T> {
+/**
+ * 分页结果封装类
+ * @author Zheng Jie
+ * @date 2018-11-23
+ * @param <T>
+ */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class PageResult<T> implements Serializable {
 
-    private final List<T> content;
+    private List<T> content;
 
-    private final long totalElements;
+    private long totalElements;
 }

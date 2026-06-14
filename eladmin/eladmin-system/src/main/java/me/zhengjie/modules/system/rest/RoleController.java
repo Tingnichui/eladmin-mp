@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import me.zhengjie.annotation.Log;
 import me.zhengjie.modules.system.domain.Role;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.modules.system.service.RoleService;
-import me.zhengjie.modules.system.domain.vo.RoleQueryCriteria;
+import me.zhengjie.modules.system.domain.dto.RoleQueryCriteria;
 import me.zhengjie.utils.PageResult;
 import me.zhengjie.utils.SecurityUtils;
 import org.springframework.http.HttpStatus;
@@ -77,14 +77,15 @@ public class RoleController {
     @ApiOperation("查询角色")
     @GetMapping
     @PreAuthorize("@el.check('roles:list')")
-    public ResponseEntity<PageResult<Role>> queryRole(RoleQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<Role>> queryRole(RoleQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(roleService.queryAll(criteria, page),HttpStatus.OK);
     }
 
     @ApiOperation("获取用户级别")
     @GetMapping(value = "/level")
     public ResponseEntity<Object> getRoleLevel(){
-        return new ResponseEntity<>(Dict.create().set("level", getLevels(null)),HttpStatus.OK);
+        return new ResponseEntity<>(Dict.create().set("level", getLevels()),HttpStatus.OK);
     }
 
     @Log("新增角色")
@@ -95,7 +96,7 @@ public class RoleController {
         if (resources.getId() != null) {
             throw new BadRequestException("A new "+ ENTITY_NAME +" cannot already have an ID");
         }
-        getLevels(resources.getLevel());
+        checkLevel(resources.getLevel());
         roleService.create(resources);
         return new ResponseEntity<>(HttpStatus.CREATED);
     }
@@ -105,7 +106,9 @@ public class RoleController {
     @PutMapping
     @PreAuthorize("@el.check('roles:edit')")
     public ResponseEntity<Object> updateRole(@Validated(Role.Update.class) @RequestBody Role resources){
-        getLevels(resources.getLevel());
+        Role role = roleService.getById(resources.getId());
+        checkLevel(role.getLevel());
+        checkLevel(resources.getLevel());
         roleService.update(resources);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
@@ -116,7 +119,7 @@ public class RoleController {
     @PreAuthorize("@el.check('roles:edit')")
     public ResponseEntity<Object> updateRoleMenu(@RequestBody Role resources){
         Role role = roleService.getById(resources.getId());
-        getLevels(role.getLevel());
+        checkLevel(role.getLevel());
         roleService.updateMenu(resources);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
@@ -128,7 +131,7 @@ public class RoleController {
     public ResponseEntity<Object> deleteRole(@RequestBody Set<Long> ids){
         for (Long id : ids) {
             Role role = roleService.getById(id);
-            getLevels(role.getLevel());
+            checkLevel(role.getLevel());
         }
         // 验证是否被用户关联
         roleService.verification(ids);
@@ -140,14 +143,15 @@ public class RoleController {
      * 获取用户的角色级别
      * @return /
      */
-    private int getLevels(Integer level){
+    private int getLevels(){
         List<Integer> levels = roleService.findByUsersId(SecurityUtils.getCurrentUserId()).stream().map(Role::getLevel).collect(Collectors.toList());
-        int min = Collections.min(levels);
-        if(level != null){
-            if(level < min){
-                throw new BadRequestException("权限不足，你的角色级别：" + min + "，低于操作的角色级别：" + level);
-            }
+        return Collections.min(levels);
+    }
+
+    private void checkLevel(Integer level){
+        int min = getLevels();
+        if(level == null || level < min){
+            throw new BadRequestException("权限不足，你的角色级别：" + min + "，低于操作的角色级别：" + level);
         }
-        return min;
     }
 }

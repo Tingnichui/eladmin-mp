@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,8 +16,10 @@
 package me.zhengjie.modules.system.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import me.zhengjie.modules.system.domain.Dict;
-import me.zhengjie.modules.system.domain.vo.DictQueryCriteria;
+import me.zhengjie.modules.system.domain.dto.DictQueryCriteria;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import java.util.List;
@@ -29,7 +31,7 @@ import java.util.List;
 @Mapper
 public interface DictMapper extends BaseMapper<Dict> {
 
-    List<Dict> findAll(@Param("criteria") DictQueryCriteria criteria);
+    IPage<Dict> findAll(@Param("criteria") DictQueryCriteria criteria, Page<Object> page);
 
-    Long countAll(@Param("criteria") DictQueryCriteria criteria);
+    List<Dict> findAll(@Param("criteria") DictQueryCriteria criteria);
 }

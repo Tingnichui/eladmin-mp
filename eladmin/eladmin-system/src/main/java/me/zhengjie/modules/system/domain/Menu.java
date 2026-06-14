@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -15,11 +15,12 @@
  */
 package me.zhengjie.modules.system.domain;
 
-import com.alibaba.fastjson.annotation.JSONField;
+import com.alibaba.fastjson2.annotation.JSONField;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Getter;
 import lombok.Setter;
@@ -90,6 +91,7 @@ public class Menu extends BaseEntity implements Serializable {
     private Integer subCount = 0;
 
     @ApiModelProperty(value = "外链菜单")
+    @JsonProperty("iFrame")
     private Boolean iFrame;
 
     @Override
@@ -109,14 +111,17 @@ public class Menu extends BaseEntity implements Serializable {
         return Objects.hash(id);
     }
 
+    @ApiModelProperty(value = "是否有子节点")
     public Boolean getHasChildren() {
         return subCount > 0;
     }
 
+    @ApiModelProperty(value = "是否为叶子")
     public Boolean getLeaf() {
         return subCount <= 0;
     }
 
+    @ApiModelProperty(value = "标签名称")
     public String getLabel() {
         return title;
     }

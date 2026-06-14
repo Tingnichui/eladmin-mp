@@ -1,5 +1,5 @@
 /*
-*  Copyright 2019-2023 Zheng Jie
+*  Copyright 2019-2025 Zheng Jie
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
 */
-package ${package}.domain.vo;
+package ${package}.domain.dto;
 
 import lombok.Data;
 <#if queryHasTimestamp>
@@ -25,6 +25,7 @@ import java.math.BigDecimal;
 <#if betweens?? && (betweens?size > 0)>
 import java.util.List;
 </#if>
+import io.swagger.annotations.ApiModelProperty;
 
 /**
 * @author ${author}
@@ -32,8 +33,20 @@ import java.util.List;
 **/
 @Data
 public class ${className}QueryCriteria{
+
+    @ApiModelProperty(value = "页码", example = "1")
+    private Integer page = 1;
+
+    @ApiModelProperty(value = "每页数据量", example = "10")
+    private Integer size = 10;
 <#if queryColumns??>
     <#list queryColumns as column>
+
+        <#if column.remark != ''>
+    @ApiModelProperty(value = "${column.remark}")
+        <#else>
+    @ApiModelProperty(value = "${column.changeColumnName}")
+        </#if>
     private ${column.columnType} ${column.changeColumnName};
     </#list>
 </#if>

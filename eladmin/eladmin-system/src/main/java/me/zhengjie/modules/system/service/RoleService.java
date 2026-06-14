@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import me.zhengjie.modules.security.service.dto.AuthorityDto;
 import me.zhengjie.modules.system.domain.Role;
 import me.zhengjie.modules.system.domain.User;
-import me.zhengjie.modules.system.domain.vo.RoleQueryCriteria;
+import me.zhengjie.modules.system.domain.dto.RoleQueryCriteria;
 import me.zhengjie.utils.PageResult;
 
 import javax.servlet.http.HttpServletResponse;
@@ -114,7 +114,7 @@ public interface RoleService extends IService<Role> {
      * @param user 用户信息
      * @return 权限信息
      */
-    List<AuthorityDto> mapToGrantedAuthorities(User user);
+    List<AuthorityDto> buildPermissions(User user);
 
     /**
      * 验证是否被用户关联

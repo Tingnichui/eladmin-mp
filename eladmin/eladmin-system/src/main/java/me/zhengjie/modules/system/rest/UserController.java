@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,16 +21,16 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import me.zhengjie.annotation.Log;
-import me.zhengjie.config.RsaProperties;
+import me.zhengjie.config.properties.RsaProperties;
 import me.zhengjie.modules.system.domain.Dept;
 import me.zhengjie.modules.system.domain.Role;
 import me.zhengjie.modules.system.service.DataService;
 import me.zhengjie.modules.system.domain.User;
 import me.zhengjie.exception.BadRequestException;
-import me.zhengjie.modules.system.domain.vo.UserPassVo;
+import me.zhengjie.modules.system.domain.dto.UserPassVo;
 import me.zhengjie.modules.system.service.DeptService;
 import me.zhengjie.modules.system.service.RoleService;
-import me.zhengjie.modules.system.domain.vo.UserQueryCriteria;
+import me.zhengjie.modules.system.domain.dto.UserQueryCriteria;
 import me.zhengjie.modules.system.service.VerifyService;
 import me.zhengjie.utils.*;
 import me.zhengjie.modules.system.service.UserService;
@@ -76,7 +76,8 @@ public class UserController {
     @ApiOperation("查询用户")
     @GetMapping
     @PreAuthorize("@el.check('user:list')")
-    public ResponseEntity<PageResult<User>> queryUser(UserQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<User>> queryUser(UserQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         if (!ObjectUtils.isEmpty(criteria.getDeptId())) {
             criteria.getDeptIds().add(criteria.getDeptId());
             // 先查找是否存在子节点

@@ -1,5 +1,5 @@
 /*
-*  Copyright 2019-2023 Zheng Jie
+*  Copyright 2019-2025 Zheng Jie
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 package ${package}.service;
 
 import ${package}.domain.${className};
-import ${package}.domain.vo.${className}QueryCriteria;
+import ${package}.domain.dto.${className}QueryCriteria;
 import java.util.Map;
 import java.util.List;
 import java.io.IOException;

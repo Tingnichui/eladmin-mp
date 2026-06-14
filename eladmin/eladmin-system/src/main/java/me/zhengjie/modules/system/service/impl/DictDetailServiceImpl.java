@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -15,21 +15,21 @@
  */
 package me.zhengjie.modules.system.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import me.zhengjie.modules.system.domain.Dict;
 import me.zhengjie.modules.system.domain.DictDetail;
 import me.zhengjie.modules.system.mapper.DictMapper;
-import me.zhengjie.modules.system.domain.vo.DictDetailQueryCriteria;
+import me.zhengjie.modules.system.domain.dto.DictDetailQueryCriteria;
 import me.zhengjie.utils.*;
 import me.zhengjie.modules.system.mapper.DictDetailMapper;
 import me.zhengjie.modules.system.service.DictDetailService;
-import org.springframework.cache.annotation.CacheConfig;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
 * @author Zheng Jie
@@ -37,7 +37,6 @@ import java.util.List;
 */
 @Service
 @RequiredArgsConstructor
-@CacheConfig(cacheNames = "dict")
 public class DictDetailServiceImpl extends ServiceImpl<DictDetailMapper, DictDetail> implements DictDetailService {
 
     private final DictMapper dictMapper;
@@ -70,9 +69,14 @@ public class DictDetailServiceImpl extends ServiceImpl<DictDetailMapper, DictDet
     }
 
     @Override
-    @Cacheable(key = "'name:' + #p0")
     public List<DictDetail> getDictByName(String name) {
-        return dictDetailMapper.findByDictName(name);
+        String key = CacheKey.DICT_NAME + name;
+        List<DictDetail> dictDetails = redisUtils.getList(key, DictDetail.class);
+        if(CollUtil.isEmpty(dictDetails)){
+            dictDetails = dictDetailMapper.findByDictName(name);
+            redisUtils.set(key, dictDetails, 1 , TimeUnit.DAYS);
+        }
+        return dictDetails;
     }
 
     @Override

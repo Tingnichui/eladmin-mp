@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package me.zhengjie.modules.system.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
-import me.zhengjie.config.FileProperties;
+import me.zhengjie.config.properties.FileProperties;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.modules.security.service.OnlineUserService;
 import me.zhengjie.modules.security.service.UserCacheManager;
@@ -26,15 +26,12 @@ import me.zhengjie.modules.system.domain.Job;
 import me.zhengjie.modules.system.domain.Role;
 import me.zhengjie.modules.system.domain.User;
 import me.zhengjie.exception.EntityExistException;
-import me.zhengjie.exception.EntityNotFoundException;
-import me.zhengjie.modules.system.domain.vo.UserQueryCriteria;
+import me.zhengjie.modules.system.domain.dto.UserQueryCriteria;
 import me.zhengjie.modules.system.mapper.UserJobMapper;
 import me.zhengjie.modules.system.mapper.UserMapper;
 import me.zhengjie.modules.system.mapper.UserRoleMapper;
 import me.zhengjie.modules.system.service.UserService;
 import me.zhengjie.utils.*;
-import org.springframework.cache.annotation.CacheConfig;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -43,6 +40,8 @@ import javax.validation.constraints.NotBlank;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -51,7 +50,6 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-@CacheConfig(cacheNames = "user")
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
     private final UserMapper userMapper;
@@ -76,10 +74,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
-    @Cacheable(key = "'id:' + #p0")
     @Transactional(rollbackFor = Exception.class)
     public User findById(long id) {
-        return getById(id);
+        String key = CacheKey.USER_ID + id;
+        User user = redisUtils.get(key, User.class);
+        if (user == null) {
+            user = getById(id);
+            redisUtils.set(key, user, 1, TimeUnit.DAYS);
+        }
+        return user;
     }
 
     @Override
@@ -95,6 +98,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (userMapper.findByPhone(resources.getPhone()) != null) {
             throw new EntityExistException(User.class, "phone", resources.getPhone());
         }
+        resources.setIsAdmin(false);
         save(resources);
         // 保存用户岗位
         userJobMapper.insertData(resources.getId(), resources.getJobs());
@@ -123,6 +127,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             redisUtils.del(CacheKey.DATA_USER + resources.getId());
             redisUtils.del(CacheKey.MENU_USER + resources.getId());
             redisUtils.del(CacheKey.ROLE_AUTH + resources.getId());
+            redisUtils.del(CacheKey.ROLE_USER + resources.getId());
         }
         // 修改部门会影响 数据权限
         if (!Objects.equals(resources.getDept(),user.getDept())) {
@@ -191,12 +196,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Override
     public User getLoginData(String userName) {
-        User user = userMapper.findByUsername(userName);
-        if (user == null) {
-            throw new EntityNotFoundException(User.class, "name", userName);
-        } else {
-            return user;
-        }
+        return userMapper.findByUsername(userName);
     }
 
     @Override
@@ -209,6 +209,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void resetPwd(Set<Long> ids, String pwd) {
+        List<User> users = userMapper.selectBatchIds(ids);
+        // 清除缓存
+        users.forEach(user -> {
+            // 清除缓存
+            flushCache(user.getUsername());
+            // 强制退出
+            onlineUserService.kickOutForUsername(user.getUsername());
+        });
+        // 重置密码
         userMapper.resetPwd(ids, pwd);
     }
 

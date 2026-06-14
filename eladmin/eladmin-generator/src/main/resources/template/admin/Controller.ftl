@@ -1,5 +1,5 @@
 /*
-*  Copyright 2019-2023 Zheng Jie
+*  Copyright 2019-2025 Zheng Jie
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package ${package}.rest;
 import me.zhengjie.annotation.Log;
 import ${package}.domain.${className};
 import ${package}.service.${className}Service;
-import ${package}.domain.vo.${className}QueryCriteria;
+import ${package}.domain.dto.${className}QueryCriteria;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -38,13 +38,12 @@ import me.zhengjie.utils.PageResult;
 **/
 @RestController
 @RequiredArgsConstructor
-@Api(tags = "${apiAlias}管理")
+@Api(tags = "${apiAlias}")
 @RequestMapping("/api/${changeClassName}")
 public class ${className}Controller {
 
     private final ${className}Service ${changeClassName}Service;
 
-    @Log("导出数据")
     @ApiOperation("导出数据")
     @GetMapping(value = "/download")
     @PreAuthorize("@el.check('${changeClassName}:list')")
@@ -53,10 +52,10 @@ public class ${className}Controller {
     }
 
     @GetMapping
-    @Log("查询${apiAlias}")
     @ApiOperation("查询${apiAlias}")
     @PreAuthorize("@el.check('${changeClassName}:list')")
-    public ResponseEntity<PageResult<${className}>> query${className}(${className}QueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<${className}>> query${className}(${className}QueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(${changeClassName}Service.queryAll(criteria,page),HttpStatus.OK);
     }
 
@@ -82,7 +81,7 @@ public class ${className}Controller {
     @Log("删除${apiAlias}")
     @ApiOperation("删除${apiAlias}")
     @PreAuthorize("@el.check('${changeClassName}:del')")
-    public ResponseEntity<Object> delete${className}(@RequestBody List<${pkColumnType}> ids) {
+    public ResponseEntity<Object> delete${className}(@ApiParam(value = "传ID数组[]") @RequestBody List<${pkColumnType}> ids) {
         ${changeClassName}Service.deleteAll(ids);
         return new ResponseEntity<>(HttpStatus.OK);
     }

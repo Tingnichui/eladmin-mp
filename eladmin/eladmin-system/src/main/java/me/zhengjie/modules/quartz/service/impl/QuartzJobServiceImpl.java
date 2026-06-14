@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -26,11 +26,10 @@ import me.zhengjie.modules.quartz.domain.QuartzLog;
 import me.zhengjie.modules.quartz.mapper.QuartzJobMapper;
 import me.zhengjie.modules.quartz.mapper.QuartzLogMapper;
 import me.zhengjie.modules.quartz.service.QuartzJobService;
-import me.zhengjie.modules.quartz.domain.vo.QuartzJobQueryCriteria;
+import me.zhengjie.modules.quartz.domain.dto.QuartzJobQueryCriteria;
 import me.zhengjie.modules.quartz.utils.QuartzManage;
 import me.zhengjie.utils.*;
 import org.quartz.CronExpression;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import javax.servlet.http.HttpServletResponse;
@@ -99,6 +98,7 @@ public class QuartzJobServiceImpl extends ServiceImpl<QuartzJobMapper, QuartzJob
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateIsPause(QuartzJob quartzJob) {
+        // 置换暂停状态
         if (quartzJob.getIsPause()) {
             quartzManage.resumeJob(quartzJob);
             quartzJob.setIsPause(false);
@@ -124,7 +124,6 @@ public class QuartzJobServiceImpl extends ServiceImpl<QuartzJobMapper, QuartzJob
         }
     }
 
-    @Async
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void executionSubJob(String[] tasks) throws InterruptedException {
@@ -140,11 +139,11 @@ public class QuartzJobServiceImpl extends ServiceImpl<QuartzJobMapper, QuartzJob
             // 执行任务
             execution(quartzJob);
             // 获取执行状态，如果执行失败则停止后面的子任务执行
-            Boolean result = (Boolean) redisUtils.get(uuid);
+            Boolean result = redisUtils.get(uuid, Boolean.class);
             while (result == null) {
                 // 休眠5秒，再次获取子任务执行情况
                 Thread.sleep(5000);
-                result = (Boolean) redisUtils.get(uuid);
+                result = redisUtils.get(uuid, Boolean.class);
             }
             if(!result){
                 redisUtils.del(uuid);

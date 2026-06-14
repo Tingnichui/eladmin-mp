@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>eladmin</artifactId>
         <groupId>me.zhengjie</groupId>
@@ -14,7 +12,6 @@
 
     <properties>
         <mail.version>1.4.7</mail.version>
-        <qiniu.version>7.9.3</qiniu.version>
         <alipay.version>4.38.4.ALL</alipay.version>
     </properties>
 
@@ -33,13 +30,6 @@
             <version>${mail.version}</version>
         </dependency>
 
-        <!--七牛云存储-->
-        <dependency>
-            <groupId>com.qiniu</groupId>
-            <artifactId>qiniu-java-sdk</artifactId>
-            <version>${qiniu.version}</version>
-        </dependency>
-
         <!--支付宝依赖-->
         <dependency>
             <groupId>com.alipay.sdk</groupId>
@@ -53,5 +43,14 @@
             <artifactId>jsoup</artifactId>
             <version>1.18.1</version>
         </dependency>
+
+        <!--amazon s3 依赖-->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>2.30.13</version>
+            <scope>compile</scope>
+        </dependency>
+
     </dependencies>
 </project>

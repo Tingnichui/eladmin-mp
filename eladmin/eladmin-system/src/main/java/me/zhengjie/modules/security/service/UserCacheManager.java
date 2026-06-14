@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 package me.zhengjie.modules.security.service;
 
 import cn.hutool.core.util.RandomUtil;
-import me.zhengjie.modules.security.config.bean.LoginProperties;
+import me.zhengjie.modules.security.config.LoginProperties;
 import me.zhengjie.modules.security.service.dto.JwtUserDto;
 import me.zhengjie.utils.RedisUtils;
 import me.zhengjie.utils.StringUtils;
@@ -44,12 +44,11 @@ public class UserCacheManager {
      * @return JwtUserDto
      */
     public JwtUserDto getUserCache(String userName) {
+        // 转小写
+        userName = StringUtils.lowerCase(userName);
         if (StringUtils.isNotEmpty(userName)) {
             // 获取数据
-            Object obj = redisUtils.get(LoginProperties.cacheKey + userName);
-            if(obj != null){
-                return (JwtUserDto)obj;
-            }
+            return redisUtils.get(LoginProperties.cacheKey + userName, JwtUserDto.class);
         }
         return null;
     }
@@ -60,6 +59,8 @@ public class UserCacheManager {
      */
     @Async
     public void addUserCache(String userName, JwtUserDto user) {
+        // 转小写
+        userName = StringUtils.lowerCase(userName);
         if (StringUtils.isNotEmpty(userName)) {
             // 添加数据, 避免数据同时过期
             long time = idleTime + RandomUtil.randomInt(900, 1800);
@@ -74,6 +75,8 @@ public class UserCacheManager {
      */
     @Async
     public void cleanUserCache(String userName) {
+        // 转小写
+        userName = StringUtils.lowerCase(userName);
         if (StringUtils.isNotEmpty(userName)) {
             // 清除数据
             redisUtils.del(LoginProperties.cacheKey + userName);

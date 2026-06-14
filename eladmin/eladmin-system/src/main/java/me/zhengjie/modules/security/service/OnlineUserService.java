@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,12 +19,11 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.zhengjie.modules.security.security.TokenProvider;
 import me.zhengjie.utils.PageResult;
-import me.zhengjie.modules.security.config.bean.SecurityProperties;
+import me.zhengjie.modules.security.config.SecurityProperties;
 import me.zhengjie.modules.security.service.dto.JwtUserDto;
 import me.zhengjie.modules.security.service.dto.OnlineUserDto;
 import me.zhengjie.utils.*;
 import org.springframework.data.domain.Pageable;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -54,11 +53,12 @@ public class OnlineUserService {
     public void save(JwtUserDto jwtUserDto, String token, HttpServletRequest request){
         String dept = jwtUserDto.getUser().getDept().getName();
         String ip = StringUtils.getIp(request);
+        String id = tokenProvider.getId(token);
         String browser = StringUtils.getBrowser(request);
         String address = StringUtils.getCityInfo(ip);
         OnlineUserDto onlineUserDto = null;
         try {
-            onlineUserDto = new OnlineUserDto(jwtUserDto.getUsername(), jwtUserDto.getUser().getNickName(), dept, browser , ip, address, EncryptUtils.desEncrypt(token), new Date());
+            onlineUserDto = new OnlineUserDto(id, jwtUserDto.getUsername(), jwtUserDto.getUser().getNickName(), dept, browser , ip, address, EncryptUtils.desEncrypt(token), new Date());
         } catch (Exception e) {
             log.error(e.getMessage(),e);
         }
@@ -74,8 +74,9 @@ public class OnlineUserService {
      */
     public PageResult<OnlineUserDto> getAll(String username, Pageable pageable){
         List<OnlineUserDto> onlineUserDtos = getAll(username);
+        int pageNumber = pageable.getPageNumber() - 1;
         return PageUtil.toPage(
-                PageUtil.paging(pageable.getPageNumber(),pageable.getPageSize(), onlineUserDtos),
+                PageUtil.paging(pageNumber,pageable.getPageSize(), onlineUserDtos),
                 onlineUserDtos.size()
         );
     }
@@ -92,7 +93,7 @@ public class OnlineUserService {
         Collections.reverse(keys);
         List<OnlineUserDto> onlineUserDtos = new ArrayList<>();
         for (String key : keys) {
-            onlineUserDtos.add((OnlineUserDto) redisUtils.get(key));
+            onlineUserDtos.add(redisUtils.get(key, OnlineUserDto.class));
         }
         onlineUserDtos.sort((o1, o2) -> o2.getLoginTime().compareTo(o1.getLoginTime()));
         return onlineUserDtos;
@@ -134,14 +135,13 @@ public class OnlineUserService {
      * @return /
      */
     public OnlineUserDto getOne(String key) {
-        return (OnlineUserDto)redisUtils.get(key);
+        return redisUtils.get(key, OnlineUserDto.class);
     }
 
     /**
      * 根据用户名强退用户
      * @param username /
      */
-    @Async
     public void kickOutForUsername(String username) {
         String loginKey = properties.getOnlineKey() + username + "*";
         redisUtils.scanDel(loginKey);

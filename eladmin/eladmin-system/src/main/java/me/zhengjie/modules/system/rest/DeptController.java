@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import me.zhengjie.annotation.Log;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.modules.system.domain.Dept;
 import me.zhengjie.modules.system.service.DeptService;
-import me.zhengjie.modules.system.domain.vo.DeptQueryCriteria;
+import me.zhengjie.modules.system.domain.dto.DeptQueryCriteria;
 import me.zhengjie.utils.PageResult;
 import me.zhengjie.utils.PageUtil;
 import org.springframework.http.HttpStatus;
@@ -66,8 +66,7 @@ public class DeptController {
     @ApiOperation("查询部门:根据ID获取同级与上级数据")
     @PostMapping("/superior")
     @PreAuthorize("@el.check('user:list','dept:list')")
-    public ResponseEntity<Object> getDeptSuperior(@RequestBody List<Long> ids,
-                                                  @RequestParam(defaultValue = "false") Boolean exclude) {
+    public ResponseEntity<Object> getDeptSuperior(@RequestBody List<Long> ids, @RequestParam(defaultValue = "false") Boolean exclude) {
         Set<Dept> deptSet  = new LinkedHashSet<>();
         for (Long id : ids) {
             Dept dept = deptService.findById(id);

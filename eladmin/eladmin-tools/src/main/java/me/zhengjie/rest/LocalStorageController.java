@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import me.zhengjie.annotation.Log;
 import me.zhengjie.domain.LocalStorage;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.service.LocalStorageService;
-import me.zhengjie.domain.vo.LocalStorageQueryCriteria;
+import me.zhengjie.domain.dto.LocalStorageQueryCriteria;
 import me.zhengjie.utils.FileUtil;
 import me.zhengjie.utils.PageResult;
 import org.springframework.http.HttpStatus;
@@ -49,7 +49,8 @@ public class LocalStorageController {
     @GetMapping
     @ApiOperation("查询文件")
     @PreAuthorize("@el.check('storage:list')")
-    public ResponseEntity<PageResult<LocalStorage>> queryFile(LocalStorageQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<LocalStorage>> queryFile(LocalStorageQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(localStorageService.queryAll(criteria,page),HttpStatus.OK);
     }
 
@@ -62,7 +63,6 @@ public class LocalStorageController {
 
     @PostMapping
     @ApiOperation("上传文件")
-    @PreAuthorize("@el.check('storage:add')")
     public ResponseEntity<Object> createFile(@RequestParam String name, @RequestParam("file") MultipartFile file){
         localStorageService.create(name, file);
         return new ResponseEntity<>(HttpStatus.CREATED);
@@ -83,7 +83,6 @@ public class LocalStorageController {
     @PutMapping
     @Log("修改文件")
     @ApiOperation("修改文件")
-    @PreAuthorize("@el.check('storage:edit')")
     public ResponseEntity<Object> updateFile(@Validated @RequestBody LocalStorage resources){
         localStorageService.update(resources);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
@@ -92,6 +91,7 @@ public class LocalStorageController {
     @Log("删除文件")
     @DeleteMapping
     @ApiOperation("多选删除")
+    @PreAuthorize("@el.check('storage:del')")
     public ResponseEntity<Object> deleteFile(@RequestBody Long[] ids) {
         localStorageService.deleteAll(ids);
         return new ResponseEntity<>(HttpStatus.OK);

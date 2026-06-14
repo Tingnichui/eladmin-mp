@@ -60,13 +60,14 @@
         <include refid="Dept_Column_List"/>,
         <include refid="Menu_Column_List"/>
         from (
-            select
-            <include refid="Base_Column_List"/>
-            from sys_role role
-            <include refid="Where_sql"/>
-            <if test="criteria.offset != null">
-                limit #{criteria.offset}, #{criteria.size}
-            </if>
+        select
+        <include refid="Base_Column_List"/>
+        from sys_role role
+        <include refid="Where_sql"/>
+        order by role.level
+        <if test="criteria.offset != null">
+            limit #{criteria.offset}, #{criteria.size}
+        </if>
         ) role
         left join sys_roles_menus srm on role.role_role_id = srm.role_id
         left join  sys_menu menu on menu.menu_id = srm.menu_id

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,8 +16,10 @@
 package me.zhengjie.modules.system.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import me.zhengjie.modules.system.domain.User;
-import me.zhengjie.modules.system.domain.vo.UserQueryCriteria;
+import me.zhengjie.modules.system.domain.dto.UserQueryCriteria;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -32,9 +34,11 @@ import java.util.Set;
 @Mapper
 public interface UserMapper extends BaseMapper<User> {
 
+    Long countAll(@Param("criteria") UserQueryCriteria criteria);
+
     List<User> findAll(@Param("criteria") UserQueryCriteria criteria);
 
-    Long countAll(@Param("criteria") UserQueryCriteria criteria);
+    IPage<User> findAll(@Param("criteria") UserQueryCriteria criteria, Page<Object> page);
 
     User findByUsername(@Param("username") String username);
 

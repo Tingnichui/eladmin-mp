@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.zhengjie.domain.GenConfig;
 import me.zhengjie.domain.ColumnInfo;
-import me.zhengjie.domain.vo.TableInfo;
+import me.zhengjie.domain.dto.TableInfo;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.mapper.ColumnInfoMapper;
 import me.zhengjie.service.GeneratorService;

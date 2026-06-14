@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -370,7 +370,7 @@ public class GenUtil {
         }
 
         if ("QueryCriteria".equals(templateName)) {
-            return packagePath + "domain" + File.separator + "vo" + File.separator + className + "QueryCriteria.java";
+            return packagePath + "domain" + File.separator + "dto" + File.separator + className + "QueryCriteria.java";
         }
 
         if ("Mapper".equals(templateName)) {

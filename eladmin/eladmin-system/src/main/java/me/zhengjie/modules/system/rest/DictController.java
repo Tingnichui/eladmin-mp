@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import me.zhengjie.annotation.Log;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.modules.system.domain.Dict;
 import me.zhengjie.modules.system.service.DictService;
-import me.zhengjie.modules.system.domain.vo.DictQueryCriteria;
+import me.zhengjie.modules.system.domain.dto.DictQueryCriteria;
 import me.zhengjie.utils.PageResult;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -65,8 +65,9 @@ public class DictController {
     @ApiOperation("查询字典")
     @GetMapping
     @PreAuthorize("@el.check('dict:list')")
-    public ResponseEntity<PageResult<Dict>> queryDict(DictQueryCriteria resources, Page<Object> page){
-        return new ResponseEntity<>(dictService.queryAll(resources, page),HttpStatus.OK);
+    public ResponseEntity<PageResult<Dict>> queryDict(DictQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
+        return new ResponseEntity<>(dictService.queryAll(criteria, page),HttpStatus.OK);
     }
 
     @Log("新增字典")

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2020 Zheng Jie
+ *  Copyright 2019-2025 Zheng Jie
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,17 +16,17 @@
 package me.zhengjie.modules.system.service.impl;
 
 import cn.hutool.core.collection.CollectionUtil;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import me.zhengjie.modules.system.domain.Dict;
 import me.zhengjie.modules.system.domain.DictDetail;
 import me.zhengjie.modules.system.mapper.DictDetailMapper;
-import me.zhengjie.modules.system.domain.vo.DictQueryCriteria;
+import me.zhengjie.modules.system.domain.dto.DictQueryCriteria;
 import me.zhengjie.utils.*;
 import me.zhengjie.modules.system.mapper.DictMapper;
 import me.zhengjie.modules.system.service.DictService;
-import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import javax.servlet.http.HttpServletResponse;
@@ -39,19 +39,17 @@ import java.util.*;
 */
 @Service
 @RequiredArgsConstructor
-@CacheConfig(cacheNames = "dict")
 public class DictServiceImpl extends ServiceImpl<DictMapper, Dict> implements DictService {
 
     private final DictMapper dictMapper;
     private final RedisUtils redisUtils;
     private final DictDetailMapper deleteDetail;
+    private final DictDetailMapper dictDetailMapper;
 
     @Override
     public PageResult<Dict> queryAll(DictQueryCriteria criteria, Page<Object> page){
-        criteria.setOffset(page.offset());
-        List<Dict> dicts = dictMapper.findAll(criteria);
-        Long total = dictMapper.countAll(criteria);
-        return PageUtil.toPage(dicts,total);
+        IPage<Dict> dicts = dictMapper.findAll(criteria, page);
+        return PageUtil.toPage(dicts);
     }
 
     @Override
@@ -94,8 +92,9 @@ public class DictServiceImpl extends ServiceImpl<DictMapper, Dict> implements Di
     public void download(List<Dict> dicts, HttpServletResponse response) throws IOException {
         List<Map<String, Object>> list = new ArrayList<>();
         for (Dict dict : dicts) {
-            if(CollectionUtil.isNotEmpty(dict.getDictDetails())){
-                for (DictDetail dictDetail : dict.getDictDetails()) {
+            List<DictDetail> dictDetails = dictDetailMapper.findByDictName(dict.getName());
+            if(CollectionUtil.isNotEmpty(dictDetails)){
+                for (DictDetail dictDetail : dictDetails) {
                     Map<String,Object> map = new LinkedHashMap<>();
                     map.put("字典名称", dict.getName());
                     map.put("字典描述", dict.getDescription());
