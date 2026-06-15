@@ -3,6 +3,9 @@
     <contextName>elAdmin</contextName>
     <property name="log.charset" value="utf-8" />
     <property name="log.pattern" value="%contextName- %red(%d{yyyy-MM-dd HH:mm:ss}) %green([%thread]) %highlight(%-5level) %boldMagenta(%logger{36}) - %msg%n" />
+    <property name="log.file.pattern" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n" />
+    <property name="root.level" value="${ROOT_LOG_LEVEL:-INFO}" />
+    <define name="log.path" class="me.zhengjie.config.logging.ApplicationHomeLogPropertyDefiner" />
 
     <!--输出到控制台-->
     <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
@@ -12,9 +15,44 @@
         </encoder>
     </appender>
 
-    <!--普通日志输出到控制台-->
-    <root level="info">
+    <!--应用日志文件，默认落在 jar 所在目录的 logs 文件夹-->
+    <appender name="file-app" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.path}/app.log</file>
+        <encoder>
+            <pattern>${log.file.pattern}</pattern>
+            <charset>${log.charset}</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${log.path}/archive/app.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>100MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>5GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!--错误日志文件-->
+    <appender name="file-error" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.path}/error.log</file>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>
+        </filter>
+        <encoder>
+            <pattern>${log.file.pattern}</pattern>
+            <charset>${log.charset}</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${log.path}/archive/error.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>100MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>5GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!--普通日志输出到控制台和文件-->
+    <root level="${root.level}">
         <appender-ref ref="console" />
+        <appender-ref ref="file-app" />
+        <appender-ref ref="file-error" />
     </root>
 
     <!-- Spring 日志级别控制 -->
