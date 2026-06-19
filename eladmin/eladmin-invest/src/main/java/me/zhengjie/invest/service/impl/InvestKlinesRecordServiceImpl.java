@@ -34,6 +34,7 @@ import me.zhengjie.utils.PageUtil;
 
 import java.util.*;
 import java.io.IOException;
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 
 import me.zhengjie.utils.PageResult;
@@ -50,6 +51,8 @@ public class InvestKlinesRecordServiceImpl extends ServiceImpl<InvestKlinesRecor
     private final InvestKlinesRecordMapper investKlinesRecordMapper;
     private final BinanceSpotUtil binanceSpotUtil;
     private final RedisUtils redisUtils;
+    @Resource
+    private InvestKlinesRecordService investKlinesRecordService;
 
     @Override
     public PageResult<InvestKlinesRecord> queryAll(InvestKlinesRecordQueryCriteria criteria, Page<Object> page){
@@ -87,7 +90,7 @@ public class InvestKlinesRecordServiceImpl extends ServiceImpl<InvestKlinesRecor
         for (InvestKlinesRecord investKlinesRecord : all) {
             Map<String,Object> map = new LinkedHashMap<>();
             map.put("交易对", investKlinesRecord.getSymbol());
-            map.put("周期，单位分钟", investKlinesRecord.getPeriod());
+            map.put("K线周期", investKlinesRecord.getIntervalCode());
             map.put("开盘时间", investKlinesRecord.getOpenTime());
             map.put("收盘时间", investKlinesRecord.getCloseTime());
             map.put("开盘价", investKlinesRecord.getOpenPrice());
@@ -105,9 +108,9 @@ public class InvestKlinesRecordServiceImpl extends ServiceImpl<InvestKlinesRecor
     }
 
     @Override
-    public void syncKlinesRecord(BinanceEnum.SYMBOL symbol, BinanceEnum.KLINES_INTERVAL interval, long defaultStartTime) {
+    public void syncKlinesRecord(BinanceEnum.SYMBOL symbol, String intervalCode, long defaultStartTime) {
 
-        final String lockKey = String.format("SYNC_KLINES:%s:%s", symbol, interval);
+        final String lockKey = String.format("SYNC_KLINES:%s:%s", symbol, intervalCode);
         long now = System.currentTimeMillis();
 
         boolean lock = redisUtils.setIfAbsent(lockKey, now);
@@ -117,7 +120,7 @@ public class InvestKlinesRecordServiceImpl extends ServiceImpl<InvestKlinesRecor
                 InvestKlinesRecord lastOneInDb = this.getOne(
                         Wrappers.lambdaQuery(InvestKlinesRecord.class)
                                 .eq(InvestKlinesRecord::getSymbol, symbol)
-                                .eq(InvestKlinesRecord::getPeriod, interval.getPeriod())
+                                .eq(InvestKlinesRecord::getIntervalCode, intervalCode)
                                 .orderByDesc(InvestKlinesRecord::getOpenTime)
                                 .last("limit 1")
                 );
@@ -131,11 +134,11 @@ public class InvestKlinesRecordServiceImpl extends ServiceImpl<InvestKlinesRecor
                 }
 
                 while (true) {
-                    List<InvestKlinesRecord> klines = binanceSpotUtil.getKlines(symbol, interval, startTime, null);
+                    List<InvestKlinesRecord> klines = binanceSpotUtil.getKlines(symbol, intervalCode, startTime, null);
                     if (CollectionUtils.isEmpty(klines)) {
                         break;
                     }
-                    this.saveBatch(klines);
+                    investKlinesRecordService.saveBatch(klines);
                     startTime = klines.get(klines.size() - 1).getCloseTime();
                 }
             }

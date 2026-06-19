@@ -47,8 +47,8 @@ public class InvestKlinesRecord implements Serializable {
     private String symbol;
 
     @NotNull
-    @ApiModelProperty(value = "周期，单位分钟")
-    private Integer period;
+    @ApiModelProperty(value = "K线周期")
+    private String intervalCode;
 
     @NotNull
     @ApiModelProperty(value = "开盘时间")

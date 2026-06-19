@@ -57,9 +57,9 @@ public class BinanceSpotUtilTests {
     @Test
     void getKlines() {
         BinanceEnum.SYMBOL symbol = BinanceEnum.SYMBOL.BTCUSDT;
-        BinanceEnum.KLINES_INTERVAL interval = BinanceEnum.KLINES_INTERVAL.MINUTE_15;
+        String intervalCode = "15m";
         final long startTime = 1504713600000L;
-        List<InvestKlinesRecord> klines = binanceSpotUtil.getKlines(symbol, interval, startTime, null);
+        List<InvestKlinesRecord> klines = binanceSpotUtil.getKlines(symbol, intervalCode, startTime, null);
         for (InvestKlinesRecord kline : klines) {
             System.err.println(DateUtil.format(new Date(kline.getOpenTime()), DatePattern.NORM_DATETIME_PATTERN));
         }

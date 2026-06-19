@@ -74,6 +74,6 @@ public interface InvestKlinesRecordService extends IService<InvestKlinesRecord> 
     */
     void download(List<InvestKlinesRecord> all, HttpServletResponse response) throws IOException;
 
-    void syncKlinesRecord(BinanceEnum.SYMBOL symbol, BinanceEnum.KLINES_INTERVAL interval, long defaultStartTime);
+    void syncKlinesRecord(BinanceEnum.SYMBOL symbol, String intervalCode, long defaultStartTime);
 
 }

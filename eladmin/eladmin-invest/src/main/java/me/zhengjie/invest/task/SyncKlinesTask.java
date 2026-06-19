@@ -30,14 +30,15 @@ public class SyncKlinesTask {
 
         for (JSONObject param : paramList) {
             String symbolStr = param.getString("symbol");
-            String intervalStr = param.getString("interval");
+            String intervalCodes = param.getString("intervalCodes");
             String defaultStartTimeStr = param.getString("defaultStartTime");
 
             BinanceEnum.SYMBOL symbol = BinanceEnum.SYMBOL.valueOf(symbolStr.toUpperCase());
-            BinanceEnum.KLINES_INTERVAL interval = BinanceEnum.KLINES_INTERVAL.valueOf(intervalStr.toUpperCase());
             long defaultStartTime = DateUtil.parse(defaultStartTimeStr, DatePattern.NORM_DATE_PATTERN).getTime();
 
-            investKlinesRecordService.syncKlinesRecord(symbol, interval, defaultStartTime);
+            for (final String intervalCode : intervalCodes.split(",")) {
+                investKlinesRecordService.syncKlinesRecord(symbol, intervalCode, defaultStartTime);
+            }
 
         }
     }

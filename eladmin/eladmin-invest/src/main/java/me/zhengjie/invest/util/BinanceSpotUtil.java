@@ -74,15 +74,15 @@ public class BinanceSpotUtil {
 
     /**
      * @param symbol 交易对
-     * @param interval 周期，单位分钟
+     * @param intervalCode 周期，单位分钟
      * @param startTime 开始时间，毫秒时间戳
      * @param endTime 结束时间，毫秒时间戳
      * @return 返回   开始时间 <= 开盘时间 的数据
      */
-    public List<InvestKlinesRecord> getKlines(BinanceEnum.SYMBOL symbol, BinanceEnum.KLINES_INTERVAL interval, Long startTime, Long endTime) {
+    public List<InvestKlinesRecord> getKlines(BinanceEnum.SYMBOL symbol, String intervalCode, Long startTime, Long endTime) {
         Map<String, Object> params = new HashMap<>();
         params.put("symbol", symbol);
-        params.put("interval", interval.getValue());
+        params.put("interval", intervalCode);
         if (null != startTime) {
             params.put("startTime", startTime);
         }
@@ -108,7 +108,7 @@ public class BinanceSpotUtil {
             record.setTradeCount((Integer) item.get(8));// 成交笔数
             record.setBuyVolume(new BigDecimal((String) item.get(9)));// 主动买入成交量
             record.setBuyTurnover(new BigDecimal((String) item.get(10)));// 主动买入成交额
-            record.setPeriod(interval.getPeriod());
+            record.setIntervalCode(intervalCode);
             investKlinesRecordList.add(record);
         }
 

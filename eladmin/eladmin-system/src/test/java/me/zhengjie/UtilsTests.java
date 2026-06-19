@@ -7,6 +7,7 @@ import me.zhengjie.invest.domain.InvestKlinesRecord;
 import me.zhengjie.invest.domain.dto.BinanceFundingRate;
 import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
 import me.zhengjie.invest.service.InvestKlinesRecordService;
+import me.zhengjie.invest.task.SyncKlinesTask;
 import me.zhengjie.invest.util.BinanceUsdFuturesUtil;
 import me.zhengjie.invest.util.BinanceSpotUtil;
 import me.zhengjie.utils.AliyunOcrUtil;
@@ -38,6 +39,8 @@ public class UtilsTests {
     private InvestKlinesRecordService investKlinesRecordService;
     @Resource
     private AliyunOcrUtil aliyunOcrUtil;
+    @Resource
+    private SyncKlinesTask syncKlinesTask;
 
     @Test
     void recognizeGeneral() {
@@ -65,13 +68,15 @@ public class UtilsTests {
 
     @Test
     void getKlines() {
-        BinanceEnum.SYMBOL symbol = BinanceEnum.SYMBOL.BTCUSDT;
-        BinanceEnum.KLINES_INTERVAL interval = BinanceEnum.KLINES_INTERVAL.MINUTE_15;
-        final long startTime = 1504713600000L;
-        List<InvestKlinesRecord> klines = binanceSpotUtil.getKlines(symbol, interval, startTime, null);
-        for (InvestKlinesRecord kline : klines) {
-            System.err.println(DateUtil.format(new Date(kline.getOpenTime()), DatePattern.NORM_DATETIME_PATTERN));
-        }
+        String params = "[\n" +
+                "    {\n" +
+                "        \"symbol\": \"BTCUSDT\",\n" +
+                "        \"intervalCodes\": \"15m,1h\",\n" +
+                "        \"defaultStartTime\": \"2017-08-16\"\n" +
+                "    }\n" +
+                "]";
+        syncKlinesTask.sync(params);
+
     }
 
     @Test
