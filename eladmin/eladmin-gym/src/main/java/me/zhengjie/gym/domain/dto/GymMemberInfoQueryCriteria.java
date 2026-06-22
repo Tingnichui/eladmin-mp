@@ -29,4 +29,6 @@ public class GymMemberInfoQueryCriteria {
     private String memberPhoneNum;
     private String birthDay;
     private List<String> memberAge;
+    private Integer page = 1;
+    private Integer size = 10;
 }

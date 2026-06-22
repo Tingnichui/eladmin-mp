@@ -63,7 +63,8 @@ public class GymClassRecordController {
     @Log("查询上课记录")
     @ApiOperation("查询上课记录")
     @PreAuthorize("@el.check('jljsClassRecord:list')")
-    public ResponseEntity<PageResult<GymClassRecord>> queryJljsClassRecord(GymClassRecordQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<GymClassRecord>> queryJljsClassRecord(GymClassRecordQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(gymClassRecordService.queryAll(criteria,page),HttpStatus.OK);
     }
 

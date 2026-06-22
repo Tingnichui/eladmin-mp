@@ -25,4 +25,6 @@ import lombok.Data;
 public class GymCoachInfoQueryCriteria {
     private String coachName;
     private String coachPhoneNum;
+    private Integer page = 1;
+    private Integer size = 10;
 }

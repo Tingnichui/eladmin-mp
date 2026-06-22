@@ -29,4 +29,6 @@ public class GymContractInfoQueryCriteria {
     private String contractRemark;
     private String courseInfoId;
     private String id;
+    private Integer page = 1;
+    private Integer size = 10;
 }

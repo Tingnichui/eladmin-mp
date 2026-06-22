@@ -56,7 +56,8 @@ public class GymMemberInfoController {
     @Log("查询会员管理")
     @ApiOperation("查询会员管理")
     @PreAuthorize("@el.check('jljsMemberInfo:list')")
-    public ResponseEntity<PageResult<GymMemberInfo>> queryJljsMemberInfo(GymMemberInfoQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<GymMemberInfo>> queryJljsMemberInfo(GymMemberInfoQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(gymMemberInfoService.queryAll(criteria,page),HttpStatus.OK);
     }
 

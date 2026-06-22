@@ -32,5 +32,6 @@ public class GymClassRecordQueryCriteria {
     private String classRemark;
     private List<Timestamp> classBeginTime;
     private List<String> contractInfoIdList;
-
+    private Integer page = 1;
+    private Integer size = 10;
 }

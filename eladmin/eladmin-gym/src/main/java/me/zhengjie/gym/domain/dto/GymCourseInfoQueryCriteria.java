@@ -29,4 +29,6 @@ public class GymCourseInfoQueryCriteria {
     private String courseType;
     private List<Integer> courseUsePeriodDays;
     private List<Integer> courseAvailableQuantity;
+    private Integer page = 1;
+    private Integer size = 10;
 }

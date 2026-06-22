@@ -61,7 +61,8 @@ public class GymContractOperateRecordController {
     @Log("查询合同操作记录")
     @ApiOperation("查询合同操作记录")
     @PreAuthorize("@el.check('jljsContractOperateRecord:list')")
-    public ResponseEntity<PageResult<GymContractOperateRecord>> queryJljsContractOperateRecord(GymContractOperateRecordQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<GymContractOperateRecord>> queryJljsContractOperateRecord(GymContractOperateRecordQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(gymContractOperateRecordService.queryAll(criteria,page),HttpStatus.OK);
     }
 

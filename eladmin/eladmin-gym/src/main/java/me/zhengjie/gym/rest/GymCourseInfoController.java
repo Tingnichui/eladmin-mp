@@ -56,7 +56,8 @@ public class GymCourseInfoController {
     @Log("查询课程管理")
     @ApiOperation("查询课程管理")
     @PreAuthorize("@el.check('jljsCourseInfo:list')")
-    public ResponseEntity<PageResult<GymCourseInfo>> queryJljsCourseInfo(GymCourseInfoQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<GymCourseInfo>> queryJljsCourseInfo(GymCourseInfoQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(gymCourseInfoService.queryAll(criteria,page),HttpStatus.OK);
     }
 

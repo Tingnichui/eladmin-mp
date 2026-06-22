@@ -58,7 +58,8 @@ public class BinanceTradeInfoExtController {
     @Log("查询币安交易信息扩展")
     @ApiOperation("查询币安交易信息扩展")
     @PreAuthorize("@el.check('binanceTradeInfoExt:list')")
-    public ResponseEntity<PageResult<BinanceTradeInfoExt>> queryBinanceTradeInfoExt(BinanceTradeInfoExtQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<BinanceTradeInfoExt>> queryBinanceTradeInfoExt(BinanceTradeInfoExtQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(binanceTradeInfoExtService.queryAll(criteria,page),HttpStatus.OK);
     }
 

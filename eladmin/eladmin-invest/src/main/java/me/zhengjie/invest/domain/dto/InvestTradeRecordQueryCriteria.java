@@ -37,4 +37,6 @@ public class InvestTradeRecordQueryCriteria{
     private String sortField;
     @Pattern(regexp = "|asc|desc")
     private String sortOrder;
+    private Integer page = 1;
+    private Integer size = 10;
 }

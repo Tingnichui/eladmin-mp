@@ -56,7 +56,8 @@ public class InvestProductController {
     @Log("查询投资产品")
     @ApiOperation("查询投资产品")
     @PreAuthorize("@el.check('investProduct:list')")
-    public ResponseEntity<PageResult<InvestProduct>> queryInvestProduct(InvestProductQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<InvestProduct>> queryInvestProduct(InvestProductQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(investProductService.queryAll(criteria,page),HttpStatus.OK);
     }
 

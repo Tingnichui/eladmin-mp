@@ -57,6 +57,8 @@ public class BinanceTradeInfoQueryCriteria{
 
     private String orderColumn = "time";
     private String orderDirection = "desc";
+    private Integer page = 1;
+    private Integer size = 10;
 
     private static final List<String> ALLOWED_COLUMNS = Collections.unmodifiableList(
             Arrays.asList("orderId", "price", "qty", "time", "quoteQty")

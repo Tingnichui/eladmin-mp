@@ -60,7 +60,8 @@ public class GymContractInfoController {
     @Log("查询合同管理")
     @ApiOperation("查询合同管理")
     @PreAuthorize("@el.check('jljsContractInfo:list')")
-    public ResponseEntity<PageResult<GymContractInfo>> queryJljsContractInfo(GymContractInfoQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<GymContractInfo>> queryJljsContractInfo(GymContractInfoQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(gymContractInfoService.queryAll(criteria,page),HttpStatus.OK);
     }
 

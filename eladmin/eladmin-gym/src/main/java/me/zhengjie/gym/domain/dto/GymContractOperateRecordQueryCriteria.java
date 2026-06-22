@@ -29,4 +29,6 @@ public class GymContractOperateRecordQueryCriteria{
     private List<String> contractInfoIdList;
     private String contractOperateType;
     private String operateStatus;
+    private Integer page = 1;
+    private Integer size = 10;
 }

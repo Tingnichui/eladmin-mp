@@ -29,4 +29,6 @@ public class InvestProductQueryCriteria{
     private String investProductName;
     private String measurementUnit;
     private List<Integer> minSize;
+    private Integer page = 1;
+    private Integer size = 10;
 }

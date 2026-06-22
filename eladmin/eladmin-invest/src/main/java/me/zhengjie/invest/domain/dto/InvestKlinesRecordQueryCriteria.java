@@ -29,4 +29,6 @@ public class InvestKlinesRecordQueryCriteria{
     private Integer period;
     private List<Timestamp> openTime;
     private List<Timestamp> closeTime;
+    private Integer page = 1;
+    private Integer size = 10;
 }

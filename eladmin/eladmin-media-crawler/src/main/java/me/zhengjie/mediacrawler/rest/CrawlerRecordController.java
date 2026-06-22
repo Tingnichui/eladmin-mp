@@ -56,7 +56,8 @@ public class CrawlerRecordController {
     @Log("查询爬虫记录")
     @ApiOperation("查询爬虫记录")
     @PreAuthorize("@el.check('crawlerRecord:list')")
-    public ResponseEntity<PageResult<CrawlerRecord>> queryCrawlerRecord(CrawlerRecordQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<CrawlerRecord>> queryCrawlerRecord(CrawlerRecordQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(crawlerRecordService.queryAll(criteria,page),HttpStatus.OK);
     }
 

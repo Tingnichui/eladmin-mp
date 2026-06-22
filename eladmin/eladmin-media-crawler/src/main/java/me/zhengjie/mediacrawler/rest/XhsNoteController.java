@@ -56,7 +56,8 @@ public class XhsNoteController {
     @Log("查询小红书笔记")
     @ApiOperation("查询小红书笔记")
     @PreAuthorize("@el.check('xhsNote:list')")
-    public ResponseEntity<PageResult<XhsNote>> queryXhsNote(XhsNoteQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<XhsNote>> queryXhsNote(XhsNoteQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(xhsNoteService.queryAll(criteria,page),HttpStatus.OK);
     }
 

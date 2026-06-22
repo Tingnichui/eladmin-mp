@@ -29,4 +29,6 @@ public class CrawlerCookiesAccountQueryCriteria{
     private String cookies;
     private Integer status;
     private List<Long> invalidTimestamp;
+    private Integer page = 1;
+    private Integer size = 10;
 }

@@ -56,7 +56,8 @@ public class BinanceAccountInfoController {
     @Log("查询币安账户")
     @ApiOperation("查询币安账户")
     @PreAuthorize("@el.check('binanceAccountInfo:list')")
-    public ResponseEntity<PageResult<BinanceAccountInfo>> queryBinanceAccountInfo(BinanceAccountInfoQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<BinanceAccountInfo>> queryBinanceAccountInfo(BinanceAccountInfoQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(binanceAccountInfoService.queryAll(criteria,page),HttpStatus.OK);
     }
 

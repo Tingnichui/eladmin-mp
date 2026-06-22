@@ -60,7 +60,8 @@ public class InvestTradeAnalysisController {
     @Log("查询交易分析")
     @ApiOperation("查询交易分析")
     @PreAuthorize("@el.check('investTradeAnalysis:list')")
-    public ResponseEntity<PageResult<InvestTradeAnalysis>> queryInvestTradeAnalysis(InvestTradeAnalysisQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<InvestTradeAnalysis>> queryInvestTradeAnalysis(InvestTradeAnalysisQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(investTradeAnalysisService.queryAll(criteria,page),HttpStatus.OK);
     }
 

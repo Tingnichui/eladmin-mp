@@ -32,4 +32,6 @@ public class BinanceAccountInfoQueryCriteria{
     private List<BigDecimal> totalInvestment;
     private Integer autoTradeFlag;
     private Integer apiValidFlag;
+    private Integer page = 1;
+    private Integer size = 10;
 }

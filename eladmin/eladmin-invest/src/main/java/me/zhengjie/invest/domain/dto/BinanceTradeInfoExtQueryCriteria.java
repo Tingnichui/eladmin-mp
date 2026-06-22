@@ -25,4 +25,6 @@ import lombok.Data;
 public class BinanceTradeInfoExtQueryCriteria{
     private Integer hedgedFlag;
     private String remark;
+    private Integer page = 1;
+    private Integer size = 10;
 }

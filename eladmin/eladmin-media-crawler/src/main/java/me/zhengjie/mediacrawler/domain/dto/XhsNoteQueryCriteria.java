@@ -27,4 +27,6 @@ public class XhsNoteQueryCriteria{
     private String type;
     private String title;
     private String desc;
+    private Integer page = 1;
+    private Integer size = 10;
 }

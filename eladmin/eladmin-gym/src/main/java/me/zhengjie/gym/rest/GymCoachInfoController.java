@@ -56,7 +56,8 @@ public class GymCoachInfoController {
     @Log("查询教练管理")
     @ApiOperation("查询教练管理")
     @PreAuthorize("@el.check('jljsCoachInfo:list')")
-    public ResponseEntity<PageResult<GymCoachInfo>> queryJljsCoachInfo(GymCoachInfoQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<GymCoachInfo>> queryJljsCoachInfo(GymCoachInfoQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(gymCoachInfoService.queryAll(criteria,page),HttpStatus.OK);
     }
 

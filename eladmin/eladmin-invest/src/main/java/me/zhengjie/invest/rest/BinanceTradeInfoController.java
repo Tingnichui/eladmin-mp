@@ -83,7 +83,8 @@ public class BinanceTradeInfoController {
     @Log("查询币安交易")
     @ApiOperation("查询币安交易")
     @PreAuthorize("@el.check('binanceTradeInfo:list')")
-    public ResponseEntity<PageResult<BinanceTradeInfo>> queryBinanceTradeInfo(BinanceTradeInfoQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<BinanceTradeInfo>> queryBinanceTradeInfo(BinanceTradeInfoQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(binanceTradeInfoService.queryAll(criteria,page),HttpStatus.OK);
     }
 
@@ -118,7 +119,7 @@ public class BinanceTradeInfoController {
     @Log("查询交易汇总")
     @ApiOperation("查询交易汇总")
     @PreAuthorize("@el.check('binanceTradeInfo:list')")
-    public ResponseEntity<Object> queryBinanceTradeInfo(BinanceTradeInfoQueryCriteria criteria){
+    public ResponseEntity<Object> queryBinanceTradeStats(BinanceTradeInfoQueryCriteria criteria){
 
         // 移除所有锁仓
         binanceTradeInfoExtService.getBaseMapper().update(null,

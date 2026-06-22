@@ -56,7 +56,8 @@ public class InvestTradeRecordController {
     @Log("查询投资记录")
     @ApiOperation("查询投资记录")
     @PreAuthorize("@el.check('investTradeRecord:list')")
-    public ResponseEntity<PageResult<InvestTradeRecord>> queryInvestTradeRecord(@Validated InvestTradeRecordQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<InvestTradeRecord>> queryInvestTradeRecord(@Validated InvestTradeRecordQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(investTradeRecordService.queryAll(criteria,page),HttpStatus.OK);
     }
 

@@ -110,7 +110,8 @@ public class GymMemberUserH5Controller {
     @Log("查询上课记录")
     @ApiOperation("查询上课记录")
     @PreAuthorize("@el.check('gymMember:classRecord:list')")
-    public ResponseEntity<PageResult<GymClassRecord>> getGymClassRecordList(GymClassRecordQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<GymClassRecord>> getGymClassRecordList(GymClassRecordQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         GymMemberInfo memberInfo = this.getJljsMemberInfo();
         List<GymContractInfo> contractInfoList = gymContractInfoService.list(
                 Wrappers.lambdaQuery(GymContractInfo.class)
@@ -127,7 +128,8 @@ public class GymMemberUserH5Controller {
     @Log("会员:查询合同操作记录")
     @ApiOperation("会员:查询合同操作记录")
     @PreAuthorize("@el.check('gymMember:contractOperateRecord:list')")
-    public ResponseEntity<PageResult<GymContractOperateRecord>> getGymContractOperateRecordList(GymContractOperateRecordQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<GymContractOperateRecord>> getGymContractOperateRecordList(GymContractOperateRecordQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         GymMemberInfo memberInfo = this.getJljsMemberInfo();
         List<GymContractInfo> contractInfoList = gymContractInfoService.list(
                 Wrappers.lambdaQuery(GymContractInfo.class)
@@ -144,7 +146,8 @@ public class GymMemberUserH5Controller {
     @Log("会员:查询合同管理")
     @ApiOperation("会员:查询合同管理")
     @PreAuthorize("@el.check('gymMember:contractInfo:list')")
-    public ResponseEntity<PageResult<GymContractInfo>> getGymContractInfoList(GymContractInfoQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<GymContractInfo>> getGymContractInfoList(GymContractInfoQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         GymMemberInfo memberInfo = this.getJljsMemberInfo();
         criteria.setMemberId(memberInfo.getId());
         return new ResponseEntity<>(gymContractInfoService.queryAll(criteria,page),HttpStatus.OK);

@@ -59,7 +59,8 @@ public class BinanceFuturesTradeInfoController {
     @Log("查询币安合约交易信息")
     @ApiOperation("查询币安合约交易信息")
     @PreAuthorize("@el.check('binanceFuturesTradeInfo:list')")
-    public ResponseEntity<PageResult<BinanceFuturesTradeInfo>> queryBinanceFuturesTradeInfo(BinanceFuturesTradeInfoQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<BinanceFuturesTradeInfo>> queryBinanceFuturesTradeInfo(BinanceFuturesTradeInfoQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(binanceFuturesTradeInfoService.queryAll(criteria,page),HttpStatus.OK);
     }
 

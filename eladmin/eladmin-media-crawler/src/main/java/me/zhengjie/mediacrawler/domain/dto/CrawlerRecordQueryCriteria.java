@@ -27,4 +27,6 @@ public class CrawlerRecordQueryCriteria{
     private String crawlerType;
     private String keywords;
     private String crawlerStatus;
+    private Integer page = 1;
+    private Integer size = 10;
 }

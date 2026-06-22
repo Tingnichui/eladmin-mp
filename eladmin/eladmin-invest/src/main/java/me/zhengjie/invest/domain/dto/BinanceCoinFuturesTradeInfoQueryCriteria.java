@@ -23,4 +23,6 @@ import lombok.Data;
 **/
 @Data
 public class BinanceCoinFuturesTradeInfoQueryCriteria{
+    private Integer page = 1;
+    private Integer size = 10;
 }

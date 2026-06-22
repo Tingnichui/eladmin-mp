@@ -72,7 +72,8 @@ public class InvestKlinesRecordController {
     @Log("查询投资K线")
     @ApiOperation("查询投资K线")
     @PreAuthorize("@el.check('investKlinesRecord:list')")
-    public ResponseEntity<PageResult<InvestKlinesRecord>> queryInvestKlinesRecord(InvestKlinesRecordQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<InvestKlinesRecord>> queryInvestKlinesRecord(InvestKlinesRecordQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(investKlinesRecordService.queryAll(criteria,page),HttpStatus.OK);
     }
 

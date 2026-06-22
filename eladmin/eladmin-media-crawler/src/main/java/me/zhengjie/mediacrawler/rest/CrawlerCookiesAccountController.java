@@ -56,7 +56,8 @@ public class CrawlerCookiesAccountController {
     @Log("查询自媒体账号")
     @ApiOperation("查询自媒体账号")
     @PreAuthorize("@el.check('crawlerCookiesAccount:list')")
-    public ResponseEntity<PageResult<CrawlerCookiesAccount>> queryCrawlerCookiesAccount(CrawlerCookiesAccountQueryCriteria criteria, Page<Object> page){
+    public ResponseEntity<PageResult<CrawlerCookiesAccount>> queryCrawlerCookiesAccount(CrawlerCookiesAccountQueryCriteria criteria){
+        Page<Object> page = new Page<>(criteria.getPage(), criteria.getSize());
         return new ResponseEntity<>(crawlerCookiesAccountService.queryAll(criteria,page),HttpStatus.OK);
     }
 
