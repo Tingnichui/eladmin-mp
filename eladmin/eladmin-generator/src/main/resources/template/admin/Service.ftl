@@ -17,7 +17,6 @@ package ${package}.service;
 
 import ${package}.domain.${className};
 import ${package}.domain.dto.${className}QueryCriteria;
-import java.util.Map;
 import java.util.List;
 import java.io.IOException;
 import javax.servlet.http.HttpServletResponse;
@@ -41,13 +40,6 @@ public interface ${className}Service extends IService<${className}> {
     PageResult<${className}> queryAll(${className}QueryCriteria criteria, Page<Object> page);
 
     /**
-    * 查询所有数据不分页
-    * @param criteria 条件参数
-    * @return List<${className}Dto>
-    */
-    List<${className}> queryAll(${className}QueryCriteria criteria);
-
-    /**
     * 创建
     * @param resources /
     */
@@ -67,9 +59,9 @@ public interface ${className}Service extends IService<${className}> {
 
     /**
     * 导出数据
-    * @param all 待导出的数据
+    * @param criteria 条件参数
     * @param response /
     * @throws IOException /
     */
-    void download(List<${className}> all, HttpServletResponse response) throws IOException;
+    void download(${className}QueryCriteria criteria, HttpServletResponse response) throws IOException;
 }

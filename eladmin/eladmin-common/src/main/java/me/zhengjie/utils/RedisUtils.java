@@ -15,6 +15,8 @@
  */
 package me.zhengjie.utils;
 
+import cn.hutool.cache.CacheUtil;
+import cn.hutool.cache.impl.TimedCache;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSON;
 import com.google.common.collect.Lists;
@@ -863,4 +865,25 @@ public class RedisUtils {
     public Long decrement(String key) {
         return redisTemplate.opsForValue().decrement(key);
     }
+
+    private final TimedCache<String, String> localCache = CacheUtil.newTimedCache(TimeUnit.MINUTES.toMillis(10));
+    public String getDictLabel(String dictName, Object dictValue) {
+        String key = String.format("dict:%s:%s", dictName, dictValue);
+        // 先查本地缓存
+        String cacheValue = localCache.get(key, false);
+        if (null != cacheValue) {
+            return cacheValue;
+        }
+
+        // 本地没有，再查 Redis
+        Object value = redisTemplate.opsForValue().get(key);
+        String result = value == null ? "" : String.valueOf(value);
+
+        // 放入本地缓存
+        localCache.put(key, result);
+
+        return result;
+
+    }
+
 }

@@ -33,7 +33,6 @@ import java.security.MessageDigest;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * File工具类，扩展 hutool 工具包
@@ -208,18 +207,109 @@ public class FileUtil extends cn.hutool.core.io.FileUtil {
      * 导出excel
      */
     public static void downloadExcel(List<Map<String, Object>> list, HttpServletResponse response) throws IOException {
+        List<String> headers = list.isEmpty() ? Collections.emptyList() : new ArrayList<>(list.get(0).keySet());
+        downloadExcel(headers, response, writer -> writer.write(list));
+    }
+
+    /**
+     * 分批导出 Excel
+     */
+    public static void downloadExcel(List<String> headers, HttpServletResponse response,
+                                     ExcelBatchConsumer consumer) throws IOException {
         String tempPath = SYS_TEM_DIR + IdUtil.fastSimpleUUID() + ".xlsx";
         File file = new File(tempPath);
         BigExcelWriter writer = ExcelUtil.getBigWriter(file);
-        // 处理数据以防止CSV注入
-        List<Map<String, Object>> sanitizedList = list.parallelStream().map(map -> {
+        ServletOutputStream out = null;
+        try {
+            ExcelBatchWriter batchWriter = new ExcelBatchWriter(writer, headers);
+            consumer.accept(batchWriter);
+            batchWriter.autoSizeColumns();
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8");
+            response.setHeader("Content-Disposition", "attachment;filename=file.xlsx");
+            out = response.getOutputStream();
+            writer.flush(out, true);
+        } finally {
+            IoUtil.close(out);
+            writer.close();
+            Files.deleteIfExists(file.toPath());
+        }
+    }
+
+    @FunctionalInterface
+    public interface ExcelBatchConsumer {
+        /**
+         * 分批写入 Excel
+         */
+        void accept(ExcelBatchWriter writer) throws IOException;
+    }
+
+    /**
+     * Excel 分批写入器
+     */
+    public static class ExcelBatchWriter {
+
+        private static final int MAX_DATA_ROWS_PER_SHEET = 1_048_575;
+
+        private final BigExcelWriter writer;
+        private final List<String> headers;
+        private final int maxDataRowsPerSheet;
+        private int sheetIndex = 1;
+        private int currentSheetDataRows;
+
+        ExcelBatchWriter(BigExcelWriter writer, List<String> headers) {
+            this(writer, headers, MAX_DATA_ROWS_PER_SHEET);
+        }
+
+        ExcelBatchWriter(BigExcelWriter writer, List<String> headers, int maxDataRowsPerSheet) {
+            this.writer = writer;
+            this.headers = new ArrayList<>(headers);
+            this.maxDataRowsPerSheet = maxDataRowsPerSheet;
+            initSheet();
+        }
+
+        /**
+         * 写入一批数据，超过单个工作表上限时自动切换工作表
+         */
+        public void write(List<Map<String, Object>> rows) {
+            int offset = 0;
+            while (offset < rows.size()) {
+                if (currentSheetDataRows >= maxDataRowsPerSheet) {
+                    nextSheet();
+                }
+                int writableRows = Math.min(rows.size() - offset,
+                        maxDataRowsPerSheet - currentSheetDataRows);
+                List<Map<String, Object>> sanitizedRows = new ArrayList<>(writableRows);
+                for (int i = offset; i < offset + writableRows; i++) {
+                    sanitizedRows.add(sanitizeRow(rows.get(i)));
+                }
+                writer.write(sanitizedRows, false);
+                currentSheetDataRows += writableRows;
+                offset += writableRows;
+            }
+        }
+
+        private void nextSheet() {
+            sheetIndex++;
+            writer.setSheet("Sheet" + sheetIndex);
+            writer.resetRow();
+            currentSheetDataRows = 0;
+            initSheet();
+        }
+
+        private void initSheet() {
+            writer.renameSheet("Sheet" + sheetIndex);
+            SXSSFSheet sheet = (SXSSFSheet) writer.getSheet();
+            sheet.trackAllColumnsForAutoSizing();
+            writer.writeHeadRow(headers);
+        }
+
+        private Map<String, Object> sanitizeRow(Map<String, Object> row) {
             Map<String, Object> sanitizedMap = new LinkedHashMap<>();
-            map.forEach((key, value) -> {
+            row.forEach((key, value) -> {
                 if (value instanceof String) {
                     String strValue = (String) value;
-                    // 检查并处理以特殊字符开头的值
                     if (strValue.startsWith("=") || strValue.startsWith("+") || strValue.startsWith("-") || strValue.startsWith("@")) {
-                        strValue = "'" + strValue; // 添加单引号前缀
+                        strValue = "'" + strValue;
                     }
                     sanitizedMap.put(key, strValue);
                 } else {
@@ -227,24 +317,14 @@ public class FileUtil extends cn.hutool.core.io.FileUtil {
                 }
             });
             return sanitizedMap;
-        }).collect(Collectors.toList());
-        // 一次性写出内容，使用默认样式，强制输出标题
-        writer.write(sanitizedList, true);
-        SXSSFSheet sheet = (SXSSFSheet)writer.getSheet();
-        //上面需要强转SXSSFSheet  不然没有trackAllColumnsForAutoSizing方法
-        sheet.trackAllColumnsForAutoSizing();
-        //列宽自适应
-        writer.autoSizeColumnAll();
-        //response为HttpServletResponse对象
-        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8");
-        //test.xls是弹出下载对话框的文件名，不能为中文，中文请自行编码
-        response.setHeader("Content-Disposition", "attachment;filename=file.xlsx");
-        ServletOutputStream out = response.getOutputStream();
-        // 终止后删除临时文件
-        file.deleteOnExit();
-        writer.flush(out, true);
-        //此处记得关闭输出Servlet流
-        IoUtil.close(out);
+        }
+
+        private void autoSizeColumns() {
+            for (int i = 0; i < writer.getSheetCount(); i++) {
+                writer.setSheet(i);
+                writer.autoSizeColumnAll();
+            }
+        }
     }
 
     public static String getFileType(String type) {

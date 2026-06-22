@@ -26,6 +26,9 @@ import me.zhengjie.exception.EntityExistException;
     </#list>
 </#if>
 import me.zhengjie.utils.FileUtil;
+<#if hasDict>
+import me.zhengjie.utils.RedisUtils;
+</#if>
 import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -53,15 +56,13 @@ import me.zhengjie.utils.PageResult;
 public class ${className}ServiceImpl extends ServiceImpl<${className}Mapper, ${className}> implements ${className}Service {
 
     private final ${className}Mapper ${changeClassName}Mapper;
+<#if hasDict>
+    private final RedisUtils redisUtils;
+</#if>
 
     @Override
     public PageResult<${className}> queryAll(${className}QueryCriteria criteria, Page<Object> page){
         return PageUtil.toPage(${changeClassName}Mapper.findAll(criteria, page));
-    }
-
-    @Override
-    public List<${className}> queryAll(${className}QueryCriteria criteria){
-        return ${changeClassName}Mapper.findAll(criteria);
     }
 
     @Override
@@ -85,21 +86,54 @@ public class ${className}ServiceImpl extends ServiceImpl<${className}Mapper, ${c
     }
 
     @Override
-    public void download(List<${className}> all, HttpServletResponse response) throws IOException {
-        List<Map<String, Object>> list = new ArrayList<>();
-        for (${className} ${changeClassName} : all) {
-            Map<String,Object> map = new LinkedHashMap<>();
-        <#list columns as column>
-            <#if column.columnKey != 'PRI'>
-            <#if column.remark != ''>
-            map.put("${column.remark}", ${changeClassName}.get${column.capitalColumnName}());
-            <#else>
-            map.put(" ${column.changeColumnName}",  ${changeClassName}.get${column.capitalColumnName}());
-            </#if>
-            </#if>
-        </#list>
-            list.add(map);
-        }
-        FileUtil.downloadExcel(list, response);
+    public void download(${className}QueryCriteria criteria, HttpServletResponse response) throws IOException {
+        List<String> headers = new ArrayList<>();
+    <#list columns as column>
+        <#if column.columnKey != 'PRI'>
+        <#if column.remark != ''>
+        headers.add("${column.remark}");
+        <#else>
+        headers.add(" ${column.changeColumnName}");
+        </#if>
+        </#if>
+    </#list>
+        FileUtil.downloadExcel(headers, response, writer -> {
+            long current = 1L;
+            final long pageSize = 10000L;
+            while (true) {
+                Page<Object> page = new Page<>(current, pageSize, false);
+                List<${className}> records = ${changeClassName}Mapper.findAll(criteria, page).getRecords();
+                if (records.isEmpty()) {
+                    break;
+                }
+                List<Map<String, Object>> list = new ArrayList<>(records.size());
+                for (${className} ${changeClassName} : records) {
+                    Map<String,Object> map = new LinkedHashMap<>();
+                <#list columns as column>
+                    <#if column.columnKey != 'PRI'>
+                    <#if column.remark != ''>
+                    <#if (column.dictName)?? && (column.dictName)!="">
+                    map.put("${column.remark}", redisUtils.getDictLabel("${column.dictName}", ${changeClassName}.get${column.capitalColumnName}()));
+                    <#else>
+                    map.put("${column.remark}", ${changeClassName}.get${column.capitalColumnName}());
+                    </#if>
+                    <#else>
+                    <#if (column.dictName)?? && (column.dictName)!="">
+                    map.put(" ${column.changeColumnName}", redisUtils.getDictLabel("${column.dictName}", ${changeClassName}.get${column.capitalColumnName}()));
+                    <#else>
+                    map.put(" ${column.changeColumnName}",  ${changeClassName}.get${column.capitalColumnName}());
+                    </#if>
+                    </#if>
+                    </#if>
+                </#list>
+                    list.add(map);
+                }
+                writer.write(list);
+                if (records.size() < pageSize) {
+                    break;
+                }
+                current++;
+            }
+        });
     }
 }

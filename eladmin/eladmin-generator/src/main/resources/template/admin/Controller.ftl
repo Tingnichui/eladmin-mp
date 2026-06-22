@@ -48,7 +48,7 @@ public class ${className}Controller {
     @GetMapping(value = "/download")
     @PreAuthorize("@el.check('${changeClassName}:list')")
     public void export${className}(HttpServletResponse response, ${className}QueryCriteria criteria) throws IOException {
-        ${changeClassName}Service.download(${changeClassName}Service.queryAll(criteria), response);
+        ${changeClassName}Service.download(criteria, response);
     }
 
     @GetMapping

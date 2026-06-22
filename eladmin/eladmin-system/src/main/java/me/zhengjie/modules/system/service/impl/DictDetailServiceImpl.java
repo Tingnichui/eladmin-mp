@@ -16,6 +16,7 @@
 package me.zhengjie.modules.system.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
@@ -26,8 +27,11 @@ import me.zhengjie.modules.system.domain.dto.DictDetailQueryCriteria;
 import me.zhengjie.utils.*;
 import me.zhengjie.modules.system.mapper.DictDetailMapper;
 import me.zhengjie.modules.system.service.DictDetailService;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import javax.annotation.PostConstruct;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -42,6 +46,31 @@ public class DictDetailServiceImpl extends ServiceImpl<DictDetailMapper, DictDet
     private final DictMapper dictMapper;
     private final DictDetailMapper dictDetailMapper;
     private final RedisUtils redisUtils;
+
+    @PostConstruct
+    public void init() {
+        this.cacheDict(null);
+    }
+
+    private void cacheDict(String dictName) {
+        final String pattern = "dict:" + (StringUtils.isNotBlank(dictName) ? dictName + ":*" : "*");
+        List<String> keys = redisUtils.scan(pattern);
+        if (CollectionUtils.isNotEmpty(keys)) {
+            redisUtils.del(keys.toArray(new String[0]));
+        }
+
+        List<Dict> dictList = dictMapper.selectList(
+                Wrappers.lambdaQuery(Dict.class)
+                        .eq(StringUtils.isNotBlank(dictName), Dict::getName, dictName)
+        );
+        for (Dict dict : dictList) {
+            String name = dict.getName();
+            List<DictDetail> dictDetails = dictDetailMapper.findByDictName(name);
+            for (DictDetail dictDetail : dictDetails) {
+                redisUtils.set(String.format("dict:%s:%s", name, dictDetail.getValue()), dictDetail.getLabel());
+            }
+        }
+    }
 
     @Override
     public PageResult<DictDetail> queryAll(DictDetailQueryCriteria criteria, Page<Object> page) {
@@ -91,5 +120,6 @@ public class DictDetailServiceImpl extends ServiceImpl<DictDetailMapper, DictDet
     public void delCaches(DictDetail dictDetail){
         Dict dict = dictMapper.selectById(dictDetail.getDictId());
         redisUtils.del(CacheKey.DICT_NAME + dict.getName());
+        this.cacheDict(dict.getName());
     }
 }
