@@ -22,9 +22,10 @@ import me.zhengjie.domain.GenConfig;
 import me.zhengjie.domain.ColumnInfo;
 import org.springframework.util.ObjectUtils;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.time.LocalDate;
 import java.util.*;
 import static me.zhengjie.utils.FileUtil.SYS_TEM_DIR;
@@ -42,6 +43,10 @@ public class GenUtil {
     private static final String TIMESTAMP = "Timestamp";
 
     private static final String BIGDECIMAL = "BigDecimal";
+
+    private static final String LONG = "Long";
+
+    private static final String STRING = "String";
 
     public static final String PK = "PRI";
 
@@ -217,6 +222,8 @@ public class GenUtil {
         genMap.put("queryHasTimestamp", false);
         // 存在 BigDecimal 字段
         genMap.put("hasBigDecimal", false);
+        // 存在 Long 字段
+        genMap.put("hasLong", false);
         // 查询类中存在 BigDecimal 字段
         genMap.put("queryHasBigDecimal", false);
         // 是否需要创建查询
@@ -241,6 +248,8 @@ public class GenUtil {
         List<Map<String, Object>> betweens = new ArrayList<>();
         // 存储不为空的字段信息
         List<Map<String, Object>> isNotNullColumns = new ArrayList<>();
+        // 统计导出表头，避免重复备注导致 Map key 覆盖
+        Map<String, Integer> exportNameCount = getExportNameCount(columnInfos);
 
         for (ColumnInfo column : columnInfos) {
             Map<String, Object> listMap = new HashMap<>(16);
@@ -254,6 +263,17 @@ public class GenUtil {
             String changeColumnName = StringUtils.toCamelCase(column.getColumnName());
             // 大写开头的字段名
             String capitalColumnName = StringUtils.toCapitalizeCamelCase(column.getColumnName());
+            // 是否是框架自动维护字段
+            boolean autoMaintain = isAutoMaintainColumn(column);
+            // 是否是 Long 类型
+            boolean longType = LONG.equals(colType);
+            // 查询接收类型，Long 使用 String 避免前端 JS 精度丢失
+            String queryColumnType = longType ? STRING : colType;
+            // 是否必填，自动维护字段不生成阻断新增的校验
+            boolean notNull = Boolean.TRUE.equals(column.getNotNull()) && !autoMaintain;
+            // 是否表单显示，自动维护字段默认只读维护，不进入新增/编辑表单
+            boolean formShow = !autoMaintain && !Boolean.FALSE.equals(column.getFormShow());
+            String exportName = getExportName(column, changeColumnName, exportNameCount);
             if (PK.equals(column.getKeyType())) {
                 // 存储主键类型
                 genMap.put("pkColumnType", colType);
@@ -272,6 +292,10 @@ public class GenUtil {
             if (BIGDECIMAL.equals(colType)) {
                 genMap.put("hasBigDecimal", true);
             }
+            // 是否存在 Long 类型的字段
+            if (longType) {
+                genMap.put("hasLong", true);
+            }
             // 主键是否自增
             if (EXTRA.equals(column.getExtra())) {
                 genMap.put("auto", true);
@@ -285,14 +309,26 @@ public class GenUtil {
 
             // 存储字段类型
             listMap.put("columnType", colType);
+            // 查询字段类型
+            listMap.put("queryColumnType", queryColumnType);
+            // 是否按字符串查询
+            listMap.put("queryStringType", STRING.equals(queryColumnType));
+            // 是否 Long 类型
+            listMap.put("longType", longType);
+            // 是否 String 类型
+            listMap.put("stringType", STRING.equals(colType));
+            // 是否自动维护字段
+            listMap.put("autoMaintain", autoMaintain);
+            // 导出表头，重复备注时自动追加字段名避免覆盖
+            listMap.put("exportName", exportName);
             // 存储字原始段名称
             listMap.put("columnName", column.getColumnName());
             // 不为空
-            listMap.put("istNotNull", column.getNotNull());
+            listMap.put("istNotNull", notNull);
             // 字段列表显示
-            listMap.put("columnShow", column.getListShow());
+            listMap.put("columnShow", !Boolean.FALSE.equals(column.getListShow()));
             // 表单显示
-            listMap.put("formShow", column.getFormShow());
+            listMap.put("formShow", formShow);
             // 表单组件类型
             listMap.put("formType", StringUtils.isNotBlank(column.getFormType()) ? column.getFormType() : "Input");
             // 小写开头的字段名称
@@ -302,7 +338,7 @@ public class GenUtil {
             // 字典名称
             listMap.put("dictName", column.getDictName());
             // 添加非空字段信息
-            if (column.getNotNull()) {
+            if (notNull) {
                 isNotNullColumns.add(listMap);
             }
             // 判断是否有查询，如有则把查询的字段set进columnQuery
@@ -311,11 +347,11 @@ public class GenUtil {
                 listMap.put("queryType", column.getQueryType());
                 // 是否存在查询
                 genMap.put("hasQuery", true);
-                if (TIMESTAMP.equals(colType)) {
+                if (TIMESTAMP.equals(queryColumnType)) {
                     // 查询中存储 Timestamp 类型
                     genMap.put("queryHasTimestamp", true);
                 }
-                if (BIGDECIMAL.equals(colType)) {
+                if (BIGDECIMAL.equals(queryColumnType)) {
                     // 查询中存储 BigDecimal 类型
                     genMap.put("queryHasBigDecimal", true);
                 }
@@ -340,6 +376,46 @@ public class GenUtil {
         // 保存非空字段信息
         genMap.put("isNotNullColumns", isNotNullColumns);
         return genMap;
+    }
+
+    private static Map<String, Integer> getExportNameCount(List<ColumnInfo> columnInfos) {
+        Map<String, Integer> exportNameCount = new HashMap<>(16);
+        for (ColumnInfo column : columnInfos) {
+            if (PK.equals(column.getKeyType())) {
+                continue;
+            }
+            String changeColumnName = StringUtils.toCamelCase(column.getColumnName());
+            String exportName = getExportBaseName(column, changeColumnName);
+            exportNameCount.put(exportName, exportNameCount.getOrDefault(exportName, 0) + 1);
+        }
+        return exportNameCount;
+    }
+
+    private static String getExportName(ColumnInfo column, String changeColumnName, Map<String, Integer> exportNameCount) {
+        String exportName = getExportBaseName(column, changeColumnName);
+        if (exportNameCount.getOrDefault(exportName, 0) > 1) {
+            return exportName + "(" + changeColumnName + ")";
+        }
+        return exportName;
+    }
+
+    private static String getExportBaseName(ColumnInfo column, String changeColumnName) {
+        return StringUtils.isNotBlank(column.getRemark()) ? column.getRemark() : changeColumnName;
+    }
+
+    public static boolean isAutoMaintainColumn(ColumnInfo column) {
+        String columnName = column.getColumnName();
+        if (columnName == null) {
+            return false;
+        }
+        String name = columnName.toLowerCase(Locale.ROOT);
+        if ("create_time".equals(name) || "created_time".equals(name)
+                || "update_time".equals(name) || "updated_time".equals(name)
+                || "create_by".equals(name) || "created_by".equals(name)
+                || "update_by".equals(name) || "updated_by".equals(name)) {
+            return true;
+        }
+        return column.getExtra() != null && column.getExtra().toLowerCase(Locale.ROOT).contains("on update");
     }
 
     /**
@@ -402,16 +478,11 @@ public class GenUtil {
 
     private static void genFile(File file, Template template, Map<String, Object> map) throws IOException {
         // 生成目标文件
-        Writer writer = null;
-        try {
-            FileUtil.touch(file);
-            writer = new FileWriter(file);
+        FileUtil.touch(file);
+        try (Writer writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
             template.render(map, writer);
-        } catch (TemplateException | IOException e) {
+        } catch (TemplateException e) {
             throw new RuntimeException(e);
-        } finally {
-            assert writer != null;
-            writer.close();
         }
     }
 }

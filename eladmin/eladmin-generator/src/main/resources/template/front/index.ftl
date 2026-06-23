@@ -20,7 +20,10 @@
         <date-range-picker
           v-model="query.${column.changeColumnName}"
           start-placeholder="${column.changeColumnName}Start"
-          end-placeholder="${column.changeColumnName}Start"
+          end-placeholder="${column.changeColumnName}End"
+          <#if column.stringType>
+          value-format="yyyy-MM-dd"
+          </#if>
           class="date-item"
         />
       </#if>
@@ -61,7 +64,7 @@
             未设置字典，请手动设置 Select
               </#if>
             <#else>
-            <el-date-picker v-model="form.${column.changeColumnName}" type="datetime" style="width: 370px;" />
+            <el-date-picker v-model="form.${column.changeColumnName}" type="<#if column.stringType>date<#else>datetime</#if>"<#if column.stringType> value-format="yyyy-MM-dd"</#if> style="width: 370px;" />
             </#if>
           </el-form-item>
         </#if>
@@ -113,11 +116,14 @@ import rrOperation from '@crud/RR.operation'
 import crudOperation from '@crud/CRUD.operation'
 import udOperation from '@crud/UD.operation'
 import pagination from '@crud/Pagination'
+<#if betweens?? && (betweens?size > 0)>
+import DateRangePicker from '@/components/DateRangePicker'
+</#if>
 
 const defaultForm = { <#if columns??><#list columns as column>${column.changeColumnName}: null<#if column_has_next>, </#if></#list></#if> }
 export default {
   name: '${className}',
-  components: { pagination, crudOperation, rrOperation, udOperation },
+  components: { <#if betweens?? && (betweens?size > 0)>DateRangePicker, </#if>pagination, crudOperation, rrOperation, udOperation },
   mixins: [presenter(), header(), form(defaultForm), crud()],
   <#if hasDict>
   dicts: [<#if hasDict??><#list dicts as dict>'${dict}'<#if dict_has_next>, </#if></#list></#if>],

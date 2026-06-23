@@ -79,6 +79,10 @@ public class GeneratorServiceImpl extends ServiceImpl<ColumnInfoMapper, ColumnIn
                     && GenUtil.EXTRA.equalsIgnoreCase(columnInfo.getExtra())){
                 columnInfo.setNotNull(false);
             }
+            if (GenUtil.isAutoMaintainColumn(columnInfo)) {
+                columnInfo.setNotNull(false);
+                columnInfo.setFormShow(false);
+            }
         }
         return columnInfos;
     }
@@ -149,13 +153,22 @@ public class GeneratorServiceImpl extends ServiceImpl<ColumnInfoMapper, ColumnIn
         if (genConfig.getId() == null) {
             throw new BadRequestException(CONFIG_MESSAGE);
         }
+        File file = null;
+        File zipFile = null;
         try {
-            File file = new File(GenUtil.download(columns, genConfig));
-            String zipPath = file.getPath() + ".zip";
-            ZipUtil.zip(file.getPath(), zipPath);
-            FileUtil.downloadFile(request, response, new File(zipPath), true);
+            file = new File(GenUtil.download(columns, genConfig));
+            zipFile = new File(file.getPath() + ".zip");
+            ZipUtil.zip(file.getPath(), zipFile.getPath());
+            FileUtil.downloadFile(request, response, zipFile, false);
         } catch (IOException e) {
             throw new BadRequestException("打包失败");
+        } finally {
+            if (zipFile != null && zipFile.exists()) {
+                FileUtil.del(zipFile);
+            }
+            if (file != null && file.exists()) {
+                FileUtil.del(file);
+            }
         }
     }
 }

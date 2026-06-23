@@ -4,10 +4,10 @@
     <#if columns??>
     <resultMap id="BaseResultMap" type="${package}.domain.${className}">
         <#list columns as column>
-            <#if column.columnKey = 'PRI'>
+            <#if (column.columnKey!'') = 'PRI'>
         <id column="${column.columnName}" property="${column.changeColumnName}"/>
             </#if>
-            <#if column.columnKey != 'PRI'>
+            <#if (column.columnKey!'') != 'PRI'>
         <result column="${column.columnName}" property="${column.changeColumnName}"/>
             </#if>
         </#list>
@@ -25,7 +25,7 @@
         <#if queryColumns??>
         WHERE 1 = 1
         <#list queryColumns as column>
-            <if test="criteria.${column.changeColumnName} != null">
+            <if test="criteria.${column.changeColumnName} != null<#if column.queryStringType> and criteria.${column.changeColumnName} != ''</#if>">
             <#if column.queryType = '='>
                 AND t1.${column.columnName} = ${symbol}{criteria.${column.changeColumnName}}
             </#if>
@@ -48,7 +48,7 @@
         </#list>
         <#if betweens??>
             <#list betweens as column>
-            <if test="criteria.${column.changeColumnName} != null and criteria.${column.changeColumnName}.size() > 0">
+            <if test="criteria.${column.changeColumnName} != null and criteria.${column.changeColumnName}.size() > 1">
                 AND t1.${column.columnName} BETWEEN ${symbol}{criteria.${column.changeColumnName}[0]} AND ${symbol}{criteria.${column.changeColumnName}[1]}
             </if>
             </#list>

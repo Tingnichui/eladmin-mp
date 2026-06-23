@@ -47,12 +47,12 @@ public class ${className}QueryCriteria{
         <#else>
     @ApiModelProperty(value = "${column.changeColumnName}")
         </#if>
-    private ${column.columnType} ${column.changeColumnName};
+    private ${column.queryColumnType} ${column.changeColumnName};
     </#list>
 </#if>
 <#if betweens??>
     <#list betweens as column>
-    private List<${column.columnType}> ${column.changeColumnName};
+    private List<${column.queryColumnType}> ${column.changeColumnName};
     </#list>
 </#if>
 }

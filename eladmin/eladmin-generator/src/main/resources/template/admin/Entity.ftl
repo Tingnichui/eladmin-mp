@@ -19,6 +19,10 @@ import lombok.Data;
 import cn.hutool.core.bean.BeanUtil;
 import io.swagger.annotations.ApiModelProperty;
 import cn.hutool.core.bean.copier.CopyOptions;
+<#if hasLong>
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+</#if>
 <#if hasTimestamp>
 import java.sql.Timestamp;
 </#if>
@@ -29,7 +33,7 @@ import java.math.BigDecimal;
 <#assign notNullUsed = false>
 <#if columns??>
     <#list columns as column>
-        <#if column.istNotNull && column.columnKey != 'PRI'>
+        <#if column.istNotNull && (column.columnKey!'') != 'PRI'>
             <#if column.columnType = 'String'>
                 <#assign notBlankUsed = true>
             <#else>
@@ -51,9 +55,6 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
-
 /**
 * @description /
 * @author ${author}
@@ -65,10 +66,10 @@ public class ${className} implements Serializable {
 <#if columns??>
     <#list columns as column>
 
-    <#if column.columnKey = 'PRI'>
+    <#if (column.columnKey!'') = 'PRI'>
     @TableId(value = "${column.columnName}"<#if auto>, type = IdType.AUTO</#if>)
     </#if>
-    <#if column.istNotNull && column.columnKey != 'PRI'>
+    <#if column.istNotNull && (column.columnKey!'') != 'PRI'>
         <#if column.columnType = 'String'>
     @NotBlank
         <#else>
@@ -79,6 +80,9 @@ public class ${className} implements Serializable {
     @ApiModelProperty(value = "${column.remark}")
     <#else>
     @ApiModelProperty(value = "${column.changeColumnName}")
+    </#if>
+    <#if column.longType>
+    @JsonSerialize(using = ToStringSerializer.class)
     </#if>
     private ${column.columnType} ${column.changeColumnName};
     </#list>

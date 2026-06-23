@@ -16,15 +16,6 @@
 package ${package}.service.impl;
 
 import ${package}.domain.${className};
-<#if columns??>
-    <#list columns as column>
-        <#if column.columnKey = 'UNI'>
-            <#if column_index = 1>
-import me.zhengjie.exception.EntityExistException;
-            </#if>
-        </#if>
-    </#list>
-</#if>
 import me.zhengjie.utils.FileUtil;
 <#if hasDict>
 import me.zhengjie.utils.RedisUtils;
@@ -89,12 +80,8 @@ public class ${className}ServiceImpl extends ServiceImpl<${className}Mapper, ${c
     public void download(${className}QueryCriteria criteria, HttpServletResponse response) throws IOException {
         List<String> headers = new ArrayList<>();
     <#list columns as column>
-        <#if column.columnKey != 'PRI'>
-        <#if column.remark != ''>
-        headers.add("${column.remark}");
-        <#else>
-        headers.add(" ${column.changeColumnName}");
-        </#if>
+        <#if (column.columnKey!'') != 'PRI'>
+        headers.add("${column.exportName}");
         </#if>
     </#list>
         FileUtil.downloadExcel(headers, response, writer -> {
@@ -110,18 +97,14 @@ public class ${className}ServiceImpl extends ServiceImpl<${className}Mapper, ${c
                 for (${className} ${changeClassName} : records) {
                     Map<String,Object> map = new LinkedHashMap<>();
                 <#list columns as column>
-                    <#if column.columnKey != 'PRI'>
-                    <#if column.remark != ''>
+                    <#if (column.columnKey!'') != 'PRI'>
                     <#if (column.dictName)?? && (column.dictName)!="">
-                    map.put("${column.remark}", redisUtils.getDictLabel("${column.dictName}", ${changeClassName}.get${column.capitalColumnName}()));
+                    map.put("${column.exportName}", getDictLabel("${column.dictName}", ${changeClassName}.get${column.capitalColumnName}()));
                     <#else>
-                    map.put("${column.remark}", ${changeClassName}.get${column.capitalColumnName}());
-                    </#if>
+                    <#if column.longType>
+                    map.put("${column.exportName}", getExportValue(${changeClassName}.get${column.capitalColumnName}()));
                     <#else>
-                    <#if (column.dictName)?? && (column.dictName)!="">
-                    map.put(" ${column.changeColumnName}", redisUtils.getDictLabel("${column.dictName}", ${changeClassName}.get${column.capitalColumnName}()));
-                    <#else>
-                    map.put(" ${column.changeColumnName}",  ${changeClassName}.get${column.capitalColumnName}());
+                    map.put("${column.exportName}", ${changeClassName}.get${column.capitalColumnName}());
                     </#if>
                     </#if>
                     </#if>
@@ -136,4 +119,17 @@ public class ${className}ServiceImpl extends ServiceImpl<${className}Mapper, ${c
             }
         });
     }
+<#if hasDict>
+
+    private Object getDictLabel(String dictName, Object dictValue) {
+        String label = redisUtils.getDictLabel(dictName, dictValue);
+        return label == null || label.length() == 0 ? <#if hasLong>getExportValue(dictValue)<#else>dictValue</#if> : label;
+    }
+</#if>
+<#if hasLong>
+
+    private Object getExportValue(Object value) {
+        return value instanceof Long ? String.valueOf(value) : value;
+    }
+</#if>
 }
