@@ -1,18 +1,18 @@
 /*
-*  Copyright 2019-2023 Zheng Jie
-*
-*  Licensed under the Apache License, Version 2.0 (the "License");
-*  you may not use this file except in compliance with the License.
-*  You may obtain a copy of the License at
-*
-*  http://www.apache.org/licenses/LICENSE-2.0
-*
-*  Unless required by applicable law or agreed to in writing, software
-*  distributed under the License is distributed on an "AS IS" BASIS,
-*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-*  See the License for the specific language governing permissions and
-*  limitations under the License.
-*/
+ *  Copyright 2019-2023 Zheng Jie
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 package me.zhengjie.invest.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -40,10 +40,10 @@ import javax.servlet.http.HttpServletResponse;
 import me.zhengjie.utils.PageResult;
 
 /**
-* @description 服务实现
-* @author genghui
-* @date 2025-07-30
-**/
+ * @author genghui
+ * @description 服务实现
+ * @date 2025-07-30
+ **/
 @Service
 @RequiredArgsConstructor
 public class InvestKlinesRecordServiceImpl extends ServiceImpl<InvestKlinesRecordMapper, InvestKlinesRecord> implements InvestKlinesRecordService {
@@ -55,12 +55,12 @@ public class InvestKlinesRecordServiceImpl extends ServiceImpl<InvestKlinesRecor
     private InvestKlinesRecordService investKlinesRecordService;
 
     @Override
-    public PageResult<InvestKlinesRecord> queryAll(InvestKlinesRecordQueryCriteria criteria, Page<Object> page){
+    public PageResult<InvestKlinesRecord> queryAll(InvestKlinesRecordQueryCriteria criteria, Page<Object> page) {
         return PageUtil.toPage(investKlinesRecordMapper.findAll(criteria, page));
     }
 
     @Override
-    public List<InvestKlinesRecord> queryAll(InvestKlinesRecordQueryCriteria criteria){
+    public List<InvestKlinesRecord> queryAll(InvestKlinesRecordQueryCriteria criteria) {
         return investKlinesRecordMapper.findAll(criteria);
     }
 
@@ -88,7 +88,7 @@ public class InvestKlinesRecordServiceImpl extends ServiceImpl<InvestKlinesRecor
     public void download(List<InvestKlinesRecord> all, HttpServletResponse response) throws IOException {
         List<Map<String, Object>> list = new ArrayList<>();
         for (InvestKlinesRecord investKlinesRecord : all) {
-            Map<String,Object> map = new LinkedHashMap<>();
+            Map<String, Object> map = new LinkedHashMap<>();
             map.put("交易对", investKlinesRecord.getSymbol());
             map.put("K线周期", investKlinesRecord.getIntervalCode());
             map.put("开盘时间", investKlinesRecord.getOpenTime());
@@ -114,33 +114,33 @@ public class InvestKlinesRecordServiceImpl extends ServiceImpl<InvestKlinesRecor
         long now = System.currentTimeMillis();
 
         boolean lock = redisUtils.setIfAbsent(lockKey, now);
+        if (!lock) return;
+
         try {
-            if (lock) {
-                // 获取数据库中最新的K线
-                InvestKlinesRecord lastOneInDb = this.getOne(
-                        Wrappers.lambdaQuery(InvestKlinesRecord.class)
-                                .eq(InvestKlinesRecord::getSymbol, symbol)
-                                .eq(InvestKlinesRecord::getIntervalCode, intervalCode)
-                                .orderByDesc(InvestKlinesRecord::getOpenTime)
-                                .last("limit 1")
-                );
+            // 获取数据库中最新的K线
+            InvestKlinesRecord lastOneInDb = this.getOne(
+                    Wrappers.lambdaQuery(InvestKlinesRecord.class)
+                            .eq(InvestKlinesRecord::getSymbol, symbol)
+                            .eq(InvestKlinesRecord::getIntervalCode, intervalCode)
+                            .orderByDesc(InvestKlinesRecord::getOpenTime)
+                            .last("limit 1")
+            );
 
-                // 查询K线时间范围 库中有数据就按照库中数据
-                long startTime = defaultStartTime;
-                if (null != lastOneInDb) {
-                    startTime = lastOneInDb.getOpenTime();
-                    // 因为不确定当前库中最新K线是否已经收盘，所以删除之后在查询
-                    investKlinesRecordMapper.deleteById(lastOneInDb.getId());
-                }
+            // 查询K线时间范围 库中有数据就按照库中数据
+            long startTime = defaultStartTime;
+            if (null != lastOneInDb) {
+                startTime = lastOneInDb.getOpenTime();
+                // 因为不确定当前库中最新K线是否已经收盘，所以删除之后在查询
+                investKlinesRecordMapper.deleteById(lastOneInDb.getId());
+            }
 
-                while (true) {
-                    List<InvestKlinesRecord> klines = binanceSpotUtil.getKlines(symbol, intervalCode, startTime, null);
-                    if (CollectionUtils.isEmpty(klines)) {
-                        break;
-                    }
-                    investKlinesRecordService.saveBatch(klines);
-                    startTime = klines.get(klines.size() - 1).getCloseTime();
+            while (true) {
+                List<InvestKlinesRecord> klines = binanceSpotUtil.getKlines(symbol, intervalCode, startTime, null);
+                if (CollectionUtils.isEmpty(klines)) {
+                    break;
                 }
+                investKlinesRecordService.saveBatch(klines);
+                startTime = klines.get(klines.size() - 1).getCloseTime();
             }
         } finally {
             redisUtils.del(lockKey);
