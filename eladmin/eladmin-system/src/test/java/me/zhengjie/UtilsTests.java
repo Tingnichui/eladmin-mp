@@ -71,7 +71,7 @@ public class UtilsTests {
         String params = "[\n" +
                 "    {\n" +
                 "        \"symbol\": \"BTCUSDT\",\n" +
-                "        \"intervalCodes\": \"5m,15m,1h,2h,4h,1d,1w,1M\",\n" +
+                "        \"intervalCodes\": \"5m,15m,1h,2h,4h,12h,1d,1w,1M\",\n" +
                 "        \"defaultStartTime\": \"2017-08-16\"\n" +
                 "    }\n" +
                 "]";
