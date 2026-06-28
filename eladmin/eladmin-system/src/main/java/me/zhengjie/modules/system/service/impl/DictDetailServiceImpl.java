@@ -49,7 +49,7 @@ public class DictDetailServiceImpl extends ServiceImpl<DictDetailMapper, DictDet
 
     @PostConstruct
     public void init() {
-        this.cacheDict(null);
+        ThreadPoolUtil.execute(() -> this.cacheDict(null));
     }
 
     private void cacheDict(String dictName) {
