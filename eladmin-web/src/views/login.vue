@@ -5,12 +5,12 @@
         ELADMIN 后台管理系统
       </h3>
       <el-form-item prop="username">
-        <el-input v-model="loginForm.username" type="text" auto-complete="off" placeholder="账号">
+        <el-input v-model="loginForm.username" name="username" type="text" autocomplete="username" placeholder="账号">
           <svg-icon slot="prefix" icon-class="user" class="el-input__icon input-icon" />
         </el-input>
       </el-form-item>
       <el-form-item prop="password">
-        <el-input v-model="loginForm.password" type="password" auto-complete="off" placeholder="密码" @keyup.enter.native="handleLogin">
+        <el-input v-model="loginForm.password" name="password" type="password" autocomplete="current-password" placeholder="密码" @keyup.enter.native="handleLogin">
           <svg-icon slot="prefix" icon-class="password" class="el-input__icon input-icon" />
         </el-input>
       </el-form-item>
@@ -42,9 +42,8 @@
 </template>
 
 <script>
-import { encrypt } from '@/utils/rsaEncrypt'
 import Config from '@/settings'
-import { getCodeImg } from '@/api/login'
+import { getCodeImg, LOGIN_PASSWORD_ENCRYPT_ERROR } from '@/api/login'
 import Cookies from 'js-cookie'
 import qs from 'qs'
 import Background from '@/assets/images/background.jpeg'
@@ -54,7 +53,6 @@ export default {
     return {
       Background: Background,
       codeUrl: '',
-      cookiePass: '',
       loginForm: {
         username: '',
         password: '',
@@ -89,7 +87,7 @@ export default {
   created() {
     // 获取验证码
     this.getCode()
-    // 获取用户名密码等Cookie
+    // 获取用户名及记住我状态 Cookie
     this.getCookie()
     // token 过期提示
     this.point()
@@ -103,17 +101,11 @@ export default {
     },
     getCookie() {
       const username = Cookies.get('username')
-      let password = Cookies.get('password')
       const rememberMe = Cookies.get('rememberMe')
-      // 保存cookie里面的加密后的密码
-      this.cookiePass = password === undefined ? '' : password
-      password = password === undefined ? this.loginForm.password : password
-      this.loginForm = {
-        username: username === undefined ? this.loginForm.username : username,
-        password: password,
-        rememberMe: rememberMe === undefined ? false : Boolean(rememberMe),
-        code: ''
-      }
+      // 密码交由浏览器密码管理器保存，清理旧版本遗留的密码 Cookie
+      Cookies.remove('password')
+      this.loginForm.username = username === undefined ? this.loginForm.username : username
+      this.loginForm.rememberMe = rememberMe === 'true'
     },
     handleLogin() {
       this.$refs.loginForm.validate(valid => {
@@ -124,14 +116,11 @@ export default {
           code: this.loginForm.code,
           uuid: this.loginForm.uuid
         }
-        if (user.password !== this.cookiePass) {
-          user.password = encrypt(user.password)
-        }
         if (valid) {
           this.loading = true
+          Cookies.remove('password')
           if (user.rememberMe) {
             Cookies.set('username', user.username, { expires: Config.passCookieExpires })
-            Cookies.set('password', user.password, { expires: Config.passCookieExpires })
             Cookies.set('rememberMe', user.rememberMe, { expires: Config.passCookieExpires })
           } else {
             Cookies.remove('username')
@@ -141,8 +130,17 @@ export default {
           this.$store.dispatch('Login', user).then(() => {
             this.loading = false
             this.$router.push({ path: this.redirect || '/' })
-          }).catch(() => {
+          }).catch(error => {
             this.loading = false
+            if (error && error.code === LOGIN_PASSWORD_ENCRYPT_ERROR) {
+              this.loginForm.password = ''
+              this.$notify({
+                title: '登录提示',
+                message: error.message,
+                type: 'warning',
+                duration: 5000
+              })
+            }
             this.getCode()
           })
         } else {

@@ -16,7 +16,7 @@ module.exports = {
    */
   tokenCookieExpires: 30,
   /**
-   * @description 记住密码状态下的密码在Cookie中存储的天数，默认1天s
+   * @description 记住密码状态下的用户名及勾选状态在 Cookie 中存储的天数，默认1天
    */
   passCookieExpires: 30,
   /**
