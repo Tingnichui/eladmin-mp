@@ -14,7 +14,7 @@ spring:
   redis:
     #数据库索引
     database: ${REDIS_DB:1}
-    host: ${REDIS_HOST:ENC(nm/nJml3b+GoPMJdG/V4S3rW1971+Zc3cTq7quEtKrSrJpUHJT2SnyAaw/97/VG3)}
+    host: ${REDIS_HOST:127.0.0.1}
     port: ${REDIS_PORT:6379}
     password: ${REDIS_PWD:ENC(oVlrCNwppZWsOY+L2TwFmQ2KbSsDrUKd3wz2/SZRTxEHLgnqGantKWARJGTpck2d)}
     #连接超时时间
@@ -28,8 +28,7 @@ spring:
       strict: false
       datasource:
         master:
-          #      url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:eladmin}?serverTimezone=Asia/Shanghai&characterEncoding=utf8&useSSL=false
-          url: ENC(jpwyHmVJ1U1KVInxwVDaL2iVvmPOVtF3jupRSa0QdZwlTWLikEaE8MstYlJO+/W4hiPEFUm54BHBMCBzpqzn/Or5bAqRfZxg0Qxn/NFIyFMKeb1LlkozfWNgb/CKpD0OuL7ectst4LSTF20rntzxbh4ihPOgsEbVioONxlVsrkAjt8Gjc/EFvKFURieFyoIGabzXW4l4KuWBd7yd297AcIQdVDK+lICKERK7YgQhL8o=)
+          url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME:eladmin}?serverTimezone=Asia/Shanghai&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true
           username: ${DB_USER:ENC(DjA8275i2+1Xf6mr0GoZICzZM3pHiQL142F7JAHXxIlAbDkW201umO+2QlnZ6IQH)}
           password: ${DB_PWD:ENC(Kn3Ylhnh6Rs+sZdjJzNAb5kVOt2zCjPSK6+Iz4eAnac6qaHBh/210soRzyHbFkYrfwAcVl+cmfS1cbIkKYAawQ==)}
           driver-class-name: com.mysql.cj.jdbc.Driver
