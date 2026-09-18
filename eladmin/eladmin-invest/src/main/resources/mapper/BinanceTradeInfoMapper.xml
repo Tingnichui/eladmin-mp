@@ -97,30 +97,4 @@
         select distinct t1.symbol from binance_trade_info t1
     </select>
 
-    <select id="list4hedge" resultType="me.zhengjie.invest.domain.BinanceTradeInfo">
-        SELECT
-            t1.id,
-            t1.price,
-            t1.qty,
-            t3.hedged_qty,
-            t1.qty - IFNULL(t3.hedged_qty, 0) as netQty
-        FROM binance_trade_info t1
-            LEFT JOIN binance_account_info t2 on t2.uid = t1.uid
-            LEFT JOIN binance_trade_info_ext t3 on t3.id = t1.id
-        WHERE t1.is_buyer = 1
-            AND t1.uid = #{uid}
-            AND t1.symbol = #{symbol}
-        <if test="lowPrice != null">
-            AND t1.price >= #{lowPrice}
-        </if>
-        <if test="highPrice != null">
-            AND t1.price &lt;= #{highPrice}
-        </if>
-        HAVING netQty > 0
-        ORDER BY t1.price ASC
-        <if test="limit != null">
-            limit #{limit}
-        </if>
-    </select>
-
 </mapper>

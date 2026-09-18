@@ -24,15 +24,14 @@ import lombok.RequiredArgsConstructor;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
-import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceFuturesTradeStatsInfoVO;
 import me.zhengjie.invest.mapper.BinanceCoinFuturesTradeInfoMapper;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.service.BinanceCoinFuturesTradeInfoService;
-import me.zhengjie.invest.service.BinanceTradeInfoExtService;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
+import me.zhengjie.invest.service.support.BinanceSpotHedgeContext;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceCoinFuturesUtil;
 import me.zhengjie.invest.util.TradeMatcherUtil;
@@ -71,8 +70,6 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
     private RedisUtils redisUtils;
     @Resource
     private BinanceTradeInfoService binanceTradeInfoService;
-    @Resource
-    private BinanceTradeInfoExtService binanceTradeInfoExtService;
 
     @Override
     public PageResult<BinanceCoinFuturesTradeInfo> queryAll(BinanceCoinFuturesTradeInfoQueryCriteria criteria, Page<Object> page) {
@@ -194,6 +191,11 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
 
     @Override
     public BinanceFuturesTradeStatsInfoVO stats(Integer uid) {
+        return stats(uid, binanceTradeInfoService.createHedgeContext(uid, BinanceEnum.SYMBOL.BTCUSDT.name()));
+    }
+
+    @Override
+    public BinanceFuturesTradeStatsInfoVO stats(Integer uid, BinanceSpotHedgeContext hedgeContext) {
         BinanceFuturesTradeStatsInfoVO statsInfoVO = new BinanceFuturesTradeStatsInfoVO();
 
         // 当前仓位
@@ -267,35 +269,13 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
                     matched -> {
                         // 亏损单找现货做对冲止损
                         if (matched.getNetPnl().compareTo(BigDecimal.ZERO) <= 0) {
-                            BigDecimal totalHedgedAmount = BigDecimal.ZERO;
-
-                            BigDecimal qty = matched.getQty();
-                            // 查询现货止损单
-                            List<BinanceTradeInfo> spotInfos = binanceTradeInfoService.list4hedge(uid, BinanceEnum.SYMBOL.BTCUSDT.name(), matched.getOpenPrice(), matched.getOpenPrice().add(new BigDecimal("1000")), qty, 100);
-                            for (BinanceTradeInfo spot : spotInfos) {
-                                // 对冲数量
-                                BigDecimal matchQty = spot.getNetQty().min(qty);
-                                if (matchQty.compareTo(BigDecimal.ZERO) <= 0) {
-                                    continue;
-                                }
-
-                                // 记录对冲价格 和 对冲数量
-                                totalHedgedAmount = totalHedgedAmount.add(spot.getPrice().multiply(matchQty));
-                                // 标记对冲
-                                binanceTradeInfoExtService.changeHedgedFlag(spot.getId(), matchQty);
-                                // 扣减数量
-                                qty = qty.subtract(matchQty);
-                                if (qty.compareTo(BigDecimal.ZERO) <= 0) {
-                                    break;
-                                }
-                            }
-
-                            BigDecimal hedgedQty = matched.getQty().subtract(qty);
-                            if (hedgedQty.compareTo(BigDecimal.ZERO) > 0) {
-                                matched.setClosePrice(totalHedgedAmount.divide(hedgedQty, 8, RoundingMode.HALF_UP));
-                            } else {
-                                matched.setClosePrice(BigDecimal.ZERO);
-                            }
+                            BinanceSpotHedgeContext.HedgeResult hedgeResult = hedgeContext.allocate(
+                                    matched.getOpenPrice(),
+                                    matched.getOpenPrice().add(new BigDecimal("1000")),
+                                    matched.getQty(),
+                                    100
+                            );
+                            matched.setClosePrice(hedgeResult.getAveragePrice());
 
                         }
                     });

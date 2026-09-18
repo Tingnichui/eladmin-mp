@@ -76,6 +76,4 @@ public interface BinanceTradeInfoExtService extends IService<BinanceTradeInfoExt
 
     void changeHedgedFlag(Long id, BigDecimal qty);
 
-    void resetHedgedQty(Integer uid, String symbol);
-
 }

@@ -30,6 +30,7 @@ import me.zhengjie.invest.domain.dto.BinanceOrderVO;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.service.*;
+import me.zhengjie.invest.service.support.BinanceSpotHedgeContext;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceSpotUtil;
 import me.zhengjie.utils.PageResult;
@@ -63,8 +64,6 @@ public class BinanceTradeInfoController {
     private BinanceFuturesTradeInfoService binanceFuturesTradeInfoService;
     @Resource
     private BinanceCoinFuturesTradeInfoService binanceCoinFuturesTradeInfoService;
-    @Resource
-    private BinanceTradeInfoExtService binanceTradeInfoExtService;
     @Resource
     private BinanceAccountInfoService binanceAccountInfoService;
     @Resource
@@ -126,16 +125,14 @@ public class BinanceTradeInfoController {
             throw new BadRequestException("请选择交易对");
         }
 
-        // 只重置当前账户、当前交易对的锁仓分配
-        binanceTradeInfoExtService.resetHedgedQty(criteria.getUid(), criteria.getSymbol());
-
         Map<String, Object> resMap = new HashMap<>();
         BinanceAccountInfo accountInfo = binanceAccountInfoService.getAccountByUid(criteria.getUid());
         BinanceAccountContextHolder.runWith(accountInfo, () -> {
-            resMap.put("usdFuturesStatsInfo", binanceFuturesTradeInfoService.stats(criteria.getUid()));
-            resMap.put("coinFuturesStatsInfo", binanceCoinFuturesTradeInfoService.stats(criteria.getUid()));
-            resMap.put("spotFuturesStatsInfo", binanceTradeInfoService.stats(criteria));
-            resMap.put("spotHedgedFuturesStatsInfo", binanceTradeInfoService.hedgedStats(criteria));
+            BinanceSpotHedgeContext hedgeContext = binanceTradeInfoService.createHedgeContext(criteria.getUid(), criteria.getSymbol());
+            resMap.put("usdFuturesStatsInfo", binanceFuturesTradeInfoService.stats(criteria.getUid(), hedgeContext));
+            resMap.put("coinFuturesStatsInfo", binanceCoinFuturesTradeInfoService.stats(criteria.getUid(), hedgeContext));
+            resMap.put("spotFuturesStatsInfo", binanceTradeInfoService.stats(criteria, hedgeContext));
+            resMap.put("spotHedgedFuturesStatsInfo", binanceTradeInfoService.hedgedStats(hedgeContext));
             resMap.put("accountInfo", binanceSpotUtil.usdStats(true));
         });
 

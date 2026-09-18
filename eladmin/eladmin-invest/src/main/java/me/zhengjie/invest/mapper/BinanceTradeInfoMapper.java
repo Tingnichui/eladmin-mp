@@ -18,7 +18,6 @@ package me.zhengjie.invest.mapper;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 
-import java.math.BigDecimal;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Mapper;
@@ -38,12 +37,5 @@ public interface BinanceTradeInfoMapper extends BaseMapper<BinanceTradeInfo> {
     List<BinanceTradeInfo> findAll(@Param("criteria") BinanceTradeInfoQueryCriteria criteria);
 
     List<String> listAllSymbol();
-
-    List<BinanceTradeInfo> list4hedge(@Param("uid") Integer uid,
-                                     @Param("symbol") String symbol,
-                                     @Param("lowPrice") BigDecimal lowPrice,
-                                     @Param("highPrice") BigDecimal highPrice,
-                                     @Param("qty") BigDecimal qty,
-                                     @Param("limit") Integer limit);
 
 }

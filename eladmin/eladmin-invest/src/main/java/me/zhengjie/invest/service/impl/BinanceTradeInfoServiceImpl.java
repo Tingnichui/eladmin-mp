@@ -33,6 +33,7 @@ import me.zhengjie.invest.mapper.BinanceTradeInfoMapper;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.service.BinanceTradeInfoExtService;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
+import me.zhengjie.invest.service.support.BinanceSpotHedgeContext;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceSpotUtil;
 import me.zhengjie.invest.util.BinanceUsdFuturesUtil;
@@ -160,12 +161,17 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
     @Override
     public BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria) {
+        return stats(criteria, null);
+    }
+
+    @Override
+    public BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria, BinanceSpotHedgeContext hedgeContext) {
         final String key = "SPOT_LAST_NET_PNL:" + criteria.getUid() + ":" + criteria.getSymbol();
         BinanceTradeStatsInfoVO statsInfoVO = new BinanceTradeStatsInfoVO();
         statsInfoVO.setLastNetPnl((BigDecimal) redisUtils.get(key));
 
         // 未锁仓的撮合交易
-        criteria.setHedgedFlag(0);
+        criteria.setHedgedFlag(hedgeContext == null ? 0 : null);
 
         // 撮合交易对
         List<BinanceTradeInfo> openList, closeList;
@@ -178,6 +184,12 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             criteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
             criteria.setIsBuyer(1);
             openList = binanceTradeInfoMapper.findAll(criteria);
+            if (hedgeContext != null) {
+                openList.forEach(trade -> trade.setQty(
+                        trade.getQty().subtract(hedgeContext.getHedgedQty(trade.getId()))
+                ));
+                openList.removeIf(trade -> trade.getQty().compareTo(BigDecimal.ZERO) <= 0);
+            }
             // 查询所有卖出 时间从早到晚
             criteria.setOrderColumn("time");
             criteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
@@ -274,26 +286,21 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
     }
 
     @Override
-    public List<BinanceTradeInfo> list4hedge(Integer uid, String symbol, BigDecimal lowPrice, BigDecimal highPrice, BigDecimal qty, Integer limit) {
-        List<BinanceTradeInfo> binanceTradeInfos = binanceTradeInfoMapper.list4hedge(uid, symbol, lowPrice, highPrice, qty, limit);
-        if (null != qty) {
-            BigDecimal netQty = binanceTradeInfos.stream().map(BinanceTradeInfo::getNetQty).reduce(BigDecimal.ZERO, BigDecimal::add);
-            if (netQty.compareTo(qty) < 0) {
-                binanceTradeInfos = binanceTradeInfoMapper.list4hedge(uid, symbol, lowPrice, null, qty, limit);
-            }
-        }
-        return binanceTradeInfos;
+    public BinanceSpotHedgeContext createHedgeContext(Integer uid, String symbol) {
+        BinanceTradeInfoQueryCriteria criteria = new BinanceTradeInfoQueryCriteria();
+        criteria.setUid(uid);
+        criteria.setSymbol(symbol);
+        criteria.setIsBuyer(1);
+        criteria.setOrderColumn("price");
+        criteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
+        return new BinanceSpotHedgeContext(binanceTradeInfoMapper.findAll(criteria));
     }
 
     @Override
-    public BinanceSpotHedgedTradeStatsInfoVO hedgedStats(BinanceTradeInfoQueryCriteria sourceCriteria) {
+    public BinanceSpotHedgedTradeStatsInfoVO hedgedStats(BinanceSpotHedgeContext hedgeContext) {
         BinanceSpotHedgedTradeStatsInfoVO statsInfo = new BinanceSpotHedgedTradeStatsInfoVO();
 
-        BinanceTradeInfoQueryCriteria criteria = new BinanceTradeInfoQueryCriteria();
-        criteria.setUid(sourceCriteria.getUid());
-        criteria.setSymbol(sourceCriteria.getSymbol());
-        criteria.setHedgedFlag(1);
-        List<BinanceTradeInfo> hedgedTradeInfo = this.queryAll(criteria);
+        List<BinanceTradeInfo> hedgedTradeInfo = hedgeContext.getHedgedTrades();
         if (CollectionUtils.isNotEmpty(hedgedTradeInfo)) {
             // 锁仓总额
             statsInfo.setPosAmount(hedgedTradeInfo.stream().map(BinanceTradeInfo::getHedgedAmount).reduce(BigDecimal.ZERO, BigDecimal::add));

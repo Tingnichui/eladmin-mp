@@ -123,8 +123,4 @@ public class BinanceTradeInfoExtServiceImpl extends ServiceImpl<BinanceTradeInfo
         this.saveOrUpdate(spotExt);
     }
 
-    @Override
-    public void resetHedgedQty(Integer uid, String symbol) {
-        binanceTradeInfoExtMapper.resetHedgedQty(uid, symbol);
-    }
 }

@@ -20,13 +20,13 @@ import me.zhengjie.invest.domain.dto.BinanceOrderVO;
 import me.zhengjie.invest.domain.dto.BinanceSpotHedgedTradeStatsInfoVO;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.io.IOException;
 import javax.servlet.http.HttpServletResponse;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
+import me.zhengjie.invest.service.support.BinanceSpotHedgeContext;
 import me.zhengjie.utils.PageResult;
 
 /**
@@ -81,11 +81,13 @@ public interface BinanceTradeInfoService extends IService<BinanceTradeInfo> {
 
     BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria);
 
+    BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria, BinanceSpotHedgeContext hedgeContext);
+
     void syncAll();
 
-    List<BinanceTradeInfo> list4hedge(Integer uid, String symbol, BigDecimal lowPrice, BigDecimal highPrice, BigDecimal qty, Integer limit);
+    BinanceSpotHedgeContext createHedgeContext(Integer uid, String symbol);
 
-    BinanceSpotHedgedTradeStatsInfoVO hedgedStats(BinanceTradeInfoQueryCriteria criteria);
+    BinanceSpotHedgedTradeStatsInfoVO hedgedStats(BinanceSpotHedgeContext hedgeContext);
 
     void createPos(BinanceOrderVO posInfo);
 

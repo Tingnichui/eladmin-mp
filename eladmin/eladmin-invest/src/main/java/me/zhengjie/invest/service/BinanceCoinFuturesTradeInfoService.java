@@ -28,6 +28,7 @@ import javax.servlet.http.HttpServletResponse;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import me.zhengjie.invest.domain.dto.BinanceFuturesTradeStatsInfoVO;
+import me.zhengjie.invest.service.support.BinanceSpotHedgeContext;
 import me.zhengjie.utils.PageResult;
 
 /**
@@ -83,6 +84,8 @@ public interface BinanceCoinFuturesTradeInfoService extends IService<BinanceCoin
     Date getLastPosCloseTime(Integer uid);
 
     BinanceFuturesTradeStatsInfoVO stats(Integer uid);
+
+    BinanceFuturesTradeStatsInfoVO stats(Integer uid, BinanceSpotHedgeContext hedgeContext);
 
     BigDecimal calculatePositionFundingFee(Integer uid, BinanceEnum.SYMBOL symbol);
 

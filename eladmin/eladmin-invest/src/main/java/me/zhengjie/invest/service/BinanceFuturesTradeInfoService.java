@@ -25,6 +25,7 @@ import javax.servlet.http.HttpServletResponse;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import me.zhengjie.invest.domain.dto.BinanceFuturesTradeStatsInfoVO;
+import me.zhengjie.invest.service.support.BinanceSpotHedgeContext;
 import me.zhengjie.utils.PageResult;
 
 /**
@@ -80,5 +81,7 @@ public interface BinanceFuturesTradeInfoService extends IService<BinanceFuturesT
     Date getLastPosCloseTime(Integer uid);
 
     BinanceFuturesTradeStatsInfoVO stats(Integer uid);
+
+    BinanceFuturesTradeStatsInfoVO stats(Integer uid, BinanceSpotHedgeContext hedgeContext);
 
 }
