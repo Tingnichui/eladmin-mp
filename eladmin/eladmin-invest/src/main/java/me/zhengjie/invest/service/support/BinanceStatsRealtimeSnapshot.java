@@ -24,11 +24,13 @@ public class BinanceStatsRealtimeSnapshot {
         private String status;
         private Date updatedAt;
         private String message;
+        private Long elapsedMillis;
 
-        public RealtimeStatus(String status, Date updatedAt, String message) {
+        public RealtimeStatus(String status, Date updatedAt, String message, Long elapsedMillis) {
             this.status = status;
             this.updatedAt = updatedAt;
             this.message = message;
+            this.elapsedMillis = elapsedMillis;
         }
     }
 }
