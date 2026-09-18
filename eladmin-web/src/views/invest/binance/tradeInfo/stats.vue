@@ -12,7 +12,7 @@
           placeholder="账户"
           class="filter-item"
           style="width: 185px"
-          @change="doStats"
+          @change="scheduleStats"
         >
           <el-option
             v-for="item in accountList"
@@ -28,7 +28,7 @@
           placeholder="投资类型"
           class="filter-item"
           style="width: 185px"
-          @change="doStats"
+          @change="scheduleStats"
         >
           <el-option
             v-for="item in dict.invest_binance_symbol"
@@ -60,7 +60,8 @@
           type="date"
           placeholder="选择日期"
           class="date-item"
-          @change="doStats"
+          value-format="yyyy-MM-dd HH:mm:ss"
+          @change="scheduleStats"
         />
         <el-button
           slot="right"
@@ -68,7 +69,8 @@
           size="mini"
           type="success"
           icon="el-icon-tickets"
-          :loading="syncLoading"
+          :loading="statsLoading"
+          :disabled="query.uid == null || !query.symbol"
           @click="doStats"
         >查询</el-button>
         <el-button
@@ -197,7 +199,10 @@ export default {
         warnings: []
       },
       accountList: [],
+      statsLoading: false,
       syncLoading: false,
+      statsDebounceTimer: null,
+      statsRequestId: 0,
       showOpenTrades: false,
       tradeList: [],
       query: {
@@ -354,25 +359,53 @@ export default {
     this.doStats()
     this.refreshAccountList()
   },
+  beforeDestroy() {
+    this.clearStatsDebounce()
+    this.statsRequestId++
+  },
   methods: {
     formatDuration,
-    // 显示汇总
-    doStats() {
-      if (this.query.endTime) {
-        const date = new Date(this.query.endTime)
-        this.query.endTime = date.toLocaleString('zh-CN', {
-          timeZone: 'Asia/Shanghai',
-          hour12: false
-        }).replace(/\//g, '-')
-      } else {
-        delete this.query.endTime // 避免传空字符串
+    scheduleStats() {
+      this.clearStatsDebounce()
+      const requestId = ++this.statsRequestId
+      this.statsDebounceTimer = setTimeout(() => {
+        this.statsDebounceTimer = null
+        this.executeStats(requestId)
+      }, 300)
+    },
+    clearStatsDebounce() {
+      if (this.statsDebounceTimer) {
+        clearTimeout(this.statsDebounceTimer)
+        this.statsDebounceTimer = null
       }
-      this.syncLoading = true
-      crudBinanceTradeInfo.stats(this.query).then(res => {
-        this.statsInfo = res
-        this.syncLoading = false
+    },
+    // 显示汇总，手动查询不等待防抖
+    doStats() {
+      this.clearStatsDebounce()
+      this.executeStats(++this.statsRequestId)
+    },
+    executeStats(requestId) {
+      if (this.query.uid == null || !this.query.symbol) {
+        if (requestId === this.statsRequestId) {
+          this.statsLoading = false
+        }
+        return
+      }
+      const params = { ...this.query }
+      if (!params.endTime) {
+        delete params.endTime
+      }
+      this.statsLoading = true
+      crudBinanceTradeInfo.stats(params).then(res => {
+        if (requestId === this.statsRequestId) {
+          this.statsInfo = res
+        }
       }).catch(() => {
-        this.syncLoading = false
+        // 请求错误由全局拦截器提示；过期请求不改变当前页面状态
+      }).then(() => {
+        if (requestId === this.statsRequestId) {
+          this.statsLoading = false
+        }
       })
     },
     formatValue(info, key, type) {
