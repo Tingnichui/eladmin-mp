@@ -62,8 +62,10 @@ class BinanceTradeInfoServiceImplTest {
 
     @Test
     void shouldReturnEmptyPositionWhenAllTradesAreClosed() {
+        String cacheKey = "SPOT_LAST_NET_PNL:1:BTCUSDT";
         BinanceTradeInfo open = trade(1L, "100", "1", 1_000L);
         BinanceTradeInfo close = trade(2L, "110", "1", 2_000L);
+        when(redisUtils.get(cacheKey)).thenReturn(new BigDecimal("8.000"));
         when(mapper.findAll(any(BinanceTradeInfoQueryCriteria.class)))
                 .thenReturn(new ArrayList<>(Collections.singletonList(open)))
                 .thenReturn(new ArrayList<>(Collections.singletonList(close)));
@@ -77,8 +79,24 @@ class BinanceTradeInfoServiceImplTest {
         assertEquals(new BigDecimal("110"), result.getTotalSellAmount());
         assertEquals(new BigDecimal("9.790"), result.getNetPnl());
         assertEquals(new BigDecimal("0.09790000"), result.getRoi());
+        assertEquals(new BigDecimal("8.000"), result.getLastNetPnl());
         assertTrue(result.getTradeList().isEmpty());
+        verify(redisUtils).set(cacheKey, new BigDecimal("9.790"));
         verify(spotUtil, never()).getPrice(any(BinanceEnum.SYMBOL.class));
+    }
+
+    @Test
+    void shouldNotUseRealtimeComparisonCacheForHistoricalStats() {
+        BinanceTradeInfoQueryCriteria criteria = criteria();
+        criteria.setEndTime(new Timestamp(5_000L));
+        when(mapper.findAll(any(BinanceTradeInfoQueryCriteria.class)))
+                .thenReturn(Collections.emptyList());
+
+        BinanceTradeStatsInfoVO result = service.stats(criteria, null);
+
+        assertNull(result.getLastNetPnl());
+        verify(redisUtils, never()).get(any(String.class));
+        verify(redisUtils, never()).set(any(String.class), any());
     }
 
     @Test

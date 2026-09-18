@@ -177,8 +177,11 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                                          BinanceSpotHedgeContext hedgeContext,
                                          List<BinanceTradeInfo> snapshotTrades) {
         final String key = "SPOT_LAST_NET_PNL:" + criteria.getUid() + ":" + criteria.getSymbol();
+        final boolean realtimeStats = criteria.getEndTime() == null;
         BinanceTradeStatsInfoVO statsInfoVO = new BinanceTradeStatsInfoVO();
-        statsInfoVO.setLastNetPnl((BigDecimal) redisUtils.get(key));
+        if (realtimeStats) {
+            statsInfoVO.setLastNetPnl((BigDecimal) redisUtils.get(key));
+        }
         BinanceTradeInfoQueryCriteria statsCriteria = copyCriteria(criteria);
 
         // 未锁仓的撮合交易
@@ -252,7 +255,9 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             statsInfoVO.setRoi(statsInfoVO.getTotalBuyAmount().compareTo(BigDecimal.ZERO) > 0
                     ? statsInfoVO.getNetPnl().divide(statsInfoVO.getTotalBuyAmount(), 8, RoundingMode.HALF_UP)
                     : null);
-            redisUtils.set(key, statsInfoVO.getNetPnl());
+            if (realtimeStats) {
+                redisUtils.set(key, statsInfoVO.getNetPnl());
+            }
 
         }
 
