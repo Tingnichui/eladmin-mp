@@ -160,7 +160,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
     @Override
     public BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria) {
-        final String key = "SPOT_LAST_NET_PNL";
+        final String key = "SPOT_LAST_NET_PNL:" + criteria.getUid() + ":" + criteria.getSymbol();
         BinanceTradeStatsInfoVO statsInfoVO = new BinanceTradeStatsInfoVO();
         statsInfoVO.setLastNetPnl((BigDecimal) redisUtils.get(key));
 
@@ -274,22 +274,24 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
     }
 
     @Override
-    public List<BinanceTradeInfo> list4hedge(BigDecimal lowPrice, BigDecimal highPrice, BigDecimal qty, Integer limit) {
-        List<BinanceTradeInfo> binanceTradeInfos = binanceTradeInfoMapper.list4hedge(lowPrice, highPrice, qty, limit);
+    public List<BinanceTradeInfo> list4hedge(Integer uid, String symbol, BigDecimal lowPrice, BigDecimal highPrice, BigDecimal qty, Integer limit) {
+        List<BinanceTradeInfo> binanceTradeInfos = binanceTradeInfoMapper.list4hedge(uid, symbol, lowPrice, highPrice, qty, limit);
         if (null != qty) {
             BigDecimal netQty = binanceTradeInfos.stream().map(BinanceTradeInfo::getNetQty).reduce(BigDecimal.ZERO, BigDecimal::add);
             if (netQty.compareTo(qty) < 0) {
-                binanceTradeInfos = binanceTradeInfoMapper.list4hedge(lowPrice, null, qty, limit);
+                binanceTradeInfos = binanceTradeInfoMapper.list4hedge(uid, symbol, lowPrice, null, qty, limit);
             }
         }
         return binanceTradeInfos;
     }
 
     @Override
-    public BinanceSpotHedgedTradeStatsInfoVO hedgedStats() {
+    public BinanceSpotHedgedTradeStatsInfoVO hedgedStats(BinanceTradeInfoQueryCriteria sourceCriteria) {
         BinanceSpotHedgedTradeStatsInfoVO statsInfo = new BinanceSpotHedgedTradeStatsInfoVO();
 
         BinanceTradeInfoQueryCriteria criteria = new BinanceTradeInfoQueryCriteria();
+        criteria.setUid(sourceCriteria.getUid());
+        criteria.setSymbol(sourceCriteria.getSymbol());
         criteria.setHedgedFlag(1);
         List<BinanceTradeInfo> hedgedTradeInfo = this.queryAll(criteria);
         if (CollectionUtils.isNotEmpty(hedgedTradeInfo)) {

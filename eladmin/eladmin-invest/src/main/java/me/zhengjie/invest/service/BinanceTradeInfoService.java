@@ -83,9 +83,9 @@ public interface BinanceTradeInfoService extends IService<BinanceTradeInfo> {
 
     void syncAll();
 
-    List<BinanceTradeInfo> list4hedge(BigDecimal lowPrice, BigDecimal highPrice, BigDecimal qty, Integer limit);
+    List<BinanceTradeInfo> list4hedge(Integer uid, String symbol, BigDecimal lowPrice, BigDecimal highPrice, BigDecimal qty, Integer limit);
 
-    BinanceSpotHedgedTradeStatsInfoVO hedgedStats();
+    BinanceSpotHedgedTradeStatsInfoVO hedgedStats(BinanceTradeInfoQueryCriteria criteria);
 
     void createPos(BinanceOrderVO posInfo);
 

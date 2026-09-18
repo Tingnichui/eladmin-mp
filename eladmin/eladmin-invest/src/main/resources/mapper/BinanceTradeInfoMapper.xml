@@ -108,6 +108,8 @@
             LEFT JOIN binance_account_info t2 on t2.uid = t1.uid
             LEFT JOIN binance_trade_info_ext t3 on t3.id = t1.id
         WHERE t1.is_buyer = 1
+            AND t1.uid = #{uid}
+            AND t1.symbol = #{symbol}
         <if test="lowPrice != null">
             AND t1.price >= #{lowPrice}
         </if>

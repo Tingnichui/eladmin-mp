@@ -80,10 +80,10 @@ public interface BinanceCoinFuturesTradeInfoService extends IService<BinanceCoin
 
     void sync();
 
-    Date getLastPosCloseTime();
+    Date getLastPosCloseTime(Integer uid);
 
-    BinanceFuturesTradeStatsInfoVO stats();
+    BinanceFuturesTradeStatsInfoVO stats(Integer uid);
 
-    BigDecimal calculatePositionFundingFee(BinanceEnum.SYMBOL symbol);
+    BigDecimal calculatePositionFundingFee(Integer uid, BinanceEnum.SYMBOL symbol);
 
 }

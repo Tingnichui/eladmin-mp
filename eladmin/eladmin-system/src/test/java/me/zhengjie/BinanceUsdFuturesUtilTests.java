@@ -78,7 +78,8 @@ public class BinanceUsdFuturesUtilTests {
 
     @Test
     void getLastPosCloseTime() {
-        Date lastPosCloseTime = binanceFuturesTradeInfoService.getLastPosCloseTime();
+        BinanceAccountInfo accountInfo = binanceAccountInfoService.getAccountByIdCardName("耿辉");
+        Date lastPosCloseTime = binanceFuturesTradeInfoService.getLastPosCloseTime(accountInfo.getUid());
         System.err.println(lastPosCloseTime);
     }
 

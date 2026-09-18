@@ -92,7 +92,7 @@ public class BinanceCoinFuturesUtilTests {
         BinanceAccountInfo accountInfo = binanceAccountInfoService.getAccountByIdCardName("耿辉");
         BinanceAccountContextHolder.runWith(accountInfo, () -> {
             BinanceEnum.SYMBOL symbol = BinanceEnum.SYMBOL.BTCUSD_PERP;
-            BigDecimal income = binanceCoinFuturesTradeInfoService.calculatePositionFundingFee(symbol);
+            BigDecimal income = binanceCoinFuturesTradeInfoService.calculatePositionFundingFee(accountInfo.getUid(), symbol);
             System.err.println(income);
         });
     }

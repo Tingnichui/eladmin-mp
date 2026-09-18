@@ -195,6 +195,10 @@ public class BinanceAccountInfoServiceImpl extends ServiceImpl<BinanceAccountInf
                         .eq(BinanceAccountInfo::getUid, uid)
         );
 
+        if (accountInfo == null) {
+            throw new BadRequestException("账户信息不存在");
+        }
+
         return this.decryptApiInfo(accountInfo);
     }
 }

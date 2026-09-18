@@ -15,7 +15,6 @@
 */
 package me.zhengjie.invest.rest;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -24,7 +23,7 @@ import me.zhengjie.annotation.Log;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
-import me.zhengjie.invest.domain.BinanceTradeInfoExt;
+import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
 import me.zhengjie.invest.domain.dto.BinanceFuturesTradeStatsInfoVO;
 import me.zhengjie.invest.domain.dto.BinanceOrderVO;
@@ -120,20 +119,23 @@ public class BinanceTradeInfoController {
     @ApiOperation("查询交易汇总")
     @PreAuthorize("@el.check('binanceTradeInfo:list')")
     public ResponseEntity<Object> queryBinanceTradeStats(BinanceTradeInfoQueryCriteria criteria){
+        if (criteria.getUid() == null) {
+            throw new BadRequestException("请选择账户");
+        }
+        if (criteria.getSymbol() == null || criteria.getSymbol().trim().isEmpty()) {
+            throw new BadRequestException("请选择交易对");
+        }
 
-        // 移除所有锁仓
-        binanceTradeInfoExtService.getBaseMapper().update(null,
-                Wrappers.lambdaUpdate(BinanceTradeInfoExt.class)
-                        .set(BinanceTradeInfoExt::getHedgedQty, 0)
-        );
+        // 只重置当前账户、当前交易对的锁仓分配
+        binanceTradeInfoExtService.resetHedgedQty(criteria.getUid(), criteria.getSymbol());
 
         Map<String, Object> resMap = new HashMap<>();
         BinanceAccountInfo accountInfo = binanceAccountInfoService.getAccountByUid(criteria.getUid());
         BinanceAccountContextHolder.runWith(accountInfo, () -> {
-            resMap.put("usdFuturesStatsInfo", binanceFuturesTradeInfoService.stats());
-            resMap.put("coinFuturesStatsInfo", binanceCoinFuturesTradeInfoService.stats());
+            resMap.put("usdFuturesStatsInfo", binanceFuturesTradeInfoService.stats(criteria.getUid()));
+            resMap.put("coinFuturesStatsInfo", binanceCoinFuturesTradeInfoService.stats(criteria.getUid()));
             resMap.put("spotFuturesStatsInfo", binanceTradeInfoService.stats(criteria));
-            resMap.put("spotHedgedFuturesStatsInfo", binanceTradeInfoService.hedgedStats());
+            resMap.put("spotHedgedFuturesStatsInfo", binanceTradeInfoService.hedgedStats(criteria));
             resMap.put("accountInfo", binanceSpotUtil.usdStats(true));
         });
 

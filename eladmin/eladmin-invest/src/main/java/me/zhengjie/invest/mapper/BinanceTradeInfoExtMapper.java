@@ -34,4 +34,6 @@ public interface BinanceTradeInfoExtMapper extends BaseMapper<BinanceTradeInfoEx
     IPage<BinanceTradeInfoExt> findAll(@Param("criteria") BinanceTradeInfoExtQueryCriteria criteria, Page<Object> page);
 
     List<BinanceTradeInfoExt> findAll(@Param("criteria") BinanceTradeInfoExtQueryCriteria criteria);
+
+    int resetHedgedQty(@Param("uid") Integer uid, @Param("symbol") String symbol);
 }

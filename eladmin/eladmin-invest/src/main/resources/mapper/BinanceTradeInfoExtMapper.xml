@@ -26,4 +26,12 @@
             </if>
         ORDER BY t1.id DESC
     </select>
+
+    <update id="resetHedgedQty">
+        UPDATE binance_trade_info_ext t1
+            INNER JOIN binance_trade_info t2 ON t2.id = t1.id
+        SET t1.hedged_qty = 0
+        WHERE t2.uid = #{uid}
+          AND t2.symbol = #{symbol}
+    </update>
 </mapper>

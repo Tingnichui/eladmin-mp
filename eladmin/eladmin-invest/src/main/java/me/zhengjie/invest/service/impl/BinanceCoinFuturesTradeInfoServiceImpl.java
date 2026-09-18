@@ -162,11 +162,15 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
     }
 
     @Override
-    public Date getLastPosCloseTime() {
-        final String key = "BINANCE:COIN_FUTURES:LAST_POS_CLOSE_TIME";
+    public Date getLastPosCloseTime(Integer uid) {
+        final String symbol = BinanceEnum.SYMBOL.BTCUSD_PERP.name();
+        final String key = "BINANCE:COIN_FUTURES:LAST_POS_CLOSE_TIME:" + uid + ":" + symbol;
         Date lastPosCloseTime = redisUtils.get(key, Date.class);
         List<BinanceCoinFuturesTradeInfo> binanceFuturesTradeInfoList = baseMapper.selectList(
                 Wrappers.lambdaQuery(BinanceCoinFuturesTradeInfo.class)
+                        .eq(BinanceCoinFuturesTradeInfo::getUid, uid)
+                        .eq(BinanceCoinFuturesTradeInfo::getSymbol, symbol)
+                        .eq(BinanceCoinFuturesTradeInfo::getPositionSide, "SHORT")
                         .gt(null != lastPosCloseTime, BinanceCoinFuturesTradeInfo::getTime, lastPosCloseTime)
                         .orderByAsc(BinanceCoinFuturesTradeInfo::getTime)
         );
@@ -180,25 +184,28 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
                 pos = pos.add(tradeInfo.getQty());
             }
             if (pos.compareTo(BigDecimal.ZERO) == 0) {
+                lastPosCloseTime = tradeInfo.getTime();
                 redisUtils.set(key, tradeInfo.getTime());
             }
         }
 
-        return redisUtils.get(key, Date.class);
+        return lastPosCloseTime == null ? new Date(0L) : lastPosCloseTime;
     }
 
     @Override
-    public BinanceFuturesTradeStatsInfoVO stats() {
+    public BinanceFuturesTradeStatsInfoVO stats(Integer uid) {
         BinanceFuturesTradeStatsInfoVO statsInfoVO = new BinanceFuturesTradeStatsInfoVO();
 
         // 当前仓位
-        Date lastPosCloseTime = this.getLastPosCloseTime();
+        Date lastPosCloseTime = this.getLastPosCloseTime(uid);
         final boolean side = false;
 
 
         // 开仓 做空空单
         List<BinanceCoinFuturesTradeInfo> openList = this.list(
                 Wrappers.lambdaQuery(BinanceCoinFuturesTradeInfo.class)
+                        .eq(BinanceCoinFuturesTradeInfo::getUid, uid)
+                        .eq(BinanceCoinFuturesTradeInfo::getSymbol, BinanceEnum.SYMBOL.BTCUSD_PERP.name())
                         .gt(BinanceCoinFuturesTradeInfo::getTime, lastPosCloseTime)
                         .eq(BinanceCoinFuturesTradeInfo::getSide, "SELL")
                         .eq(BinanceCoinFuturesTradeInfo::getPositionSide, "SHORT")
@@ -208,6 +215,8 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
         // 平仓 做空多单
         List<BinanceCoinFuturesTradeInfo> closeList = this.list(
                 Wrappers.lambdaQuery(BinanceCoinFuturesTradeInfo.class)
+                        .eq(BinanceCoinFuturesTradeInfo::getUid, uid)
+                        .eq(BinanceCoinFuturesTradeInfo::getSymbol, BinanceEnum.SYMBOL.BTCUSD_PERP.name())
                         .gt(BinanceCoinFuturesTradeInfo::getTime, lastPosCloseTime)
                         .eq(BinanceCoinFuturesTradeInfo::getSide, "BUY")
                         .eq(BinanceCoinFuturesTradeInfo::getPositionSide, "SHORT")
@@ -262,7 +271,7 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
 
                             BigDecimal qty = matched.getQty();
                             // 查询现货止损单
-                            List<BinanceTradeInfo> spotInfos = binanceTradeInfoService.list4hedge(matched.getOpenPrice(), matched.getOpenPrice().add(new BigDecimal("1000")), qty, 100);
+                            List<BinanceTradeInfo> spotInfos = binanceTradeInfoService.list4hedge(uid, BinanceEnum.SYMBOL.BTCUSDT.name(), matched.getOpenPrice(), matched.getOpenPrice().add(new BigDecimal("1000")), qty, 100);
                             for (BinanceTradeInfo spot : spotInfos) {
                                 // 对冲数量
                                 BigDecimal matchQty = spot.getNetQty().min(qty);
@@ -296,7 +305,7 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
             // 未平仓的交易
             statsInfoVO.setTradeList(matchedList.stream().sorted(Comparator.comparing(MatchedTradeInfo::getOpenPrice).reversed()).collect(Collectors.toList()));
             // 资金费
-            statsInfoVO.setFundingFee(this.calculatePositionFundingFee(BinanceEnum.SYMBOL.BTCUSD_PERP).multiply(currentPrice));
+            statsInfoVO.setFundingFee(this.calculatePositionFundingFee(uid, BinanceEnum.SYMBOL.BTCUSD_PERP).multiply(currentPrice));
 
         }
 
@@ -304,8 +313,8 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
     }
 
     @Override
-    public BigDecimal calculatePositionFundingFee(BinanceEnum.SYMBOL symbol) {
-        Date startTime = getLastPosCloseTime();
+    public BigDecimal calculatePositionFundingFee(Integer uid, BinanceEnum.SYMBOL symbol) {
+        Date startTime = getLastPosCloseTime(uid);
         String incomeType = "FUNDING_FEE";
         List<JSONObject> list = binanceCoinFuturesUtil.listIncome(symbol, startTime.getTime(), incomeType);
         return list.stream().map(v -> v.getBigDecimal("income")).reduce(BigDecimal.ZERO, BigDecimal::add);

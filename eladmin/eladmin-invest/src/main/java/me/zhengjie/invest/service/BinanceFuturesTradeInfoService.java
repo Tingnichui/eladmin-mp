@@ -77,8 +77,8 @@ public interface BinanceFuturesTradeInfoService extends IService<BinanceFuturesT
 
     void sync();
 
-    Date getLastPosCloseTime();
+    Date getLastPosCloseTime(Integer uid);
 
-    BinanceFuturesTradeStatsInfoVO stats();
+    BinanceFuturesTradeStatsInfoVO stats(Integer uid);
 
 }

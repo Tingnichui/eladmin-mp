@@ -17,6 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class InvestTest {
 
+    private static final Integer TEST_UID = 1014564231;
+
     @Resource
     private BinanceTradeInfoService binanceTradeInfoService;
     @Resource
@@ -33,13 +35,13 @@ public class InvestTest {
 
     @Test
     void stats() {
-        binanceFuturesTradeInfoService.stats();
+        binanceFuturesTradeInfoService.stats(TEST_UID);
     }
 
     @Test
     void lastPosCloseTime() {
-        assertNotNull(binanceFuturesTradeInfoService.getLastPosCloseTime());
-        assertNotNull(binanceCoinFuturesTradeInfoService.getLastPosCloseTime());
+        assertNotNull(binanceFuturesTradeInfoService.getLastPosCloseTime(TEST_UID));
+        assertNotNull(binanceCoinFuturesTradeInfoService.getLastPosCloseTime(TEST_UID));
     }
 
     @Test
