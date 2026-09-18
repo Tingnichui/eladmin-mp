@@ -21,6 +21,7 @@ import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -45,6 +46,8 @@ public class BinanceTradeStatsInfoVO extends BinanceBaseStatsVO implements Seria
     // 持仓盈亏
     private BigDecimal holdingProfitLoss = BigDecimal.ZERO;
     // 当前现货价格
-    private BigDecimal currentSpotPrice = BigDecimal.ZERO;
+    private BigDecimal currentSpotPrice;
+    // 局部降级提示，由统计接口合并到顶层 warnings
+    private List<String> warnings = new ArrayList<>();
 
 }

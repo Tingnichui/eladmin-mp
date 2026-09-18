@@ -5,6 +5,7 @@ import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 
 @Data
@@ -25,6 +26,6 @@ public class BinanceBaseStatsVO implements Serializable {
     // 资金费
     private BigDecimal fundingFee = BigDecimal.ZERO;
     // 交易
-    private List<MatchedTradeInfo> tradeList;
+    private List<MatchedTradeInfo> tradeList = Collections.emptyList();
 
 }

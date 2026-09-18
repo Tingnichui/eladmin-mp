@@ -46,6 +46,7 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -139,11 +140,14 @@ public class BinanceTradeInfoController {
             resMap.put("coinFuturesStatsInfo", binanceCoinFuturesTradeInfoService.stats(
                     criteria.getUid(), hedgeContext, realtimeSnapshot.getCoinFuturesPrice(),
                     realtimeSnapshot.getCoinFundingFee()));
-            resMap.put("spotFuturesStatsInfo", binanceTradeInfoService.stats(criteria, hedgeContext));
+            BinanceTradeStatsInfoVO spotStats = binanceTradeInfoService.stats(criteria, hedgeContext);
+            resMap.put("spotFuturesStatsInfo", spotStats);
             resMap.put("spotHedgedFuturesStatsInfo", binanceTradeInfoService.hedgedStats(hedgeContext));
             resMap.put("accountInfo", realtimeSnapshot.getAccountInfo());
             resMap.put("realtimeStatus", realtimeSnapshot.getStatuses());
-            resMap.put("warnings", realtimeSnapshot.getWarnings());
+            List<String> warnings = new ArrayList<>(realtimeSnapshot.getWarnings());
+            warnings.addAll(spotStats.getWarnings());
+            resMap.put("warnings", warnings);
         });
 
         return new ResponseEntity<>(resMap,HttpStatus.OK);
