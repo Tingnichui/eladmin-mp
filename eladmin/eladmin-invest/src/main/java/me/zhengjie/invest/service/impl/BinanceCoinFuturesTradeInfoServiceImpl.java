@@ -204,34 +204,45 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
     @Override
     public BinanceFuturesTradeStatsInfoVO stats(Integer uid, BinanceSpotHedgeContext hedgeContext,
                                                 BigDecimal currentPrice, BigDecimal fundingFee) {
+        return stats(uid, hedgeContext, currentPrice, fundingFee, null);
+    }
+
+    @Override
+    public BinanceFuturesTradeStatsInfoVO stats(Integer uid, BinanceSpotHedgeContext hedgeContext,
+                                                BigDecimal currentPrice, BigDecimal fundingFee,
+                                                List<BinanceCoinFuturesTradeInfo> snapshotTrades) {
         BinanceFuturesTradeStatsInfoVO statsInfoVO = new BinanceFuturesTradeStatsInfoVO();
 
-        // 当前仓位
-        Date lastPosCloseTime = this.getLastPosCloseTime(uid);
         final boolean side = false;
 
-
-        // 开仓 做空空单
-        List<BinanceCoinFuturesTradeInfo> openList = this.list(
-                Wrappers.lambdaQuery(BinanceCoinFuturesTradeInfo.class)
-                        .eq(BinanceCoinFuturesTradeInfo::getUid, uid)
-                        .eq(BinanceCoinFuturesTradeInfo::getSymbol, BinanceEnum.SYMBOL.BTCUSD_PERP.name())
-                        .gt(BinanceCoinFuturesTradeInfo::getTime, lastPosCloseTime)
-                        .eq(BinanceCoinFuturesTradeInfo::getSide, "SELL")
-                        .eq(BinanceCoinFuturesTradeInfo::getPositionSide, "SHORT")
-                        .orderByAsc(BinanceCoinFuturesTradeInfo::getTime)
-        );
-
-        // 平仓 做空多单
-        List<BinanceCoinFuturesTradeInfo> closeList = this.list(
-                Wrappers.lambdaQuery(BinanceCoinFuturesTradeInfo.class)
-                        .eq(BinanceCoinFuturesTradeInfo::getUid, uid)
-                        .eq(BinanceCoinFuturesTradeInfo::getSymbol, BinanceEnum.SYMBOL.BTCUSD_PERP.name())
-                        .gt(BinanceCoinFuturesTradeInfo::getTime, lastPosCloseTime)
-                        .eq(BinanceCoinFuturesTradeInfo::getSide, "BUY")
-                        .eq(BinanceCoinFuturesTradeInfo::getPositionSide, "SHORT")
-                        .orderByAsc(BinanceCoinFuturesTradeInfo::getTime)
-        );
+        List<BinanceCoinFuturesTradeInfo> openList;
+        List<BinanceCoinFuturesTradeInfo> closeList;
+        if (snapshotTrades == null) {
+            Date lastPosCloseTime = this.getLastPosCloseTime(uid);
+            openList = this.list(
+                    Wrappers.lambdaQuery(BinanceCoinFuturesTradeInfo.class)
+                            .eq(BinanceCoinFuturesTradeInfo::getUid, uid)
+                            .eq(BinanceCoinFuturesTradeInfo::getSymbol, BinanceEnum.SYMBOL.BTCUSD_PERP.name())
+                            .gt(BinanceCoinFuturesTradeInfo::getTime, lastPosCloseTime)
+                            .eq(BinanceCoinFuturesTradeInfo::getSide, "SELL")
+                            .eq(BinanceCoinFuturesTradeInfo::getPositionSide, "SHORT")
+                            .orderByAsc(BinanceCoinFuturesTradeInfo::getTime)
+            );
+            closeList = this.list(
+                    Wrappers.lambdaQuery(BinanceCoinFuturesTradeInfo.class)
+                            .eq(BinanceCoinFuturesTradeInfo::getUid, uid)
+                            .eq(BinanceCoinFuturesTradeInfo::getSymbol, BinanceEnum.SYMBOL.BTCUSD_PERP.name())
+                            .gt(BinanceCoinFuturesTradeInfo::getTime, lastPosCloseTime)
+                            .eq(BinanceCoinFuturesTradeInfo::getSide, "BUY")
+                            .eq(BinanceCoinFuturesTradeInfo::getPositionSide, "SHORT")
+                            .orderByAsc(BinanceCoinFuturesTradeInfo::getTime)
+            );
+        } else {
+            openList = snapshotTrades.stream().filter(trade -> "SELL".equals(trade.getSide()))
+                    .map(this::copyTrade).collect(Collectors.toCollection(ArrayList::new));
+            closeList = snapshotTrades.stream().filter(trade -> "BUY".equals(trade.getSide()))
+                    .map(this::copyTrade).collect(Collectors.toCollection(ArrayList::new));
+        }
 
         // 盈利交易匹配
         {
@@ -299,9 +310,19 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
         return statsInfoVO;
     }
 
+    private BinanceCoinFuturesTradeInfo copyTrade(BinanceCoinFuturesTradeInfo source) {
+        BinanceCoinFuturesTradeInfo target = new BinanceCoinFuturesTradeInfo();
+        target.copy(source);
+        return target;
+    }
+
     @Override
     public BigDecimal calculatePositionFundingFee(Integer uid, BinanceEnum.SYMBOL symbol) {
-        Date startTime = getLastPosCloseTime(uid);
+        return calculatePositionFundingFee(uid, symbol, getLastPosCloseTime(uid));
+    }
+
+    @Override
+    public BigDecimal calculatePositionFundingFee(Integer uid, BinanceEnum.SYMBOL symbol, Date startTime) {
         String incomeType = "FUNDING_FEE";
         List<JSONObject> list = binanceCoinFuturesUtil.listIncome(symbol, startTime.getTime(), incomeType);
         return list.stream().map(v -> v.getBigDecimal("income")).reduce(BigDecimal.ZERO, BigDecimal::add);

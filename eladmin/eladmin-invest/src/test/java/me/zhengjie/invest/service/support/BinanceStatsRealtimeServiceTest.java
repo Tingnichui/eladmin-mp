@@ -26,6 +26,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -61,6 +62,18 @@ class BinanceStatsRealtimeServiceTest {
         assertEquals(new BigDecimal("62100"), snapshot.getCoinFuturesPrice());
         assertEquals("LIVE", snapshot.getStatuses().get("usdFuturesPrice").getStatus());
         assertTrue(snapshot.getWarnings().isEmpty());
+    }
+
+    @Test
+    void shouldReuseSnapshotPositionStartForFundingFee() {
+        Date positionStart = new Date(1_000L);
+
+        service.load(1, positionStart);
+
+        verify(coinFuturesService).calculatePositionFundingFee(
+                1, BinanceEnum.SYMBOL.BTCUSD_PERP, positionStart);
+        verify(coinFuturesService, never()).calculatePositionFundingFee(
+                1, BinanceEnum.SYMBOL.BTCUSD_PERP);
     }
 
     @Test

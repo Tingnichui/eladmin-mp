@@ -87,4 +87,7 @@ public interface BinanceFuturesTradeInfoService extends IService<BinanceFuturesT
 
     BinanceFuturesTradeStatsInfoVO stats(Integer uid, BinanceSpotHedgeContext hedgeContext, BigDecimal currentPrice);
 
+    BinanceFuturesTradeStatsInfoVO stats(Integer uid, BinanceSpotHedgeContext hedgeContext, BigDecimal currentPrice,
+                                         List<BinanceFuturesTradeInfo> snapshotTrades);
+
 }

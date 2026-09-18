@@ -64,6 +64,10 @@ public class BinanceStatsRealtimeService {
     }
 
     public BinanceStatsRealtimeSnapshot load(Integer uid) {
+        return load(uid, null);
+    }
+
+    public BinanceStatsRealtimeSnapshot load(Integer uid, Date coinPositionStartTime) {
         CompletableFuture<BinanceStatsRealtimeSnapshot> owner = new CompletableFuture<>();
         CompletableFuture<BinanceStatsRealtimeSnapshot> existing = inFlightSnapshots.putIfAbsent(uid, owner);
         if (existing != null) {
@@ -76,7 +80,7 @@ public class BinanceStatsRealtimeService {
         }
 
         try {
-            BinanceStatsRealtimeSnapshot snapshot = loadParallel(uid);
+            BinanceStatsRealtimeSnapshot snapshot = loadParallel(uid, coinPositionStartTime);
             owner.complete(snapshot);
             return snapshot;
         } catch (RuntimeException e) {
@@ -87,7 +91,7 @@ public class BinanceStatsRealtimeService {
         }
     }
 
-    private BinanceStatsRealtimeSnapshot loadParallel(Integer uid) {
+    private BinanceStatsRealtimeSnapshot loadParallel(Integer uid, Date coinPositionStartTime) {
         BinanceAccountInfo accountInfo = BinanceAccountContextHolder.get();
         long deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(REQUEST_TIMEOUT_MILLIS);
         PendingItem<BigDecimal> usdPrice = submit(
@@ -100,7 +104,10 @@ public class BinanceStatsRealtimeService {
         );
         PendingItem<BigDecimal> fundingFee = submit(
                 accountInfo, uid, "coinFundingFee", CACHE_PREFIX + "FUNDING:COIN:" + uid, "币本位资金费",
-                () -> binanceCoinFuturesTradeInfoService.calculatePositionFundingFee(uid, BinanceEnum.SYMBOL.BTCUSD_PERP),
+                () -> coinPositionStartTime == null
+                        ? binanceCoinFuturesTradeInfoService.calculatePositionFundingFee(uid, BinanceEnum.SYMBOL.BTCUSD_PERP)
+                        : binanceCoinFuturesTradeInfoService.calculatePositionFundingFee(
+                                uid, BinanceEnum.SYMBOL.BTCUSD_PERP, coinPositionStartTime),
                 this::toBigDecimal
         );
         PendingItem<Object> account = submit(

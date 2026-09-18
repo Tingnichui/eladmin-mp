@@ -90,6 +90,12 @@ public interface BinanceCoinFuturesTradeInfoService extends IService<BinanceCoin
     BinanceFuturesTradeStatsInfoVO stats(Integer uid, BinanceSpotHedgeContext hedgeContext,
                                          BigDecimal currentPrice, BigDecimal fundingFee);
 
+    BinanceFuturesTradeStatsInfoVO stats(Integer uid, BinanceSpotHedgeContext hedgeContext,
+                                         BigDecimal currentPrice, BigDecimal fundingFee,
+                                         List<BinanceCoinFuturesTradeInfo> snapshotTrades);
+
     BigDecimal calculatePositionFundingFee(Integer uid, BinanceEnum.SYMBOL symbol);
+
+    BigDecimal calculatePositionFundingFee(Integer uid, BinanceEnum.SYMBOL symbol, Date startTime);
 
 }

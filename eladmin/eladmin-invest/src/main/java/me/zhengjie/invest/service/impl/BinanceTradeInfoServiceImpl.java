@@ -169,6 +169,13 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
     @Override
     public BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria, BinanceSpotHedgeContext hedgeContext) {
+        return stats(criteria, hedgeContext, null);
+    }
+
+    @Override
+    public BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria,
+                                         BinanceSpotHedgeContext hedgeContext,
+                                         List<BinanceTradeInfo> snapshotTrades) {
         final String key = "SPOT_LAST_NET_PNL:" + criteria.getUid() + ":" + criteria.getSymbol();
         BinanceTradeStatsInfoVO statsInfoVO = new BinanceTradeStatsInfoVO();
         statsInfoVO.setLastNetPnl((BigDecimal) redisUtils.get(key));
@@ -184,10 +191,18 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
         {
             // 查询所有买入 价格从低到高
-            statsCriteria.setOrderColumn("price");
-            statsCriteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
-            statsCriteria.setIsBuyer(1);
-            openList = sanitizeTrades(binanceTradeInfoMapper.findAll(statsCriteria), statsInfoVO, "买入");
+            if (snapshotTrades == null) {
+                statsCriteria.setOrderColumn("price");
+                statsCriteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
+                statsCriteria.setIsBuyer(1);
+                openList = sanitizeTrades(binanceTradeInfoMapper.findAll(statsCriteria), statsInfoVO, "买入");
+            } else {
+                openList = snapshotTrades.stream()
+                        .filter(trade -> Integer.valueOf(1).equals(trade.getIsBuyer()))
+                        .map(this::copyTrade)
+                        .sorted(Comparator.comparing(BinanceTradeInfo::getPrice))
+                        .collect(Collectors.toCollection(ArrayList::new));
+            }
             if (hedgeContext != null) {
                 openList.forEach(trade -> trade.setQty(
                         trade.getQty().subtract(hedgeContext.getHedgedQty(trade.getId()))
@@ -195,10 +210,18 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                 openList.removeIf(trade -> trade.getQty().compareTo(BigDecimal.ZERO) <= 0);
             }
             // 查询所有卖出 时间从早到晚
-            statsCriteria.setOrderColumn("time");
-            statsCriteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
-            statsCriteria.setIsBuyer(0);
-            closeList = sanitizeTrades(binanceTradeInfoMapper.findAll(statsCriteria), statsInfoVO, "卖出");
+            if (snapshotTrades == null) {
+                statsCriteria.setOrderColumn("time");
+                statsCriteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
+                statsCriteria.setIsBuyer(0);
+                closeList = sanitizeTrades(binanceTradeInfoMapper.findAll(statsCriteria), statsInfoVO, "卖出");
+            } else {
+                closeList = snapshotTrades.stream()
+                        .filter(trade -> Integer.valueOf(0).equals(trade.getIsBuyer()))
+                        .map(this::copyTrade)
+                        .sorted(Comparator.comparing(BinanceTradeInfo::getTime))
+                        .collect(Collectors.toCollection(ArrayList::new));
+            }
 
             List<MatchedTradeInfo> matchedList = TradeMatcherUtil.matchTrades(
                     side,
@@ -295,6 +318,12 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
     private BinanceTradeInfoQueryCriteria copyCriteria(BinanceTradeInfoQueryCriteria source) {
         BinanceTradeInfoQueryCriteria target = new BinanceTradeInfoQueryCriteria();
         BeanUtils.copyProperties(source, target);
+        return target;
+    }
+
+    private BinanceTradeInfo copyTrade(BinanceTradeInfo source) {
+        BinanceTradeInfo target = new BinanceTradeInfo();
+        target.copy(source);
         return target;
     }
 

@@ -203,34 +203,45 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
 
     @Override
     public BinanceFuturesTradeStatsInfoVO stats(Integer uid, BinanceSpotHedgeContext hedgeContext, BigDecimal currentPrice) {
+        return stats(uid, hedgeContext, currentPrice, null);
+    }
+
+    @Override
+    public BinanceFuturesTradeStatsInfoVO stats(Integer uid, BinanceSpotHedgeContext hedgeContext,
+                                                BigDecimal currentPrice,
+                                                List<BinanceFuturesTradeInfo> snapshotTrades) {
         BinanceFuturesTradeStatsInfoVO statsInfoVO = new BinanceFuturesTradeStatsInfoVO();
 
-        // 当前仓位
-        Date lastPosCloseTime = this.getLastPosCloseTime(uid);
         final boolean side = false;
 
-
-        // 开仓 做空空单
-        List<BinanceFuturesTradeInfo> openList = binanceFuturesTradeInfoMapper.selectList(
-                Wrappers.lambdaQuery(BinanceFuturesTradeInfo.class)
-                        .eq(BinanceFuturesTradeInfo::getUid, uid)
-                        .eq(BinanceFuturesTradeInfo::getSymbol, BinanceEnum.SYMBOL.BTCUSDT.name())
-                        .gt(BinanceFuturesTradeInfo::getTime, lastPosCloseTime)
-                        .eq(BinanceFuturesTradeInfo::getSide, "SELL")
-                        .eq(BinanceFuturesTradeInfo::getPositionSide, "SHORT")
-                        .orderByAsc(BinanceFuturesTradeInfo::getTime)
-        );
-
-        // 平仓 做空多单
-        List<BinanceFuturesTradeInfo> closeList = binanceFuturesTradeInfoMapper.selectList(
-                Wrappers.lambdaQuery(BinanceFuturesTradeInfo.class)
-                        .eq(BinanceFuturesTradeInfo::getUid, uid)
-                        .eq(BinanceFuturesTradeInfo::getSymbol, BinanceEnum.SYMBOL.BTCUSDT.name())
-                        .gt(BinanceFuturesTradeInfo::getTime, lastPosCloseTime)
-                        .eq(BinanceFuturesTradeInfo::getSide, "BUY")
-                        .eq(BinanceFuturesTradeInfo::getPositionSide, "SHORT")
-                        .orderByAsc(BinanceFuturesTradeInfo::getTime)
-        );
+        List<BinanceFuturesTradeInfo> openList;
+        List<BinanceFuturesTradeInfo> closeList;
+        if (snapshotTrades == null) {
+            Date lastPosCloseTime = this.getLastPosCloseTime(uid);
+            openList = binanceFuturesTradeInfoMapper.selectList(
+                    Wrappers.lambdaQuery(BinanceFuturesTradeInfo.class)
+                            .eq(BinanceFuturesTradeInfo::getUid, uid)
+                            .eq(BinanceFuturesTradeInfo::getSymbol, BinanceEnum.SYMBOL.BTCUSDT.name())
+                            .gt(BinanceFuturesTradeInfo::getTime, lastPosCloseTime)
+                            .eq(BinanceFuturesTradeInfo::getSide, "SELL")
+                            .eq(BinanceFuturesTradeInfo::getPositionSide, "SHORT")
+                            .orderByAsc(BinanceFuturesTradeInfo::getTime)
+            );
+            closeList = binanceFuturesTradeInfoMapper.selectList(
+                    Wrappers.lambdaQuery(BinanceFuturesTradeInfo.class)
+                            .eq(BinanceFuturesTradeInfo::getUid, uid)
+                            .eq(BinanceFuturesTradeInfo::getSymbol, BinanceEnum.SYMBOL.BTCUSDT.name())
+                            .gt(BinanceFuturesTradeInfo::getTime, lastPosCloseTime)
+                            .eq(BinanceFuturesTradeInfo::getSide, "BUY")
+                            .eq(BinanceFuturesTradeInfo::getPositionSide, "SHORT")
+                            .orderByAsc(BinanceFuturesTradeInfo::getTime)
+            );
+        } else {
+            openList = snapshotTrades.stream().filter(trade -> "SELL".equals(trade.getSide()))
+                    .map(this::copyTrade).collect(Collectors.toCollection(ArrayList::new));
+            closeList = snapshotTrades.stream().filter(trade -> "BUY".equals(trade.getSide()))
+                    .map(this::copyTrade).collect(Collectors.toCollection(ArrayList::new));
+        }
 
         // 盈利交易匹配
         {
@@ -295,6 +306,12 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
         }
 
         return statsInfoVO;
+    }
+
+    private BinanceFuturesTradeInfo copyTrade(BinanceFuturesTradeInfo source) {
+        BinanceFuturesTradeInfo target = new BinanceFuturesTradeInfo();
+        target.copy(source);
+        return target;
     }
 
 
