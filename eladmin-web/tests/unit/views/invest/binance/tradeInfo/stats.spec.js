@@ -109,4 +109,15 @@ describe('trade stats request lifecycle', () => {
 
     expect(params).not.toHaveProperty('endTime')
   })
+
+  it('maps the spot return field to roi', () => {
+    const descriptions = Stats.computed.statsDescriptions.call({ statsInfo: {}})
+    const spotStats = descriptions.find(item => item.title === '现货统计')
+
+    expect(spotStats.descriptionsItems).toContainEqual({
+      label: '收益率',
+      key: 'roi',
+      type: 'percent'
+    })
+  })
 })

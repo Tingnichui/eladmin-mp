@@ -50,6 +50,7 @@ class BinanceTradeInfoServiceImplTest {
         assertEquals(BigDecimal.ZERO, result.getPosQty());
         assertEquals(BigDecimal.ZERO, result.getPosAmount());
         assertNull(result.getPosAvgPrice());
+        assertNull(result.getRoi());
         assertTrue(result.getTradeList().isEmpty());
         assertTrue(result.getWarnings().isEmpty());
         assertNull(criteria.getIsBuyer());
@@ -72,6 +73,10 @@ class BinanceTradeInfoServiceImplTest {
         assertEquals(BigDecimal.ZERO, result.getPosQty());
         assertEquals(BigDecimal.ZERO, result.getPosAmount());
         assertNull(result.getPosAvgPrice());
+        assertEquals(new BigDecimal("100"), result.getTotalBuyAmount());
+        assertEquals(new BigDecimal("110"), result.getTotalSellAmount());
+        assertEquals(new BigDecimal("9.790"), result.getNetPnl());
+        assertEquals(new BigDecimal("0.09790000"), result.getRoi());
         assertTrue(result.getTradeList().isEmpty());
         verify(spotUtil, never()).getPrice(any(BinanceEnum.SYMBOL.class));
     }

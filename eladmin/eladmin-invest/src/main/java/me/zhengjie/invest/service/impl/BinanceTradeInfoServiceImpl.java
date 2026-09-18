@@ -248,6 +248,10 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             statsInfoVO.setFee(matchedList.stream().map(MatchedTradeInfo::getFee).reduce(BigDecimal.ZERO, BigDecimal::add));
             // 净盈亏
             statsInfoVO.setNetPnl(matchedList.stream().map(MatchedTradeInfo::getNetPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
+            // 收益率：净盈亏 / 买入总额
+            statsInfoVO.setRoi(statsInfoVO.getTotalBuyAmount().compareTo(BigDecimal.ZERO) > 0
+                    ? statsInfoVO.getNetPnl().divide(statsInfoVO.getTotalBuyAmount(), 8, RoundingMode.HALF_UP)
+                    : null);
             redisUtils.set(key, statsInfoVO.getNetPnl());
 
         }

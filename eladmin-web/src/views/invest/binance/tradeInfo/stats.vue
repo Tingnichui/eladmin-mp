@@ -260,7 +260,7 @@ export default {
           descriptionsItems: [
             { label: '买入总额', key: 'totalBuyAmount' },
             { label: '卖出总额', key: 'totalSellAmount' },
-            { label: '收益率', key: 'profitPct', type: 'percent' },
+            { label: '收益率', key: 'roi', type: 'percent' },
             { label: '盈亏', key: 'pnl' },
             { label: '手续费', key: 'fee' },
             { label: '净盈亏', key: 'netPnl', showType: 'diff', diffKey: 'lastNetPnl' },
