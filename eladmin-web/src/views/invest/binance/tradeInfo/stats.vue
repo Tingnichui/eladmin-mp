@@ -12,7 +12,7 @@
           placeholder="账户"
           class="filter-item"
           style="width: 185px"
-          @change="scheduleStats"
+          @change="handleAccountChange"
         >
           <el-option
             v-for="item in accountList"
@@ -188,6 +188,8 @@ import TradePositionDistributionBar from '@/views/invest/binance/tradeInfo/Trade
 import CRUD from '@crud/crud'
 import * as numberUtil from '@/utils/numberUtil'
 
+const ACCOUNT_STORAGE_KEY = 'binanceTradeInfoStats.uid'
+
 export default {
   name: 'BinanceTradeInfoStats',
   components: { TradePositionDistributionBar },
@@ -208,7 +210,7 @@ export default {
       tradeList: [],
       query: {
         symbol: 'BTCUSDT',
-        uid: 1014564231
+        uid: null
       },
       tableColumns: [
         { prop: 'side', label: '方向', formatter: (row) => (row.side ? '做多' : '做空') },
@@ -357,7 +359,6 @@ export default {
     }
   },
   mounted() {
-    this.doStats()
     this.refreshAccountList()
   },
   beforeDestroy() {
@@ -421,9 +422,24 @@ export default {
       }
       return numberUtil.formatByType(info[key], type)
     },
+    handleAccountChange(uid) {
+      if (uid == null) {
+        window.localStorage.removeItem(ACCOUNT_STORAGE_KEY)
+      } else {
+        window.localStorage.setItem(ACCOUNT_STORAGE_KEY, String(uid))
+      }
+      this.scheduleStats()
+    },
     refreshAccountList() {
-      listAllAccount().then(data => {
-        this.accountList = data.content
+      return listAllAccount().then(data => {
+        this.accountList = (data && data.content) || []
+        const storedUid = window.localStorage.getItem(ACCOUNT_STORAGE_KEY)
+        const selectedAccount = this.accountList.find(item => String(item.uid) === storedUid) || this.accountList[0]
+        this.query.uid = selectedAccount ? selectedAccount.uid : null
+        if (this.query.uid != null) {
+          window.localStorage.setItem(ACCOUNT_STORAGE_KEY, String(this.query.uid))
+          this.doStats()
+        }
       })
     },
     syncSpotTradeInfo() {

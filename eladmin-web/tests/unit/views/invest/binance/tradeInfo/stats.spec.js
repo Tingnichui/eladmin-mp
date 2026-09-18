@@ -1,5 +1,6 @@
 /* eslint-env jest */
 import crudBinanceTradeInfo from '@/api/binanceTradeInfo'
+import { listAllAccount } from '@/api/binanceAccountInfo'
 import Stats from '@/views/invest/binance/tradeInfo/stats.vue'
 
 jest.mock('@/api/binanceTradeInfo', () => ({
@@ -26,6 +27,7 @@ describe('trade stats request lifecycle', () => {
   afterEach(() => {
     jest.clearAllMocks()
     jest.useRealTimers()
+    window.localStorage.clear()
   })
 
   it('debounces filter changes and keeps only the latest request intent', () => {
@@ -148,5 +150,43 @@ describe('trade stats request lifecycle', () => {
       title: '同步成功：现货 2 条，U 本位 1 条，币本位 0 条'
     }))
     expect(vm.syncLoading).toBe(false)
+  })
+
+  it('restores the last selected account before loading stats', async() => {
+    window.localStorage.setItem('binanceTradeInfoStats.uid', '8')
+    listAllAccount.mockResolvedValue({
+      content: [
+        { uid: 7, idCardName: '账户一' },
+        { uid: 8, idCardName: '账户二' }
+      ]
+    })
+    const vm = {
+      accountList: [],
+      query: { uid: null, symbol: 'BTCUSDT' },
+      doStats: jest.fn()
+    }
+
+    await Stats.methods.refreshAccountList.call(vm)
+
+    expect(vm.query.uid).toBe(8)
+    expect(vm.doStats).toHaveBeenCalledTimes(1)
+  })
+
+  it('selects the first available account when the saved account is unavailable', async() => {
+    window.localStorage.setItem('binanceTradeInfoStats.uid', '99')
+    listAllAccount.mockResolvedValue({
+      content: [{ uid: 7, idCardName: '账户一' }]
+    })
+    const vm = {
+      accountList: [],
+      query: { uid: null, symbol: 'BTCUSDT' },
+      doStats: jest.fn()
+    }
+
+    await Stats.methods.refreshAccountList.call(vm)
+
+    expect(vm.query.uid).toBe(7)
+    expect(window.localStorage.getItem('binanceTradeInfoStats.uid')).toBe('7')
+    expect(vm.doStats).toHaveBeenCalledTimes(1)
   })
 })
