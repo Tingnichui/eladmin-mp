@@ -256,11 +256,21 @@ public class RedisUtils {
         if (value == null) {
             return null;
         }
-        // 兼容 Fastjson2 将历史 Date/Timestamp 缓存反序列化为 {"@type": "...", "val": millis} 的情况
-        if (Date.class.equals(clazz) && value instanceof Map) {
-            Object millis = ((Map<?, ?>) value).get("val");
-            if (millis instanceof Number) {
-                return clazz.cast(new Date(((Number) millis).longValue()));
+        if (Date.class.equals(clazz)) {
+            // 兼容 Redis 中 Date 的多种历史序列化格式：Date、毫秒时间戳、日期字符串和带 val 的对象
+            if (value instanceof Date) {
+                return clazz.cast(value);
+            }
+            Object dateValue = value instanceof Map ? ((Map<?, ?>) value).get("val") : value;
+            if (dateValue instanceof Number) {
+                return clazz.cast(new Date(((Number) dateValue).longValue()));
+            }
+            if (dateValue instanceof CharSequence) {
+                String text = dateValue.toString().trim();
+                if (text.matches("-?\\d+")) {
+                    return clazz.cast(new Date(Long.parseLong(text)));
+                }
+                return clazz.cast(cn.hutool.core.date.DateUtil.parse(text));
             }
         }
         // 如果 value 不是目标类型，则尝试将其反序列化为 clazz 类型
