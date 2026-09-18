@@ -167,7 +167,7 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
     @Override
     public Date getLastPosCloseTime() {
         final String key = "BINANCE:FUTURES:LAST_POS_CLOSE_TIME";
-        Date lastPosCloseTime = (Date) redisUtils.get(key);
+        Date lastPosCloseTime = redisUtils.get(key, Date.class);
         List<BinanceFuturesTradeInfo> binanceFuturesTradeInfoList = binanceFuturesTradeInfoMapper.selectList(
                 Wrappers.lambdaQuery(BinanceFuturesTradeInfo.class)
                         .gt(null != lastPosCloseTime, BinanceFuturesTradeInfo::getTime, lastPosCloseTime)
@@ -187,7 +187,7 @@ public class BinanceFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceFutur
             }
         }
 
-        return (Date) redisUtils.get(key);
+        return redisUtils.get(key, Date.class);
     }
 
     @Override

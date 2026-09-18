@@ -256,6 +256,13 @@ public class RedisUtils {
         if (value == null) {
             return null;
         }
+        // 兼容 Fastjson2 将历史 Date/Timestamp 缓存反序列化为 {"@type": "...", "val": millis} 的情况
+        if (Date.class.equals(clazz) && value instanceof Map) {
+            Object millis = ((Map<?, ?>) value).get("val");
+            if (millis instanceof Number) {
+                return clazz.cast(new Date(((Number) millis).longValue()));
+            }
+        }
         // 如果 value 不是目标类型，则尝试将其反序列化为 clazz 类型
         if (!clazz.isInstance(value)) {
             return JSON.parseObject(value.toString(), clazz);

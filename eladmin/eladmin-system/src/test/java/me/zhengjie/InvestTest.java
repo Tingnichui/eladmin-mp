@@ -2,6 +2,7 @@ package me.zhengjie;
 
 import me.zhengjie.invest.domain.dto.BinanceOrderVO;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
+import me.zhengjie.invest.service.BinanceCoinFuturesTradeInfoService;
 import me.zhengjie.invest.service.BinanceFuturesTradeInfoService;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
@@ -11,6 +12,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import javax.annotation.Resource;
 import java.math.BigDecimal;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class InvestTest {
 
@@ -18,6 +21,8 @@ public class InvestTest {
     private BinanceTradeInfoService binanceTradeInfoService;
     @Resource
     private BinanceFuturesTradeInfoService binanceFuturesTradeInfoService;
+    @Resource
+    private BinanceCoinFuturesTradeInfoService binanceCoinFuturesTradeInfoService;
     @Resource
     private BinanceAccountInfoService binanceAccountInfoService;
 
@@ -29,6 +34,12 @@ public class InvestTest {
     @Test
     void stats() {
         binanceFuturesTradeInfoService.stats();
+    }
+
+    @Test
+    void lastPosCloseTime() {
+        assertNotNull(binanceFuturesTradeInfoService.getLastPosCloseTime());
+        assertNotNull(binanceCoinFuturesTradeInfoService.getLastPosCloseTime());
     }
 
     @Test
