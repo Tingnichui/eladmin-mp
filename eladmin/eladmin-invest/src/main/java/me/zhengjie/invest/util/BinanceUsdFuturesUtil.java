@@ -140,6 +140,15 @@ public class BinanceUsdFuturesUtil {
         return JSON.parseArray(this.doRequest("/fapi/v1/userTrades", parmasMap, true, true)).toJavaList(BinanceFuturesTradeInfo.class);
     }
 
+    public List<BinanceFuturesTradeInfo> userTradesFromId(BinanceEnum.SYMBOL symbol, Long fromId, int limit) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("symbol", symbol);
+        params.put("fromId", fromId);
+        params.put("limit", limit);
+        return JSON.parseArray(this.doRequest("/fapi/v1/userTrades", params, true, true))
+                .toJavaList(BinanceFuturesTradeInfo.class);
+    }
+
     public JSONObject account() {
         Map<String, Object> parmasMap = new HashMap<>();
         parmasMap.put("symbol", "symbol");

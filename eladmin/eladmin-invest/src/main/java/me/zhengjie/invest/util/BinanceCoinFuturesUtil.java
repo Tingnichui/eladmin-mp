@@ -76,6 +76,15 @@ public class BinanceCoinFuturesUtil {
         return JSON.parseArray(this.doRequest("/dapi/v1/userTrades", parmasMap, true, true)).toJavaList(BinanceCoinFuturesTradeInfo.class);
     }
 
+    public List<BinanceCoinFuturesTradeInfo> userTradesFromId(BinanceEnum.SYMBOL symbol, Long fromId, int limit) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("symbol", symbol);
+        params.put("fromId", fromId);
+        params.put("limit", limit);
+        return JSON.parseArray(this.doRequest("/dapi/v1/userTrades", params, true, true))
+                .toJavaList(BinanceCoinFuturesTradeInfo.class);
+    }
+
     private String doRequest(String url, Map<String, Object> params, Boolean signFlag, Boolean getFlag) {
         log.info("入参：{}", JSON.toJSONString(params));
 

@@ -60,6 +60,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceCoinFuturesTradeInfoMapper, BinanceCoinFuturesTradeInfo> implements BinanceCoinFuturesTradeInfoService {
 
+    private static final int SYNC_PAGE_SIZE = 1000;
+
     @Resource
     private BinanceCoinFuturesTradeInfoMapper binanceCoinFuturesTradeInfoMapper;
     @Resource
@@ -140,25 +142,51 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
     public int sync(BinanceAccountInfo accountInfo) {
         int[] syncedCount = {0};
         BinanceAccountContextHolder.runWith(accountInfo, () -> {
-            List<BinanceCoinFuturesTradeInfo> orderInfoList = binanceCoinFuturesUtil.userTrades(
-                    BinanceEnum.SYMBOL.BTCUSD_PERP, null, null);
-            if (CollectionUtils.isEmpty(orderInfoList)) {
-                return;
+            String symbol = BinanceEnum.SYMBOL.BTCUSD_PERP.name();
+            List<BinanceCoinFuturesTradeInfo> latestTrades = this.list(
+                    Wrappers.<BinanceCoinFuturesTradeInfo>query()
+                            .select("id")
+                            .eq("uid", accountInfo.getUid())
+                            .eq("symbol", symbol)
+                            .orderByDesc("id")
+                            .last("limit 1")
+            );
+            long fromId = latestTrades.isEmpty() ? 0L : latestTrades.get(0).getId() + 1L;
+            while (true) {
+                List<BinanceCoinFuturesTradeInfo> orderInfoList = binanceCoinFuturesUtil.userTradesFromId(
+                        BinanceEnum.SYMBOL.BTCUSD_PERP, fromId, SYNC_PAGE_SIZE);
+                if (CollectionUtils.isEmpty(orderInfoList)) {
+                    break;
+                }
+                Set<Long> pageIds = orderInfoList.stream().map(BinanceCoinFuturesTradeInfo::getId)
+                        .filter(Objects::nonNull).collect(Collectors.toSet());
+                if (pageIds.isEmpty()) {
+                    throw new IllegalStateException("币安币本位成交数据缺少 ID");
+                }
+                Set<Long> existIdSet = this.list(
+                        Wrappers.<BinanceCoinFuturesTradeInfo>query()
+                                .select("id")
+                                .eq("uid", accountInfo.getUid())
+                                .eq("symbol", symbol)
+                                .in("id", pageIds)
+                ).stream().map(BinanceCoinFuturesTradeInfo::getId).collect(Collectors.toSet());
+                List<BinanceCoinFuturesTradeInfo> newOrders = orderInfoList.stream()
+                        .filter(order -> order.getId() != null && !existIdSet.contains(order.getId()))
+                        .peek(order -> order.setUid(accountInfo.getUid()))
+                        .collect(Collectors.toList());
+                if (CollectionUtils.isNotEmpty(newOrders)) {
+                    this.saveOrUpdateBatch(newOrders);
+                    syncedCount[0] += newOrders.size();
+                }
+                long nextFromId = Collections.max(pageIds) + 1L;
+                if (nextFromId <= fromId) {
+                    throw new IllegalStateException("币安币本位成交分页未向前推进");
+                }
+                fromId = nextFromId;
+                if (orderInfoList.size() < SYNC_PAGE_SIZE) {
+                    break;
+                }
             }
-            Set<Long> existIdSet = this.list(
-                    Wrappers.lambdaQuery(BinanceCoinFuturesTradeInfo.class)
-                            .select(BinanceCoinFuturesTradeInfo::getId)
-                            .in(BinanceCoinFuturesTradeInfo::getId, orderInfoList.stream()
-                                    .map(BinanceCoinFuturesTradeInfo::getId).collect(Collectors.toSet()))
-            ).stream().map(BinanceCoinFuturesTradeInfo::getId).collect(Collectors.toSet());
-            List<BinanceCoinFuturesTradeInfo> newOrders = orderInfoList.stream()
-                    .filter(order -> !existIdSet.contains(order.getId()))
-                    .peek(order -> order.setUid(accountInfo.getUid()))
-                    .collect(Collectors.toList());
-            if (CollectionUtils.isNotEmpty(newOrders)) {
-                this.saveOrUpdateBatch(newOrders);
-            }
-            syncedCount[0] = newOrders.size();
         });
         return syncedCount[0];
     }

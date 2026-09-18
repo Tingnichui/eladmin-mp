@@ -50,9 +50,14 @@ public class BinanceSpotUtil {
     private RedisUtils redisUtils;
 
     public List<BinanceTradeInfo> getMyTrades(String symbol) {
+        return getMyTrades(symbol, null, 1000);
+    }
+
+    public List<BinanceTradeInfo> getMyTrades(String symbol, Long fromId, int limit) {
         Map<String, Object> params = new HashMap<>();
         params.put("symbol", symbol);
-//        params.put("startTime", startTime.getTime());
+        params.put("fromId", fromId);
+        params.put("limit", limit);
         return JSON.parseArray(this.doRequest("/api/v3/myTrades", params, true, true))
                 .toJavaList(BinanceTradeInfo.class);
     }
