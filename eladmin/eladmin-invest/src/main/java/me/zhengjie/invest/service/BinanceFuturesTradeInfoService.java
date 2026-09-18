@@ -18,6 +18,7 @@ package me.zhengjie.invest.service;
 import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
 import me.zhengjie.invest.domain.dto.BinanceFuturesTradeInfoQueryCriteria;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 import java.io.IOException;
@@ -83,5 +84,7 @@ public interface BinanceFuturesTradeInfoService extends IService<BinanceFuturesT
     BinanceFuturesTradeStatsInfoVO stats(Integer uid);
 
     BinanceFuturesTradeStatsInfoVO stats(Integer uid, BinanceSpotHedgeContext hedgeContext);
+
+    BinanceFuturesTradeStatsInfoVO stats(Integer uid, BinanceSpotHedgeContext hedgeContext, BigDecimal currentPrice);
 
 }

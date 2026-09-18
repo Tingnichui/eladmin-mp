@@ -196,6 +196,14 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
 
     @Override
     public BinanceFuturesTradeStatsInfoVO stats(Integer uid, BinanceSpotHedgeContext hedgeContext) {
+        BigDecimal currentPrice = binanceCoinFuturesUtil.price(BinanceEnum.SYMBOL.BTCUSD_PERP);
+        BigDecimal fundingFee = this.calculatePositionFundingFee(uid, BinanceEnum.SYMBOL.BTCUSD_PERP);
+        return stats(uid, hedgeContext, currentPrice, fundingFee);
+    }
+
+    @Override
+    public BinanceFuturesTradeStatsInfoVO stats(Integer uid, BinanceSpotHedgeContext hedgeContext,
+                                                BigDecimal currentPrice, BigDecimal fundingFee) {
         BinanceFuturesTradeStatsInfoVO statsInfoVO = new BinanceFuturesTradeStatsInfoVO();
 
         // 当前仓位
@@ -261,10 +269,8 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
         }
 
 
-        // 现货止损交易匹配
-        {
-            // 获取当前合约价格
-            BigDecimal currentPrice = binanceCoinFuturesUtil.price(BinanceEnum.SYMBOL.BTCUSD_PERP);
+        // 现货止损交易匹配依赖实时价格；价格不可用时保留本地历史统计
+        if (currentPrice != null) {
             List<MatchedTradeInfo> matchedList = TradeMatcherUtil.matchTrades(side, "0.001", openList, BinanceCoinFuturesTradeInfo::getBaseQty, BinanceCoinFuturesTradeInfo::getPrice, currentPrice,
                     matched -> {
                         // 亏损单找现货做对冲止损
@@ -284,10 +290,11 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
             statsInfoVO.setStopLossAmount(matchedList.stream().map(MatchedTradeInfo::getPnl).filter(v -> v.compareTo(BigDecimal.ZERO) <= 0).reduce(BigDecimal.ZERO, BigDecimal::add));
             // 未平仓的交易
             statsInfoVO.setTradeList(matchedList.stream().sorted(Comparator.comparing(MatchedTradeInfo::getOpenPrice).reversed()).collect(Collectors.toList()));
-            // 资金费
-            statsInfoVO.setFundingFee(this.calculatePositionFundingFee(uid, BinanceEnum.SYMBOL.BTCUSD_PERP).multiply(currentPrice));
-
+        } else {
+            statsInfoVO.setStopLossAmount(null);
+            statsInfoVO.setTradeList(Collections.emptyList());
         }
+        statsInfoVO.setFundingFee(currentPrice == null || fundingFee == null ? null : fundingFee.multiply(currentPrice));
 
         return statsInfoVO;
     }

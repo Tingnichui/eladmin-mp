@@ -81,6 +81,14 @@
         >同步</el-button>
       </div>
       <div>
+        <el-alert
+          v-if="realtimeWarningText"
+          :title="realtimeWarningText"
+          type="warning"
+          :closable="false"
+          show-icon
+          style="margin-top: 16px"
+        />
         <el-descriptions
           v-for="description in statsDescriptions"
           v-show="description.showFlag || (description.data.posQty && description.data.posQty !== 0)"
@@ -184,7 +192,9 @@ export default {
   data() {
     return {
       statsInfo: {
-        spotFuturesStatsInfo: {}
+        spotFuturesStatsInfo: {},
+        realtimeStatus: {},
+        warnings: []
       },
       accountList: [],
       syncLoading: false,
@@ -213,6 +223,20 @@ export default {
     }
   },
   computed: {
+    realtimeWarningText() {
+      const warnings = (this.statsInfo && this.statsInfo.warnings) || []
+      const statuses = (this.statsInfo && this.statsInfo.realtimeStatus) || {}
+      const labels = {
+        usdFuturesPrice: 'U本位价格',
+        coinFuturesPrice: '币本位价格',
+        coinFundingFee: '币本位资金费',
+        accountInfo: '账户资产'
+      }
+      const cacheTimes = Object.keys(statuses)
+        .filter(key => statuses[key] && statuses[key].status === 'CACHE' && statuses[key].updatedAt)
+        .map(key => `${labels[key] || key}缓存时间：${new Date(statuses[key].updatedAt).toLocaleString('zh-CN')}`)
+      return warnings.concat(cacheTimes).join('；')
+    },
     statsDescriptions() {
       return [
         {
@@ -352,6 +376,9 @@ export default {
       })
     },
     formatValue(info, key, type) {
+      if (!info || info[key] === null || info[key] === undefined) {
+        return '--'
+      }
       return numberUtil.formatByType(info[key], type)
     },
     refreshAccountList() {
