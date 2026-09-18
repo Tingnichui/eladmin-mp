@@ -19,6 +19,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import me.zhengjie.annotation.Log;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
@@ -60,6 +61,7 @@ import java.util.stream.Collectors;
 **/
 @RestController
 @RequiredArgsConstructor
+@Slf4j
 @Api(tags = "币安交易管理")
 @RequestMapping("/api/binanceTradeInfo")
 public class BinanceTradeInfoController {
@@ -184,6 +186,57 @@ public class BinanceTradeInfoController {
             });
         }
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @PutMapping("/syncSelected")
+    @Log("同步当前账户交易")
+    @ApiOperation("同步当前账户交易")
+    @PreAuthorize("@el.check('binanceTradeInfo:sync')")
+    public ResponseEntity<Map<String, Object>> syncSelected(@RequestParam Integer uid,
+                                                            @RequestParam String symbol) {
+        BinanceEnum.SYMBOL spotSymbol;
+        try {
+            spotSymbol = BinanceEnum.SYMBOL.valueOf(symbol);
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new BadRequestException("交易对不存在");
+        }
+        if (!Integer.valueOf(0).equals(spotSymbol.getType())) {
+            throw new BadRequestException("请选择现货交易对");
+        }
+
+        BinanceAccountInfo accountInfo = binanceAccountInfoService.getAccountByUid(uid);
+        if (!Integer.valueOf(1).equals(accountInfo.getApiValidFlag())) {
+            throw new BadRequestException("当前账户 API 不可用");
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        try {
+            result.put("spotCount", binanceTradeInfoService.syncTradeInfo(accountInfo, spotSymbol.name()));
+        } catch (Exception e) {
+            log.warn("当前账户现货同步失败: uid={}, symbol={}, error={}", uid, symbol,
+                    e.getClass().getSimpleName());
+            throw new BadRequestException("现货同步失败，请稍后重试");
+        }
+        try {
+            result.put("usdFuturesCount", binanceFuturesTradeInfoService.sync(accountInfo));
+        } catch (Exception e) {
+            log.warn("当前账户 U 本位同步失败: uid={}, error={}", uid, e.getClass().getSimpleName());
+            throw new BadRequestException("U 本位同步失败，请稍后重试");
+        }
+        try {
+            result.put("coinFuturesCount", binanceCoinFuturesTradeInfoService.sync(accountInfo));
+        } catch (Exception e) {
+            log.warn("当前账户币本位同步失败: uid={}, error={}", uid, e.getClass().getSimpleName());
+            throw new BadRequestException("币本位同步失败，请稍后重试");
+        }
+        try {
+            BinanceAccountContextHolder.runWith(accountInfo, () -> binanceSpotUtil.usdStats(false));
+            result.put("accountUpdated", true);
+        } catch (Exception e) {
+            log.warn("当前账户资产同步失败: uid={}, error={}", uid, e.getClass().getSimpleName());
+            throw new BadRequestException("账户资产同步失败，请稍后重试");
+        }
+        return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
 

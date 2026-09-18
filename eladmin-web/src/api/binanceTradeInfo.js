@@ -31,6 +31,14 @@ export function syncSpotTradeInfo() {
   })
 }
 
+export function syncSelected(params) {
+  return request({
+    url: 'api/binanceTradeInfo/syncSelected',
+    method: 'put',
+    params
+  })
+}
+
 export function syncFuturesHedge() {
   return request({
     url: 'api/binanceTradeInfo/syncFuturesHedge',
@@ -46,4 +54,4 @@ export function stats(params) {
   })
 }
 
-export default { add, edit, del, syncSpotTradeInfo, stats, syncFuturesHedge }
+export default { add, edit, del, syncSpotTradeInfo, syncSelected, stats, syncFuturesHedge }

@@ -136,30 +136,34 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         // 查询所有账号
         List<BinanceAccountInfo> accountInfoList = binanceAccountInfoService.listUseApiAccount();
         for (BinanceAccountInfo accountInfo : accountInfoList) {
-            // 设置账号信息
-            BinanceAccountContextHolder.set(accountInfo);
-            // 调用接口获取最近的订单信息
+            syncTradeInfo(accountInfo, symbol);
+        }
+    }
+
+    @Override
+    public int syncTradeInfo(BinanceAccountInfo accountInfo, String symbol) {
+        int[] syncedCount = {0};
+        BinanceAccountContextHolder.runWith(accountInfo, () -> {
             List<BinanceTradeInfo> orderInfoList = binanceSpotUtil.getMyTrades(symbol);
-            // 查询已经在库中的订单
+            if (CollectionUtils.isEmpty(orderInfoList)) {
+                return;
+            }
             Set<Long> existIdSet = this.list(
                     Wrappers.lambdaQuery(BinanceTradeInfo.class)
                             .select(BinanceTradeInfo::getId)
-                            .in(BinanceTradeInfo::getId, orderInfoList.stream().map(BinanceTradeInfo::getId).collect(Collectors.toSet()))
+                            .in(BinanceTradeInfo::getId, orderInfoList.stream()
+                                    .map(BinanceTradeInfo::getId).collect(Collectors.toSet()))
             ).stream().map(BinanceTradeInfo::getId).collect(Collectors.toSet());
-
-            // 过滤掉已存在的订单
             List<BinanceTradeInfo> newOrders = orderInfoList.stream()
                     .filter(order -> !existIdSet.contains(order.getId()))
                     .peek(order -> order.setUid(accountInfo.getUid()))
                     .collect(Collectors.toList());
-
-            // 保存新订单
-            this.saveOrUpdateBatch(newOrders);
-
-            // 清除账号信息
-            BinanceAccountContextHolder.clear();
-        }
-
+            if (CollectionUtils.isNotEmpty(newOrders)) {
+                this.saveOrUpdateBatch(newOrders);
+            }
+            syncedCount[0] = newOrders.size();
+        });
+        return syncedCount[0];
     }
 
     @Override

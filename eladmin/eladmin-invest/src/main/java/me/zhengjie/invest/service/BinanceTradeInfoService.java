@@ -16,6 +16,7 @@
 package me.zhengjie.invest.service;
 
 import me.zhengjie.invest.domain.BinanceTradeInfo;
+import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.dto.BinanceOrderVO;
 import me.zhengjie.invest.domain.dto.BinanceSpotHedgedTradeStatsInfoVO;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
@@ -78,6 +79,8 @@ public interface BinanceTradeInfoService extends IService<BinanceTradeInfo> {
     void download(List<BinanceTradeInfo> all, HttpServletResponse response) throws IOException;
 
     void syncTradeInfo(String symbol);
+
+    int syncTradeInfo(BinanceAccountInfo accountInfo, String symbol);
 
     BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria);
 

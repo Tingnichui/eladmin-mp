@@ -79,6 +79,7 @@
           type="success"
           icon="el-icon-refresh"
           :loading="syncLoading"
+          :disabled="query.uid == null || !query.symbol"
           @click="syncSpotTradeInfo"
         >同步</el-button>
       </div>
@@ -427,10 +428,13 @@ export default {
     },
     syncSpotTradeInfo() {
       this.syncLoading = true
-      crudBinanceTradeInfo.syncSpotTradeInfo().then(() => {
+      crudBinanceTradeInfo.syncSelected({
+        uid: this.query.uid,
+        symbol: this.query.symbol
+      }).then((res) => {
         this.doStats()
         this.$notify({
-          title: '同步成功',
+          title: `同步成功：现货 ${res.spotCount || 0} 条，U 本位 ${res.usdFuturesCount || 0} 条，币本位 ${res.coinFuturesCount || 0} 条`,
           type: CRUD.NOTIFICATION_TYPE.SUCCESS,
           duration: 2500
         })

@@ -132,30 +132,35 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
         // 查询所有账号
         List<BinanceAccountInfo> accountInfoList = binanceAccountInfoService.listUseApiAccount();
         for (BinanceAccountInfo accountInfo : accountInfoList) {
-            BinanceAccountContextHolder.runWith(accountInfo, () -> {
-                List<BinanceCoinFuturesTradeInfo> orderInfoList = binanceCoinFuturesUtil.userTrades(BinanceEnum.SYMBOL.BTCUSD_PERP, null, null);
-                if (CollectionUtils.isEmpty(orderInfoList)) {
-                    return;
-                }
-
-                // 查询已经在库中的订单
-                Set<Long> existIdSet = this.list(
-                        Wrappers.lambdaQuery(BinanceCoinFuturesTradeInfo.class)
-                                .select(BinanceCoinFuturesTradeInfo::getId)
-                                .in(BinanceCoinFuturesTradeInfo::getId, orderInfoList.stream().map(BinanceCoinFuturesTradeInfo::getId).collect(Collectors.toSet()))
-                ).stream().map(BinanceCoinFuturesTradeInfo::getId).collect(Collectors.toSet());
-
-                // 过滤掉已存在的订单
-                List<BinanceCoinFuturesTradeInfo> newOrders = orderInfoList.stream()
-                        .filter(order -> !existIdSet.contains(order.getId()))
-                        .peek(order -> order.setUid(accountInfo.getUid()))
-                        .collect(Collectors.toList());
-
-                // 保存新订单
-                this.saveOrUpdateBatch(newOrders);
-
-            });
+            sync(accountInfo);
         }
+    }
+
+    @Override
+    public int sync(BinanceAccountInfo accountInfo) {
+        int[] syncedCount = {0};
+        BinanceAccountContextHolder.runWith(accountInfo, () -> {
+            List<BinanceCoinFuturesTradeInfo> orderInfoList = binanceCoinFuturesUtil.userTrades(
+                    BinanceEnum.SYMBOL.BTCUSD_PERP, null, null);
+            if (CollectionUtils.isEmpty(orderInfoList)) {
+                return;
+            }
+            Set<Long> existIdSet = this.list(
+                    Wrappers.lambdaQuery(BinanceCoinFuturesTradeInfo.class)
+                            .select(BinanceCoinFuturesTradeInfo::getId)
+                            .in(BinanceCoinFuturesTradeInfo::getId, orderInfoList.stream()
+                                    .map(BinanceCoinFuturesTradeInfo::getId).collect(Collectors.toSet()))
+            ).stream().map(BinanceCoinFuturesTradeInfo::getId).collect(Collectors.toSet());
+            List<BinanceCoinFuturesTradeInfo> newOrders = orderInfoList.stream()
+                    .filter(order -> !existIdSet.contains(order.getId()))
+                    .peek(order -> order.setUid(accountInfo.getUid()))
+                    .collect(Collectors.toList());
+            if (CollectionUtils.isNotEmpty(newOrders)) {
+                this.saveOrUpdateBatch(newOrders);
+            }
+            syncedCount[0] = newOrders.size();
+        });
+        return syncedCount[0];
     }
 
     @Override

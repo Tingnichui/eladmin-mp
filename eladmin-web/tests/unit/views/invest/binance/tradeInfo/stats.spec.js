@@ -6,7 +6,8 @@ jest.mock('@/api/binanceTradeInfo', () => ({
   __esModule: true,
   default: {
     stats: jest.fn(),
-    syncSpotTradeInfo: jest.fn()
+    syncSpotTradeInfo: jest.fn(),
+    syncSelected: jest.fn()
   }
 }))
 jest.mock('@/api/binanceAccountInfo', () => ({
@@ -119,5 +120,33 @@ describe('trade stats request lifecycle', () => {
       key: 'roi',
       type: 'percent'
     })
+  })
+
+  it('syncs only the selected account and symbol before refreshing stats', async() => {
+    crudBinanceTradeInfo.syncSelected.mockResolvedValue({
+      spotCount: 2,
+      usdFuturesCount: 1,
+      coinFuturesCount: 0
+    })
+    const vm = {
+      query: { uid: 7, symbol: 'BTCUSDT' },
+      syncLoading: false,
+      doStats: jest.fn(),
+      $notify: jest.fn()
+    }
+
+    Stats.methods.syncSpotTradeInfo.call(vm)
+    expect(vm.syncLoading).toBe(true)
+    await flushPromises()
+
+    expect(crudBinanceTradeInfo.syncSelected).toHaveBeenCalledWith({
+      uid: 7,
+      symbol: 'BTCUSDT'
+    })
+    expect(vm.doStats).toHaveBeenCalledTimes(1)
+    expect(vm.$notify).toHaveBeenCalledWith(expect.objectContaining({
+      title: '同步成功：现货 2 条，U 本位 1 条，币本位 0 条'
+    }))
+    expect(vm.syncLoading).toBe(false)
   })
 })

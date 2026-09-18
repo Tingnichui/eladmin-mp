@@ -16,6 +16,7 @@
 package me.zhengjie.invest.service;
 
 import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
+import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.dto.BinanceFuturesTradeInfoQueryCriteria;
 
 import java.math.BigDecimal;
@@ -78,6 +79,8 @@ public interface BinanceFuturesTradeInfoService extends IService<BinanceFuturesT
     void download(List<BinanceFuturesTradeInfo> all, HttpServletResponse response) throws IOException;
 
     void sync();
+
+    int sync(BinanceAccountInfo accountInfo);
 
     Date getLastPosCloseTime(Integer uid);
 
