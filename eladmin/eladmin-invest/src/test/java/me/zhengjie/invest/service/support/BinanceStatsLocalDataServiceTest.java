@@ -11,6 +11,7 @@ import me.zhengjie.invest.mapper.BinanceFuturesTradeInfoMapper;
 import me.zhengjie.invest.mapper.BinanceTradeInfoMapper;
 import me.zhengjie.utils.RedisUtils;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -55,7 +56,8 @@ class BinanceStatsLocalDataServiceTest {
         BinanceTradeInfoQueryCriteria criteria = new BinanceTradeInfoQueryCriteria();
         criteria.setUid(1);
         criteria.setSymbol(BinanceEnum.SYMBOL.BTCUSDT.name());
-        criteria.setEndTime(new Timestamp(5_000L));
+        Timestamp cutoff = new Timestamp(5_000L);
+        criteria.setEndTime(cutoff);
 
         BinanceStatsLocalDataSnapshot snapshot = service.load(criteria);
 
@@ -66,9 +68,12 @@ class BinanceStatsLocalDataServiceTest {
                 Collections.singletonList(snapshot.getCoinFuturesTrades().get(0).getId()));
         assertEquals(new Timestamp(2_000L), snapshot.getCoinPositionStartTime());
         assertTrue(snapshot.getQueryElapsedMillis().containsKey("total"));
-        verify(spotMapper, times(1)).findAll(any(BinanceTradeInfoQueryCriteria.class));
+        ArgumentCaptor<BinanceTradeInfoQueryCriteria> spotCriteriaCaptor =
+                ArgumentCaptor.forClass(BinanceTradeInfoQueryCriteria.class);
+        verify(spotMapper, times(1)).findAll(spotCriteriaCaptor.capture());
         verify(usdMapper, times(1)).selectList(any(Wrapper.class));
         verify(coinMapper, times(1)).selectList(any(Wrapper.class));
+        assertEquals(cutoff, spotCriteriaCaptor.getValue().getEndTime());
         verify(redisUtils, never()).set(any(String.class), any());
     }
 

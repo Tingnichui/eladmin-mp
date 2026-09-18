@@ -53,14 +53,14 @@
         <!--            :value="item.value"-->
         <!--          />-->
         <!--        </el-select>-->
-        <label class="el-form-item-label">截止日期</label>
+        <label class="el-form-item-label">成交截止日期</label>
         <el-date-picker
           v-model="query.endTime"
           align="right"
           type="date"
           placeholder="选择日期"
           class="date-item"
-          value-format="yyyy-MM-dd HH:mm:ss"
+          value-format="yyyy-MM-dd"
           @change="scheduleStats"
         />
         <el-button
@@ -391,10 +391,7 @@ export default {
         }
         return
       }
-      const params = { ...this.query }
-      if (!params.endTime) {
-        delete params.endTime
-      }
+      const params = this.buildStatsParams()
       this.statsLoading = true
       crudBinanceTradeInfo.stats(params).then(res => {
         if (requestId === this.statsRequestId) {
@@ -407,6 +404,15 @@ export default {
           this.statsLoading = false
         }
       })
+    },
+    buildStatsParams() {
+      const params = { ...this.query }
+      if (params.endTime) {
+        params.endTime = `${params.endTime} 23:59:59`
+      } else {
+        delete params.endTime
+      }
+      return params
     },
     formatValue(info, key, type) {
       if (!info || info[key] === null || info[key] === undefined) {

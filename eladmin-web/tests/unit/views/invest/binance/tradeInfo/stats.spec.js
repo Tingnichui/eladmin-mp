@@ -62,7 +62,8 @@ describe('trade stats request lifecycle', () => {
       },
       statsRequestId: 1,
       statsLoading: false,
-      statsInfo: {}
+      statsInfo: {},
+      buildStatsParams: Stats.methods.buildStatsParams
     }
 
     Stats.methods.executeStats.call(vm, 1)
@@ -78,5 +79,34 @@ describe('trade stats request lifecycle', () => {
     await flushPromises()
     expect(vm.statsInfo).toEqual({ marker: 'latest' })
     expect(vm.statsLoading).toBe(false)
+  })
+
+  it('uses the end of the selected day without mutating the query', () => {
+    const vm = {
+      query: {
+        uid: 1,
+        symbol: 'BTCUSDT',
+        endTime: '2026-09-18'
+      }
+    }
+
+    const params = Stats.methods.buildStatsParams.call(vm)
+
+    expect(params.endTime).toBe('2026-09-18 23:59:59')
+    expect(vm.query.endTime).toBe('2026-09-18')
+  })
+
+  it('omits the cutoff when no date is selected', () => {
+    const vm = {
+      query: {
+        uid: 1,
+        symbol: 'BTCUSDT',
+        endTime: null
+      }
+    }
+
+    const params = Stats.methods.buildStatsParams.call(vm)
+
+    expect(params).not.toHaveProperty('endTime')
   })
 })
