@@ -5,7 +5,10 @@ import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -14,6 +17,60 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 public class TradeMatcherUtil {
+
+    /**
+     * 按成交时间和成交 ID 对现货买卖进行 FIFO 撮合。
+     * 已完全撮合的买卖会从传入列表移除，列表中只保留剩余数量。
+     */
+    public static <T> List<MatchedTradeInfo> matchTradesFifo(
+            boolean side,
+            String feeRate,
+            List<T> openList,
+            List<T> closeList,
+            Function<T, BigDecimal> qtyGetter,
+            BiConsumer<T, BigDecimal> qtySetter,
+            Function<T, BigDecimal> priceGetter,
+            Function<T, Timestamp> timeGetter,
+            Function<T, Long> idGetter
+    ) {
+        Comparator<T> tradeOrder = Comparator
+                .comparing(timeGetter)
+                .thenComparing(idGetter, Comparator.nullsLast(Long::compareTo));
+        openList.sort(tradeOrder);
+        closeList.sort(tradeOrder);
+
+        Deque<T> openQueue = new ArrayDeque<>(openList);
+        List<MatchedTradeInfo> matchedList = new ArrayList<>();
+        for (T close : closeList) {
+            while (qtyGetter.apply(close).compareTo(BigDecimal.ZERO) > 0 && !openQueue.isEmpty()) {
+                T open = openQueue.peekFirst();
+                if (tradeOrder.compare(open, close) >= 0) {
+                    break;
+                }
+
+                BigDecimal matchQty = qtyGetter.apply(open).min(qtyGetter.apply(close));
+                MatchedTradeInfo matched = new MatchedTradeInfo(side, feeRate);
+                matched.setQty(matchQty);
+                matched.setOpenPrice(priceGetter.apply(open));
+                matched.setClosePrice(priceGetter.apply(close));
+                matched.setOpenTime(timeGetter.apply(open));
+                matched.setCloseTime(timeGetter.apply(close));
+                matchedList.add(matched);
+
+                qtySetter.accept(open, qtyGetter.apply(open).subtract(matchQty));
+                qtySetter.accept(close, qtyGetter.apply(close).subtract(matchQty));
+                if (qtyGetter.apply(open).compareTo(BigDecimal.ZERO) <= 0) {
+                    openQueue.removeFirst();
+                }
+            }
+        }
+
+        openList.clear();
+        openList.addAll(openQueue);
+        closeList.removeIf(close -> qtyGetter.apply(close).compareTo(BigDecimal.ZERO) <= 0);
+        return matchedList;
+    }
+
     /**
      * 通用撮合方法
      *

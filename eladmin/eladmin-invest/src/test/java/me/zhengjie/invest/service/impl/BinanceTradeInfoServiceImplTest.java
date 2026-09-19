@@ -14,6 +14,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -116,6 +117,44 @@ class BinanceTradeInfoServiceImplTest {
         assertNull(result.getCurrentSpotPrice());
         assertTrue(result.getTradeList().isEmpty());
         assertTrue(result.getWarnings().contains("现货持仓实时估值暂不可用"));
+    }
+
+    @Test
+    void shouldUseFifoInsteadOfTheLowestBuyPrice() {
+        BinanceTradeInfo firstBuy = trade(1L, "120", "1", 1_000L);
+        firstBuy.setIsBuyer(1);
+        BinanceTradeInfo secondBuy = trade(2L, "100", "1", 2_000L);
+        secondBuy.setIsBuyer(1);
+        BinanceTradeInfo sell = trade(3L, "130", "1", 3_000L);
+        sell.setIsBuyer(0);
+        when(spotUtil.getPrice(BinanceEnum.SYMBOL.BTCUSDT)).thenReturn(new BigDecimal("140"));
+
+        BinanceTradeStatsInfoVO result = service.stats(
+                criteria(), null, new ArrayList<>(Arrays.asList(secondBuy, sell, firstBuy)));
+
+        assertEquals(new BigDecimal("120"), result.getTotalBuyAmount());
+        assertEquals(new BigDecimal("130"), result.getTotalSellAmount());
+        assertEquals(new BigDecimal("100.00000000"), result.getPosAvgPrice());
+        assertEquals(new BigDecimal("1"), result.getPosQty());
+        assertEquals(BigDecimal.ZERO, result.getUnmatchedSellQty());
+    }
+
+    @Test
+    void shouldReportASellWithoutAnEarlierBuyInsteadOfMatchingAFutureBuy() {
+        BinanceTradeInfo sell = trade(1L, "110", "1", 1_000L);
+        sell.setIsBuyer(0);
+        BinanceTradeInfo futureBuy = trade(2L, "100", "1", 2_000L);
+        futureBuy.setIsBuyer(1);
+        when(spotUtil.getPrice(BinanceEnum.SYMBOL.BTCUSDT)).thenReturn(new BigDecimal("120"));
+
+        BinanceTradeStatsInfoVO result = service.stats(
+                criteria(), null, new ArrayList<>(Arrays.asList(futureBuy, sell)));
+
+        assertEquals(BigDecimal.ZERO, result.getTotalBuyAmount());
+        assertEquals(BigDecimal.ZERO, result.getTotalSellAmount());
+        assertEquals(new BigDecimal("1"), result.getUnmatchedSellQty());
+        assertEquals(new BigDecimal("1"), result.getPosQty());
+        assertTrue(result.getWarnings().contains("部分卖出成交缺少可匹配的历史买入"));
     }
 
     private BinanceTradeInfoQueryCriteria criteria() {

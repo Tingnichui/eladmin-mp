@@ -270,13 +270,13 @@ export default {
             { label: '盈亏', key: 'pnl' },
             { label: '手续费', key: 'fee' },
             { label: '净盈亏', key: 'netPnl', showType: 'diff', diffKey: 'lastNetPnl' },
+            { label: '未匹配卖出数量', key: 'unmatchedSellQty' },
             { label: '持仓均价', key: 'posAvgPrice' },
             { label: '持仓数量', key: 'posQty' },
             { label: '持仓总额', key: 'posAmount' },
             { label: '持仓盈利', key: 'holdingProfit' },
             { label: '持仓亏损', key: 'holdingLoss' },
             { label: '持仓盈亏', key: 'holdingProfitLoss' },
-            { label: '', key: '' },
             { label: '', key: '' },
             { label: '持仓订单', key: 'tradeList', type: 'length', showType: 'link' }
           ]

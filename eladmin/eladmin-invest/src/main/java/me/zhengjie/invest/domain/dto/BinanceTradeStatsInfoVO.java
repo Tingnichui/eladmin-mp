@@ -47,6 +47,8 @@ public class BinanceTradeStatsInfoVO extends BinanceBaseStatsVO implements Seria
     private BigDecimal holdingProfitLoss = BigDecimal.ZERO;
     // 当前现货价格
     private BigDecimal currentSpotPrice;
+    // 无法由历史买入覆盖的卖出数量
+    private BigDecimal unmatchedSellQty = BigDecimal.ZERO;
     // 局部降级提示，由统计接口合并到顶层 warnings
     private List<String> warnings = new ArrayList<>();
 

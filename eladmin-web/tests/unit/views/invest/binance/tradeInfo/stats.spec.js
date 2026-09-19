@@ -122,6 +122,10 @@ describe('trade stats request lifecycle', () => {
       key: 'roi',
       type: 'percent'
     })
+    expect(spotStats.descriptionsItems).toContainEqual({
+      label: '未匹配卖出数量',
+      key: 'unmatchedSellQty'
+    })
   })
 
   it('keeps zero values visible in statistics', () => {
