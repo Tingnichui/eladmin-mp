@@ -53,16 +53,6 @@
         <!--            :value="item.value"-->
         <!--          />-->
         <!--        </el-select>-->
-        <label class="el-form-item-label">成交截止日期</label>
-        <el-date-picker
-          v-model="query.endTime"
-          align="right"
-          type="date"
-          placeholder="选择日期"
-          class="date-item"
-          value-format="yyyy-MM-dd"
-          @change="scheduleStats"
-        />
         <el-button
           slot="right"
           class="filter-item"
@@ -471,13 +461,7 @@ export default {
       })
     },
     buildStatsParams() {
-      const params = { ...this.query }
-      if (params.endTime) {
-        params.endTime = `${params.endTime} 23:59:59`
-      } else {
-        delete params.endTime
-      }
-      return params
+      return { ...this.query }
     },
     formatValue(info, key, type) {
       if (!info || info[key] === null || info[key] === undefined) {

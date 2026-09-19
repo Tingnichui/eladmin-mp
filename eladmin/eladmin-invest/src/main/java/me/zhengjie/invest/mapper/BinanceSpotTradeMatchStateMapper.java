@@ -54,4 +54,10 @@ public interface BinanceSpotTradeMatchStateMapper extends BaseMapper<BinanceSpot
                             @Param("matchedQty") BigDecimal matchedQty,
                             @Param("remainingQty") BigDecimal remainingQty,
                             @Param("matchStatus") String matchStatus);
+
+    List<BinanceSpotTradeMatchState> findStatsOpenBuys(@Param("uid") Integer uid,
+                                                       @Param("symbol") String symbol);
+
+    BigDecimal sumStatsUnmatchedSellQty(@Param("uid") Integer uid,
+                                        @Param("symbol") String symbol);
 }

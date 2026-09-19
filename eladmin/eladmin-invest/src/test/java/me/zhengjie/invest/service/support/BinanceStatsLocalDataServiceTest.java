@@ -22,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -56,9 +55,6 @@ class BinanceStatsLocalDataServiceTest {
         BinanceTradeInfoQueryCriteria criteria = new BinanceTradeInfoQueryCriteria();
         criteria.setUid(1);
         criteria.setSymbol(BinanceEnum.SYMBOL.BTCUSDT.name());
-        Timestamp cutoff = new Timestamp(5_000L);
-        criteria.setEndTime(cutoff);
-
         BinanceStatsLocalDataSnapshot snapshot = service.load(criteria);
 
         assertEquals(1, snapshot.getSpotTrades().size());
@@ -73,8 +69,8 @@ class BinanceStatsLocalDataServiceTest {
         verify(spotMapper, times(1)).findAll(spotCriteriaCaptor.capture());
         verify(usdMapper, times(1)).selectList(any(Wrapper.class));
         verify(coinMapper, times(1)).selectList(any(Wrapper.class));
-        assertEquals(cutoff, spotCriteriaCaptor.getValue().getEndTime());
-        verify(redisUtils, never()).set(any(String.class), any());
+        assertEquals(BinanceEnum.SYMBOL.BTCUSDT.name(), spotCriteriaCaptor.getValue().getSymbol());
+        verify(redisUtils, times(2)).set(any(String.class), any());
     }
 
     private BinanceTradeInfo spotTrade(Long id, long time) {

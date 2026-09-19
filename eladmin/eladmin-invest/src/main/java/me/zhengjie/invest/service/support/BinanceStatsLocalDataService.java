@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -55,7 +54,6 @@ public class BinanceStatsLocalDataService {
         BinanceTradeInfoQueryCriteria criteria = new BinanceTradeInfoQueryCriteria();
         criteria.setUid(source.getUid());
         criteria.setSymbol(source.getSymbol());
-        criteria.setEndTime(source.getEndTime());
         criteria.setOrderColumn("time");
         criteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
         List<BinanceTradeInfo> trades = spotMapper.findAll(criteria);
@@ -76,14 +74,13 @@ public class BinanceStatsLocalDataService {
                                                                BinanceStatsLocalDataSnapshot snapshot) {
         String symbol = BinanceEnum.SYMBOL.BTCUSDT.name();
         String cacheKey = USD_CLOSE_KEY + criteria.getUid() + ":" + symbol;
-        Date cachedClose = criteria.getEndTime() == null ? redisUtils.get(cacheKey, Date.class) : null;
+        Date cachedClose = redisUtils.get(cacheKey, Date.class);
         List<BinanceFuturesTradeInfo> trades = usdFuturesMapper.selectList(
                 Wrappers.lambdaQuery(BinanceFuturesTradeInfo.class)
                         .eq(BinanceFuturesTradeInfo::getUid, criteria.getUid())
                         .eq(BinanceFuturesTradeInfo::getSymbol, symbol)
                         .eq(BinanceFuturesTradeInfo::getPositionSide, "SHORT")
                         .gt(cachedClose != null, BinanceFuturesTradeInfo::getTime, cachedClose)
-                        .le(criteria.getEndTime() != null, BinanceFuturesTradeInfo::getTime, criteria.getEndTime())
                         .orderByAsc(BinanceFuturesTradeInfo::getTime)
         );
         List<BinanceFuturesTradeInfo> valid = trades == null ? new ArrayList<>() : trades.stream()
@@ -96,7 +93,7 @@ public class BinanceStatsLocalDataService {
                     return ok;
                 }).collect(Collectors.toCollection(ArrayList::new));
         Date latestClose = findLatestClose(valid, cachedClose);
-        updateCloseCache(criteria.getEndTime(), cacheKey, cachedClose, latestClose);
+        updateCloseCache(cacheKey, cachedClose, latestClose);
         return after(valid, latestClose);
     }
 
@@ -104,14 +101,13 @@ public class BinanceStatsLocalDataService {
                                                                     BinanceStatsLocalDataSnapshot snapshot) {
         String symbol = BinanceEnum.SYMBOL.BTCUSD_PERP.name();
         String cacheKey = COIN_CLOSE_KEY + criteria.getUid() + ":" + symbol;
-        Date cachedClose = criteria.getEndTime() == null ? redisUtils.get(cacheKey, Date.class) : null;
+        Date cachedClose = redisUtils.get(cacheKey, Date.class);
         List<BinanceCoinFuturesTradeInfo> trades = coinFuturesMapper.selectList(
                 Wrappers.lambdaQuery(BinanceCoinFuturesTradeInfo.class)
                         .eq(BinanceCoinFuturesTradeInfo::getUid, criteria.getUid())
                         .eq(BinanceCoinFuturesTradeInfo::getSymbol, symbol)
                         .eq(BinanceCoinFuturesTradeInfo::getPositionSide, "SHORT")
                         .gt(cachedClose != null, BinanceCoinFuturesTradeInfo::getTime, cachedClose)
-                        .le(criteria.getEndTime() != null, BinanceCoinFuturesTradeInfo::getTime, criteria.getEndTime())
                         .orderByAsc(BinanceCoinFuturesTradeInfo::getTime)
         );
         List<BinanceCoinFuturesTradeInfo> valid = trades == null ? new ArrayList<>() : trades.stream()
@@ -125,7 +121,7 @@ public class BinanceStatsLocalDataService {
                 }).collect(Collectors.toCollection(ArrayList::new));
         Date latestClose = findLatestCoinClose(valid, cachedClose);
         snapshot.setCoinPositionStartTime(latestClose == null ? new Date(0L) : latestClose);
-        updateCloseCache(criteria.getEndTime(), cacheKey, cachedClose, latestClose);
+        updateCloseCache(cacheKey, cachedClose, latestClose);
         return afterCoin(valid, latestClose);
     }
 
@@ -163,8 +159,8 @@ public class BinanceStatsLocalDataService {
                 .collect(Collectors.toCollection(ArrayList::new));
     }
 
-    private void updateCloseCache(Timestamp endTime, String key, Date cachedClose, Date latestClose) {
-        if (endTime == null && latestClose != null && (cachedClose == null || latestClose.after(cachedClose))) {
+    private void updateCloseCache(String key, Date cachedClose, Date latestClose) {
+        if (latestClose != null && (cachedClose == null || latestClose.after(cachedClose))) {
             redisUtils.set(key, latestClose);
         }
     }

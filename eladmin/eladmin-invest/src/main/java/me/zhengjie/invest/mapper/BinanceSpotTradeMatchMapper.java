@@ -17,6 +17,7 @@ package me.zhengjie.invest.mapper;
 
 import me.zhengjie.invest.domain.BinanceSpotTradeMatch;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeMatchQueryCriteria;
+import me.zhengjie.invest.domain.dto.BinanceSpotTradeStatsAggregate;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
@@ -31,4 +32,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 public interface BinanceSpotTradeMatchMapper extends BaseMapper<BinanceSpotTradeMatch> {
 
     IPage<BinanceSpotTradeMatch> findAll(@Param("criteria") BinanceSpotTradeMatchQueryCriteria criteria, Page<Object> page);
+
+    BinanceSpotTradeStatsAggregate aggregateStats(@Param("uid") Integer uid,
+                                                   @Param("symbol") String symbol);
 }

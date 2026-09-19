@@ -150,16 +150,14 @@ public class BinanceTradeInfoController {
                             .collect(Collectors.toCollection(ArrayList::new))
             );
             BinanceStatsRealtimeSnapshot realtimeSnapshot = binanceStatsRealtimeService.load(
-                    criteria.getUid(), criteria.getEndTime() == null
-                            ? localSnapshot.getCoinPositionStartTime() : null);
+                    criteria.getUid(), localSnapshot.getCoinPositionStartTime());
             resMap.put("usdFuturesStatsInfo", binanceFuturesTradeInfoService.stats(
                     criteria.getUid(), hedgeContext, realtimeSnapshot.getUsdFuturesPrice(),
                     localSnapshot.getUsdFuturesTrades()));
             resMap.put("coinFuturesStatsInfo", binanceCoinFuturesTradeInfoService.stats(
                     criteria.getUid(), hedgeContext, realtimeSnapshot.getCoinFuturesPrice(),
                     realtimeSnapshot.getCoinFundingFee(), localSnapshot.getCoinFuturesTrades()));
-            BinanceTradeStatsInfoVO spotStats = binanceTradeInfoService.stats(
-                    criteria, hedgeContext, localSnapshot.getSpotTrades());
+            BinanceTradeStatsInfoVO spotStats = binanceTradeInfoService.stats(criteria);
             resMap.put("spotFuturesStatsInfo", spotStats);
             resMap.put("spotHedgedFuturesStatsInfo", binanceTradeInfoService.hedgedStats(hedgeContext));
             resMap.put("accountInfo", realtimeSnapshot.getAccountInfo());

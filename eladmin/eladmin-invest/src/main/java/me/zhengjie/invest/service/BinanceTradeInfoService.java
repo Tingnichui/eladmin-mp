@@ -84,11 +84,6 @@ public interface BinanceTradeInfoService extends IService<BinanceTradeInfo> {
 
     BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria);
 
-    BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria, BinanceSpotHedgeContext hedgeContext);
-
-    BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria, BinanceSpotHedgeContext hedgeContext,
-                                  List<BinanceTradeInfo> snapshotTrades);
-
     void syncAll();
 
     BinanceSpotHedgeContext createHedgeContext(Integer uid, String symbol);

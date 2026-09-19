@@ -1,9 +1,12 @@
 package me.zhengjie.invest.service.impl;
 
 import me.zhengjie.invest.constants.BinanceEnum;
-import me.zhengjie.invest.domain.BinanceTradeInfo;
+import me.zhengjie.invest.domain.BinanceSpotTradeMatchState;
+import me.zhengjie.invest.domain.dto.BinanceSpotTradeStatsAggregate;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
+import me.zhengjie.invest.mapper.BinanceSpotTradeMatchMapper;
+import me.zhengjie.invest.mapper.BinanceSpotTradeMatchStateMapper;
 import me.zhengjie.invest.mapper.BinanceTradeInfoMapper;
 import me.zhengjie.invest.util.BinanceSpotUtil;
 import me.zhengjie.utils.RedisUtils;
@@ -13,14 +16,13 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -29,6 +31,8 @@ import static org.mockito.Mockito.when;
 class BinanceTradeInfoServiceImplTest {
 
     private final BinanceTradeInfoMapper mapper = mock(BinanceTradeInfoMapper.class);
+    private final BinanceSpotTradeMatchMapper matchMapper = mock(BinanceSpotTradeMatchMapper.class);
+    private final BinanceSpotTradeMatchStateMapper stateMapper = mock(BinanceSpotTradeMatchStateMapper.class);
     private final BinanceSpotUtil spotUtil = mock(BinanceSpotUtil.class);
     private final RedisUtils redisUtils = mock(RedisUtils.class);
     private final BinanceTradeInfoServiceImpl service = new BinanceTradeInfoServiceImpl();
@@ -36,17 +40,20 @@ class BinanceTradeInfoServiceImplTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(service, "binanceTradeInfoMapper", mapper);
+        ReflectionTestUtils.setField(service, "binanceSpotTradeMatchMapper", matchMapper);
+        ReflectionTestUtils.setField(service, "binanceSpotTradeMatchStateMapper", stateMapper);
         ReflectionTestUtils.setField(service, "binanceSpotUtil", spotUtil);
         ReflectionTestUtils.setField(service, "redisUtils", redisUtils);
+        when(matchMapper.aggregateStats(any(), any())).thenReturn(new BinanceSpotTradeStatsAggregate());
+        when(stateMapper.sumStatsUnmatchedSellQty(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(stateMapper.findStatsOpenBuys(any(), any())).thenReturn(Collections.emptyList());
     }
 
     @Test
     void shouldReturnStableEmptyStatsWithoutMutatingCriteria() {
         BinanceTradeInfoQueryCriteria criteria = criteria();
-        when(mapper.findAll(any(BinanceTradeInfoQueryCriteria.class)))
-                .thenReturn(Collections.emptyList());
 
-        BinanceTradeStatsInfoVO result = service.stats(criteria, null);
+        BinanceTradeStatsInfoVO result = service.stats(criteria);
 
         assertEquals(BigDecimal.ZERO, result.getPosQty());
         assertEquals(BigDecimal.ZERO, result.getPosAmount());
@@ -62,16 +69,13 @@ class BinanceTradeInfoServiceImplTest {
     }
 
     @Test
-    void shouldReturnEmptyPositionWhenAllTradesAreClosed() {
+    void shouldReturnPersistedClosedTradeStats() {
         String cacheKey = "SPOT_LAST_NET_PNL:1:BTCUSDT";
-        BinanceTradeInfo open = trade(1L, "100", "1", 1_000L);
-        BinanceTradeInfo close = trade(2L, "110", "1", 2_000L);
         when(redisUtils.get(cacheKey)).thenReturn(new BigDecimal("8.000"));
-        when(mapper.findAll(any(BinanceTradeInfoQueryCriteria.class)))
-                .thenReturn(new ArrayList<>(Collections.singletonList(open)))
-                .thenReturn(new ArrayList<>(Collections.singletonList(close)));
+        when(matchMapper.aggregateStats(eq(1), eq("BTCUSDT")))
+                .thenReturn(aggregate("100", "110", "10", "0.210", "9.790"));
 
-        BinanceTradeStatsInfoVO result = service.stats(criteria(), null);
+        BinanceTradeStatsInfoVO result = service.stats(criteria());
 
         assertEquals(BigDecimal.ZERO, result.getPosQty());
         assertEquals(BigDecimal.ZERO, result.getPosAmount());
@@ -87,29 +91,13 @@ class BinanceTradeInfoServiceImplTest {
     }
 
     @Test
-    void shouldNotUseRealtimeComparisonCacheForHistoricalStats() {
-        BinanceTradeInfoQueryCriteria criteria = criteria();
-        criteria.setEndTime(new Timestamp(5_000L));
-        when(mapper.findAll(any(BinanceTradeInfoQueryCriteria.class)))
-                .thenReturn(Collections.emptyList());
-
-        BinanceTradeStatsInfoVO result = service.stats(criteria, null);
-
-        assertNull(result.getLastNetPnl());
-        verify(redisUtils, never()).get(any(String.class));
-        verify(redisUtils, never()).set(any(String.class), any());
-    }
-
-    @Test
-    void shouldKeepHistoricalStatsWhenRealtimePriceFails() {
-        BinanceTradeInfo open = trade(1L, "100", "2", 1_000L);
-        when(mapper.findAll(any(BinanceTradeInfoQueryCriteria.class)))
-                .thenReturn(new ArrayList<>(Collections.singletonList(open)))
-                .thenReturn(Collections.emptyList());
+    void shouldKeepPositionStatsWhenRealtimePriceFails() {
+        when(stateMapper.findStatsOpenBuys(eq(1), eq("BTCUSDT")))
+                .thenReturn(Collections.singletonList(position(1L, "100", "2", 1_000L)));
         when(spotUtil.getPrice(BinanceEnum.SYMBOL.BTCUSDT))
                 .thenThrow(new RuntimeException("proxy unavailable"));
 
-        BinanceTradeStatsInfoVO result = service.stats(criteria(), null);
+        BinanceTradeStatsInfoVO result = service.stats(criteria());
 
         assertEquals(new BigDecimal("2"), result.getPosQty());
         assertEquals(new BigDecimal("200"), result.getPosAmount());
@@ -120,17 +108,14 @@ class BinanceTradeInfoServiceImplTest {
     }
 
     @Test
-    void shouldUseFifoInsteadOfTheLowestBuyPrice() {
-        BinanceTradeInfo firstBuy = trade(1L, "120", "1", 1_000L);
-        firstBuy.setIsBuyer(1);
-        BinanceTradeInfo secondBuy = trade(2L, "100", "1", 2_000L);
-        secondBuy.setIsBuyer(1);
-        BinanceTradeInfo sell = trade(3L, "130", "1", 3_000L);
-        sell.setIsBuyer(0);
+    void shouldUsePersistedFifoResultAndRemainingPosition() {
+        when(matchMapper.aggregateStats(eq(1), eq("BTCUSDT")))
+                .thenReturn(aggregate("120", "130", "10", "0.250", "9.750"));
+        when(stateMapper.findStatsOpenBuys(eq(1), eq("BTCUSDT")))
+                .thenReturn(Collections.singletonList(position(2L, "100", "1", 2_000L)));
         when(spotUtil.getPrice(BinanceEnum.SYMBOL.BTCUSDT)).thenReturn(new BigDecimal("140"));
 
-        BinanceTradeStatsInfoVO result = service.stats(
-                criteria(), null, new ArrayList<>(Arrays.asList(secondBuy, sell, firstBuy)));
+        BinanceTradeStatsInfoVO result = service.stats(criteria());
 
         assertEquals(new BigDecimal("120"), result.getTotalBuyAmount());
         assertEquals(new BigDecimal("130"), result.getTotalSellAmount());
@@ -140,20 +125,19 @@ class BinanceTradeInfoServiceImplTest {
     }
 
     @Test
-    void shouldReportASellWithoutAnEarlierBuyInsteadOfMatchingAFutureBuy() {
-        BinanceTradeInfo sell = trade(1L, "110", "1", 1_000L);
-        sell.setIsBuyer(0);
-        BinanceTradeInfo futureBuy = trade(2L, "100", "1", 2_000L);
-        futureBuy.setIsBuyer(1);
+    void shouldReportPersistedUnmatchedSell() {
+        when(stateMapper.sumStatsUnmatchedSellQty(eq(1), eq("BTCUSDT")))
+                .thenReturn(BigDecimal.ONE);
+        when(stateMapper.findStatsOpenBuys(eq(1), eq("BTCUSDT")))
+                .thenReturn(Collections.singletonList(position(2L, "100", "1", 2_000L)));
         when(spotUtil.getPrice(BinanceEnum.SYMBOL.BTCUSDT)).thenReturn(new BigDecimal("120"));
 
-        BinanceTradeStatsInfoVO result = service.stats(
-                criteria(), null, new ArrayList<>(Arrays.asList(futureBuy, sell)));
+        BinanceTradeStatsInfoVO result = service.stats(criteria());
 
         assertEquals(BigDecimal.ZERO, result.getTotalBuyAmount());
         assertEquals(BigDecimal.ZERO, result.getTotalSellAmount());
-        assertEquals(new BigDecimal("1"), result.getUnmatchedSellQty());
-        assertEquals(new BigDecimal("1"), result.getPosQty());
+        assertEquals(BigDecimal.ONE, result.getUnmatchedSellQty());
+        assertEquals(BigDecimal.ONE, result.getPosQty());
         assertTrue(result.getWarnings().contains("部分卖出成交缺少可匹配的历史买入"));
     }
 
@@ -164,12 +148,23 @@ class BinanceTradeInfoServiceImplTest {
         return criteria;
     }
 
-    private BinanceTradeInfo trade(Long id, String price, String qty, long time) {
-        BinanceTradeInfo trade = new BinanceTradeInfo();
-        trade.setId(id);
-        trade.setPrice(new BigDecimal(price));
-        trade.setQty(new BigDecimal(qty));
-        trade.setTime(new Timestamp(time));
-        return trade;
+    private BinanceSpotTradeStatsAggregate aggregate(String buyAmount, String sellAmount,
+                                                      String pnl, String fee, String netPnl) {
+        BinanceSpotTradeStatsAggregate aggregate = new BinanceSpotTradeStatsAggregate();
+        aggregate.setTotalBuyAmount(new BigDecimal(buyAmount));
+        aggregate.setTotalSellAmount(new BigDecimal(sellAmount));
+        aggregate.setPnl(new BigDecimal(pnl));
+        aggregate.setFee(new BigDecimal(fee));
+        aggregate.setNetPnl(new BigDecimal(netPnl));
+        return aggregate;
+    }
+
+    private BinanceSpotTradeMatchState position(Long tradeId, String price, String qty, long time) {
+        BinanceSpotTradeMatchState position = new BinanceSpotTradeMatchState();
+        position.setTradeId(tradeId);
+        position.setPrice(new BigDecimal(price));
+        position.setRemainingQty(new BigDecimal(qty));
+        position.setTradeTime(new Timestamp(time));
+        return position;
     }
 }

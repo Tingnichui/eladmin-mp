@@ -23,14 +23,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
+import me.zhengjie.invest.domain.BinanceSpotTradeMatchState;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
 import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
 import me.zhengjie.invest.domain.dto.BinanceOrderVO;
 import me.zhengjie.invest.domain.dto.BinanceSpotHedgedTradeStatsInfoVO;
+import me.zhengjie.invest.domain.dto.BinanceSpotTradeStatsAggregate;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.mapper.BinanceTradeInfoMapper;
+import me.zhengjie.invest.mapper.BinanceSpotTradeMatchMapper;
+import me.zhengjie.invest.mapper.BinanceSpotTradeMatchStateMapper;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.service.BinanceSpotTradeMatcherService;
 import me.zhengjie.invest.service.BinanceTradeInfoExtService;
@@ -39,14 +43,12 @@ import me.zhengjie.invest.service.support.BinanceSpotHedgeContext;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceSpotUtil;
 import me.zhengjie.invest.util.BinanceUsdFuturesUtil;
-import me.zhengjie.invest.util.TradeMatcherUtil;
 import me.zhengjie.utils.FileUtil;
 import me.zhengjie.utils.PageResult;
 import me.zhengjie.utils.PageUtil;
 import me.zhengjie.utils.RedisUtils;
 import me.zhengjie.utils.enums.OrderDirectionEnum;
 import org.apache.commons.collections4.CollectionUtils;
-import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -72,6 +74,10 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
     @Resource
     private BinanceTradeInfoMapper binanceTradeInfoMapper;
+    @Resource
+    private BinanceSpotTradeMatchMapper binanceSpotTradeMatchMapper;
+    @Resource
+    private BinanceSpotTradeMatchStateMapper binanceSpotTradeMatchStateMapper;
     @Resource
     private BinanceAccountInfoService binanceAccountInfoService;
     @Resource
@@ -200,136 +206,71 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
     @Override
     public BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria) {
-        return stats(criteria, null);
-    }
-
-    @Override
-    public BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria, BinanceSpotHedgeContext hedgeContext) {
-        return stats(criteria, hedgeContext, null);
-    }
-
-    @Override
-    public BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria,
-                                         BinanceSpotHedgeContext hedgeContext,
-                                         List<BinanceTradeInfo> snapshotTrades) {
         final String key = "SPOT_LAST_NET_PNL:" + criteria.getUid() + ":" + criteria.getSymbol();
-        final boolean realtimeStats = criteria.getEndTime() == null;
         BinanceTradeStatsInfoVO statsInfoVO = new BinanceTradeStatsInfoVO();
-        if (realtimeStats) {
-            statsInfoVO.setLastNetPnl((BigDecimal) redisUtils.get(key));
-        }
-        BinanceTradeInfoQueryCriteria statsCriteria = copyCriteria(criteria);
-
-        // 普通现货统计独立采用 FIFO，不受合约对冲分配影响
-        statsCriteria.setHedgedFlag(null);
-
-        // 撮合交易对
-        List<BinanceTradeInfo> openList, closeList;
+        statsInfoVO.setLastNetPnl((BigDecimal) redisUtils.get(key));
         final boolean side = true;
         final String feeRate = "0.001";
+        BinanceSpotTradeStatsAggregate aggregate = binanceSpotTradeMatchMapper.aggregateStats(
+                criteria.getUid(), criteria.getSymbol());
+        if (aggregate == null) {
+            aggregate = new BinanceSpotTradeStatsAggregate();
+        }
+        statsInfoVO.setTotalBuyAmount(zeroIfNull(aggregate.getTotalBuyAmount()));
+        statsInfoVO.setTotalSellAmount(zeroIfNull(aggregate.getTotalSellAmount()));
+        statsInfoVO.setPnl(zeroIfNull(aggregate.getPnl()));
+        statsInfoVO.setFee(zeroIfNull(aggregate.getFee()));
+        statsInfoVO.setNetPnl(zeroIfNull(aggregate.getNetPnl()));
+        statsInfoVO.setRoi(statsInfoVO.getTotalBuyAmount().compareTo(BigDecimal.ZERO) > 0
+                ? statsInfoVO.getNetPnl().divide(statsInfoVO.getTotalBuyAmount(), 8, RoundingMode.HALF_UP)
+                : null);
+        redisUtils.set(key, statsInfoVO.getNetPnl());
 
-        {
-            // 查询所有买入，FIFO 撮合会按成交时间和成交 ID 排序
-            if (snapshotTrades == null) {
-                statsCriteria.setOrderColumn("time");
-                statsCriteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
-                statsCriteria.setIsBuyer(1);
-                openList = sanitizeTrades(binanceTradeInfoMapper.findAll(statsCriteria), statsInfoVO, "买入");
-            } else {
-                openList = snapshotTrades.stream()
-                        .filter(trade -> Integer.valueOf(1).equals(trade.getIsBuyer()))
-                        .map(this::copyTrade)
-                        .sorted(Comparator.comparing(BinanceTradeInfo::getTime)
-                                .thenComparing(BinanceTradeInfo::getId))
-                        .collect(Collectors.toCollection(ArrayList::new));
-            }
-            // 查询所有卖出 时间从早到晚
-            if (snapshotTrades == null) {
-                statsCriteria.setOrderColumn("time");
-                statsCriteria.setOrderDirection(OrderDirectionEnum.ASC.getValue());
-                statsCriteria.setIsBuyer(0);
-                closeList = sanitizeTrades(binanceTradeInfoMapper.findAll(statsCriteria), statsInfoVO, "卖出");
-            } else {
-                closeList = snapshotTrades.stream()
-                        .filter(trade -> Integer.valueOf(0).equals(trade.getIsBuyer()))
-                        .map(this::copyTrade)
-                        .sorted(Comparator.comparing(BinanceTradeInfo::getTime)
-                                .thenComparing(BinanceTradeInfo::getId))
-                        .collect(Collectors.toCollection(ArrayList::new));
-            }
-
-            List<MatchedTradeInfo> matchedList = TradeMatcherUtil.matchTradesFifo(
-                    side,
-                    feeRate,
-                    openList,
-                    closeList,
-                    BinanceTradeInfo::getQty,
-                    BinanceTradeInfo::setQty,
-                    BinanceTradeInfo::getPrice,
-                    BinanceTradeInfo::getTime,
-                    BinanceTradeInfo::getId
-            );
-
-            BigDecimal unmatchedSellQty = closeList.stream()
-                    .map(BinanceTradeInfo::getQty)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            statsInfoVO.setUnmatchedSellQty(unmatchedSellQty);
-            if (unmatchedSellQty.compareTo(BigDecimal.ZERO) > 0) {
-                addWarning(statsInfoVO, "部分卖出成交缺少可匹配的历史买入");
-            }
-
-            // 买入总金额
-            statsInfoVO.setTotalBuyAmount(matchedList.stream().map(MatchedTradeInfo::getOpenAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
-            // 卖出总金额
-            statsInfoVO.setTotalSellAmount(matchedList.stream().map(MatchedTradeInfo::getCloseAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
-
-            // 盈亏
-            statsInfoVO.setPnl(matchedList.stream().map(MatchedTradeInfo::getPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
-            // 手续费
-            statsInfoVO.setFee(matchedList.stream().map(MatchedTradeInfo::getFee).reduce(BigDecimal.ZERO, BigDecimal::add));
-            // 净盈亏
-            statsInfoVO.setNetPnl(matchedList.stream().map(MatchedTradeInfo::getNetPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
-            // 收益率：净盈亏 / 买入总额
-            statsInfoVO.setRoi(statsInfoVO.getTotalBuyAmount().compareTo(BigDecimal.ZERO) > 0
-                    ? statsInfoVO.getNetPnl().divide(statsInfoVO.getTotalBuyAmount(), 8, RoundingMode.HALF_UP)
-                    : null);
-            if (realtimeStats) {
-                redisUtils.set(key, statsInfoVO.getNetPnl());
-            }
-
+        BigDecimal unmatchedSellQty = zeroIfNull(binanceSpotTradeMatchStateMapper.sumStatsUnmatchedSellQty(
+                criteria.getUid(), criteria.getSymbol()));
+        statsInfoVO.setUnmatchedSellQty(unmatchedSellQty);
+        if (unmatchedSellQty.compareTo(BigDecimal.ZERO) > 0) {
+            addWarning(statsInfoVO, "部分卖出成交缺少可匹配的历史买入");
         }
 
-
-
-        // 剩余未平仓总金额
-        BigDecimal totalWaitSellAmount = openList.stream().map(b -> b.getQty().multiply(b.getPrice())).reduce(BigDecimal.ZERO, BigDecimal::add);
+        List<BinanceSpotTradeMatchState> openList = binanceSpotTradeMatchStateMapper.findStatsOpenBuys(
+                criteria.getUid(), criteria.getSymbol());
+        if (openList == null) {
+            openList = Collections.emptyList();
+        }
+        BigDecimal totalWaitSellAmount = openList.stream()
+                .map(b -> zeroIfNull(b.getRemainingQty()).multiply(zeroIfNull(b.getPrice())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         statsInfoVO.setPosAmount(totalWaitSellAmount);
-        // 剩余未平仓总数量
         BigDecimal totalWaitSellQty = openList.stream()
-                .map(BinanceTradeInfo::getQty)
+                .map(BinanceSpotTradeMatchState::getRemainingQty)
+                .map(this::zeroIfNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         statsInfoVO.setPosQty(totalWaitSellQty);
-        // 剩余未平仓均价
         statsInfoVO.setPosAvgPrice(totalWaitSellQty.compareTo(BigDecimal.ZERO) > 0
                 ? totalWaitSellAmount.divide(totalWaitSellQty, 8, RoundingMode.HALF_UP)
                 : null);
-
-        // 剩余待平仓交易
-        openList.sort(Comparator.comparing(BinanceTradeInfo::getPrice).reversed());
 
         if (openList.isEmpty()) {
             return statsInfoVO;
         }
 
         try {
-            BigDecimal currentPrice = binanceSpotUtil.getPrice(BinanceEnum.SYMBOL.valueOf(statsCriteria.getSymbol()));
+            BigDecimal currentPrice = binanceSpotUtil.getPrice(BinanceEnum.SYMBOL.valueOf(criteria.getSymbol()));
             if (currentPrice == null || currentPrice.compareTo(BigDecimal.ZERO) <= 0) {
                 throw new IllegalStateException("现货价格为空或无效");
             }
             statsInfoVO.setCurrentSpotPrice(currentPrice);
 
 
-            List<MatchedTradeInfo> matchedTradeInfos = TradeMatcherUtil.matchTrades(side, feeRate, openList, BinanceTradeInfo::getQty, BinanceTradeInfo::getPrice, currentPrice, null);
+            List<MatchedTradeInfo> matchedTradeInfos = openList.stream().map(position -> {
+                MatchedTradeInfo trade = new MatchedTradeInfo(side, feeRate);
+                trade.setQty(position.getRemainingQty());
+                trade.setOpenPrice(position.getPrice());
+                trade.setOpenTime(position.getTradeTime());
+                trade.setClosePrice(currentPrice);
+                return trade;
+            }).collect(Collectors.toList());
             // 持仓盈利
             statsInfoVO.setHoldingProfit(matchedTradeInfos.stream().map(MatchedTradeInfo::getNetPnl).filter(netPnl -> netPnl.compareTo(BigDecimal.ZERO) > 0).reduce(BigDecimal.ZERO, BigDecimal::add));
             // 持仓亏损
@@ -356,46 +297,14 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             statsInfoVO.setTradeList(Collections.emptyList());
             addWarning(statsInfoVO, "现货持仓实时估值暂不可用");
             log.warn("现货持仓实时估值失败: uid={}, symbol={}, error={}",
-                    statsCriteria.getUid(), statsCriteria.getSymbol(), e.getClass().getSimpleName());
+                    criteria.getUid(), criteria.getSymbol(), e.getClass().getSimpleName());
         }
 
         return statsInfoVO;
     }
 
-    private BinanceTradeInfoQueryCriteria copyCriteria(BinanceTradeInfoQueryCriteria source) {
-        BinanceTradeInfoQueryCriteria target = new BinanceTradeInfoQueryCriteria();
-        BeanUtils.copyProperties(source, target);
-        return target;
-    }
-
-    private BinanceTradeInfo copyTrade(BinanceTradeInfo source) {
-        BinanceTradeInfo target = new BinanceTradeInfo();
-        target.copy(source);
-        return target;
-    }
-
-    private List<BinanceTradeInfo> sanitizeTrades(List<BinanceTradeInfo> trades,
-                                                  BinanceTradeStatsInfoVO statsInfo,
-                                                  String tradeType) {
-        if (CollectionUtils.isEmpty(trades)) {
-            return new ArrayList<>();
-        }
-        List<BinanceTradeInfo> validTrades = trades.stream()
-                .filter(this::isValidTrade)
-                .collect(Collectors.toCollection(ArrayList::new));
-        int invalidCount = trades.size() - validTrades.size();
-        if (invalidCount > 0) {
-            addWarning(statsInfo, "部分现货历史交易数据无效，已忽略");
-            log.warn("忽略无效现货交易: type={}, count={}", tradeType, invalidCount);
-        }
-        return validTrades;
-    }
-
-    private boolean isValidTrade(BinanceTradeInfo trade) {
-        return trade != null
-                && trade.getQty() != null && trade.getQty().compareTo(BigDecimal.ZERO) > 0
-                && trade.getPrice() != null && trade.getPrice().compareTo(BigDecimal.ZERO) > 0
-                && trade.getTime() != null;
+    private BigDecimal zeroIfNull(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 
     private void addWarning(BinanceTradeStatsInfoVO statsInfo, String warning) {

@@ -25,6 +25,14 @@
         id, uid, symbol, buy_trade_id, sell_trade_id, matched_qty, buy_price, sell_price, buy_time, sell_time, buy_amount, sell_amount, fee_rate, pnl, fee, net_pnl, create_time
     </sql>
 
+    <resultMap id="StatsAggregateResultMap" type="me.zhengjie.invest.domain.dto.BinanceSpotTradeStatsAggregate">
+        <result column="total_buy_amount" property="totalBuyAmount"/>
+        <result column="total_sell_amount" property="totalSellAmount"/>
+        <result column="pnl" property="pnl"/>
+        <result column="fee" property="fee"/>
+        <result column="net_pnl" property="netPnl"/>
+    </resultMap>
+
     <select id="findAll" resultMap="BaseResultMap">
         SELECT
         <include refid="Base_Column_List"/>
@@ -49,5 +57,16 @@
                 AND t1.sell_time BETWEEN #{criteria.sellTime[0]} AND #{criteria.sellTime[1]}
             </if>
         ORDER BY t1.id DESC
+    </select>
+
+    <select id="aggregateStats" resultMap="StatsAggregateResultMap">
+        SELECT COALESCE(SUM(t1.buy_amount), 0) AS total_buy_amount,
+               COALESCE(SUM(t1.sell_amount), 0) AS total_sell_amount,
+               COALESCE(SUM(t1.pnl), 0) AS pnl,
+               COALESCE(SUM(t1.fee), 0) AS fee,
+               COALESCE(SUM(t1.net_pnl), 0) AS net_pnl
+        FROM binance_spot_trade_match t1
+        WHERE t1.uid = #{uid}
+          AND t1.symbol = #{symbol}
     </select>
 </mapper>
