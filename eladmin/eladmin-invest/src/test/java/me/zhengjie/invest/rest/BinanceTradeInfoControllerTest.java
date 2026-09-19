@@ -2,9 +2,11 @@ package me.zhengjie.invest.rest;
 
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
+import me.zhengjie.invest.domain.dto.BinanceSpotTradeMatchResult;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.service.BinanceCoinFuturesTradeInfoService;
 import me.zhengjie.invest.service.BinanceFuturesTradeInfoService;
+import me.zhengjie.invest.service.BinanceSpotTradeMatcherService;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceSpotUtil;
@@ -32,6 +34,7 @@ class BinanceTradeInfoControllerTest {
             mock(BinanceCoinFuturesTradeInfoService.class);
     private final BinanceAccountInfoService accountService = mock(BinanceAccountInfoService.class);
     private final BinanceSpotUtil spotUtil = mock(BinanceSpotUtil.class);
+    private final BinanceSpotTradeMatcherService matcherService = mock(BinanceSpotTradeMatcherService.class);
     private final BinanceTradeInfoController controller = new BinanceTradeInfoController();
 
     @BeforeEach
@@ -41,6 +44,7 @@ class BinanceTradeInfoControllerTest {
         ReflectionTestUtils.setField(controller, "binanceCoinFuturesTradeInfoService", coinFuturesService);
         ReflectionTestUtils.setField(controller, "binanceAccountInfoService", accountService);
         ReflectionTestUtils.setField(controller, "binanceSpotUtil", spotUtil);
+        ReflectionTestUtils.setField(controller, "binanceSpotTradeMatcherService", matcherService);
     }
 
     @Test
@@ -73,5 +77,28 @@ class BinanceTradeInfoControllerTest {
 
         verify(accountService, never()).getAccountByUid(7);
         verifyNoInteractions(spotService);
+    }
+
+    @Test
+    void shouldInitializeAndMatchSelectedSpotSymbol() {
+        BinanceSpotTradeMatchResult result = new BinanceSpotTradeMatchResult();
+        result.setInitializedCount(23);
+        result.setMatchCount(18);
+        when(matcherService.initializeAndMatch(7, "BNBUSDT")).thenReturn(result);
+
+        ResponseEntity<BinanceSpotTradeMatchResult> response =
+                controller.matchSpotTradeInfo(7, "BNBUSDT");
+
+        assertEquals(23, response.getBody().getInitializedCount());
+        assertEquals(18, response.getBody().getMatchCount());
+        verify(matcherService).initializeAndMatch(7, "BNBUSDT");
+    }
+
+    @Test
+    void shouldRejectFuturesSymbolForSpotMatching() {
+        assertThrows(BadRequestException.class,
+                () -> controller.matchSpotTradeInfo(7, "BTCUSD_PERP"));
+
+        verifyNoInteractions(matcherService);
     }
 }
