@@ -39,7 +39,7 @@ export function formatDecimal(val) {
 }
 
 export function formatByType(value, type) {
-  if (!value) {
+  if (value === null || value === undefined) {
     return ''
   }
   if (type === 'percent') return formatPercent(value)

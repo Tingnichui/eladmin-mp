@@ -21,7 +21,6 @@
 import echarts from 'echarts'
 require('echarts/theme/macarons') // echarts theme
 import { debounce } from '@/utils'
-import { price } from '@/api/investKlinesRecord'
 import { addAmount, divAmount, formatPercent, mulAmount, subAmount } from '@/utils/numberUtil'
 
 export default {
@@ -42,16 +41,15 @@ export default {
       type: Array,
       default: () => [] // 避免未定义时出错
     },
-    symbol: {
-      type: String,
-      default: () => '' // 避免未定义时出错
+    currentPrice: {
+      type: [Number, String],
+      default: null
     }
   },
   data() {
     return {
       chart: null,
       priceInterval: 500,
-      currentPrice: '',
       totalWaitAvgSellPrice: '',
       totalWaitSellQty: ''
     }
@@ -62,6 +60,9 @@ export default {
       handler() {
         this.updateChart()
       }
+    },
+    currentPrice() {
+      this.updateChart()
     }
   },
   mounted() {
@@ -72,11 +73,6 @@ export default {
       }
     }, 100)
     window.addEventListener('resize', this.__resizeHandler)
-
-    // 每 5 更新一次
-    setInterval(() => {
-      this.updateChart()
-    }, 5000)
   },
   beforeDestroy() {
     if (this.chart) {
@@ -138,12 +134,21 @@ export default {
       })
     },
     updateChart() {
-      if (!this.chart || !this.rowData.length) return
-
-      // 获取当前价格
-      price(this.symbol).then(res => {
-        this.currentPrice = res
-      })
+      if (!this.chart) return
+      if (!this.rowData.length) {
+        this.totalWaitAvgSellPrice = ''
+        this.totalWaitSellQty = ''
+        this.chart.clear()
+        this.chart.setOption({
+          title: {
+            text: '暂无持仓数据',
+            left: 'center',
+            top: 'middle',
+            textStyle: { color: '#999', fontSize: 14, fontWeight: 'normal' }
+          }
+        })
+        return
+      }
 
       const buckets = this.groupTradesByPrice(this.rowData)
       // 先建立一个 map，range -> avgPrice

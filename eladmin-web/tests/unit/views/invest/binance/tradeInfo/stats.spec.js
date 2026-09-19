@@ -124,6 +124,40 @@ describe('trade stats request lifecycle', () => {
     })
   })
 
+  it('keeps zero values visible in statistics', () => {
+    expect(Stats.methods.formatValue({}, 'amount')).toBe('--')
+    expect(Stats.methods.formatValue({ amount: 0 }, 'amount')).toBe('0.0000')
+    expect(Stats.methods.formatValue({ roi: 0 }, 'roi', 'percent')).toBe('0.00%')
+  })
+
+  it('initializes the reactive open price filter', () => {
+    const state = Stats.data()
+
+    expect(state.filterForm).toEqual({
+      side: null,
+      openPrice: null,
+      priceRange: 500
+    })
+    expect(state.filterForm).not.toHaveProperty('minPrice')
+  })
+
+  it('filters open trades by direction and open price range', () => {
+    const filteredTrades = Stats.computed.filteredTrades.call({
+      tradeList: [
+        { id: 1, side: true, openPrice: 110 },
+        { id: 2, side: true, openPrice: 90 },
+        { id: 3, side: false, openPrice: 90 }
+      ],
+      filterForm: {
+        side: true,
+        openPrice: '100',
+        priceRange: 20
+      }
+    })
+
+    expect(filteredTrades.map(item => item.id)).toEqual([1])
+  })
+
   it('syncs only the selected account and symbol before refreshing stats', async() => {
     crudBinanceTradeInfo.syncSelected.mockResolvedValue({
       spotCount: 2,

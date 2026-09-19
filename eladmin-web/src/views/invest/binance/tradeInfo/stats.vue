@@ -94,7 +94,6 @@
         />
         <el-descriptions
           v-for="description in statsDescriptions"
-          v-show="description.showFlag || (description.data.posQty && description.data.posQty !== 0)"
           :key="description.title"
           :title="description.title"
           :column="3"
@@ -134,7 +133,12 @@
           </el-descriptions-item>
         </el-descriptions>
         <div>
-          <trade-position-distribution-bar :row-data="statsInfo.spotFuturesStatsInfo.tradeList" :symbol="query.symbol" height="400px" style="margin-top: 20px" />
+          <trade-position-distribution-bar
+            :row-data="statsInfo.spotFuturesStatsInfo.tradeList"
+            :current-price="statsInfo.spotFuturesStatsInfo.currentSpotPrice"
+            height="400px"
+            style="margin-top: 20px"
+          />
           <!--          <trade-profit-rate-scatter :row-data="statsInfo.matchedTradeInfoList" height="400px" style="margin-top: 20px" />-->
         </div>
       </div>
@@ -225,7 +229,7 @@ export default {
       ],
       filterForm: {
         side: null,
-        minPrice: null,
+        openPrice: null,
         priceRange: 500
       }
     }
@@ -249,7 +253,6 @@ export default {
       return [
         {
           title: '账户统计',
-          showFlag: true,
           data: (this.statsInfo && this.statsInfo.accountInfo) || {},
           descriptionsItems: [
             { label: '汇率', key: 'rmbToUsdRate' },
