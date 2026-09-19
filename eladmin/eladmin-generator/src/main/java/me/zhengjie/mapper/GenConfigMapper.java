@@ -28,4 +28,6 @@ import org.apache.ibatis.annotations.Param;
 public interface GenConfigMapper extends BaseMapper<GenConfig> {
 
     GenConfig findByTableName(@Param("tableName") String tableName);
+
+    int deleteDuplicates(@Param("tableName") String tableName, @Param("configId") Long configId);
 }

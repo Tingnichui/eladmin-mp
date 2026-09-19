@@ -23,5 +23,13 @@
         <include refid="Base_Column_List"/>
         FROM code_config
         WHERE table_name = #{tableName}
+        ORDER BY config_id DESC
+        LIMIT 1
     </select>
+
+    <delete id="deleteDuplicates">
+        DELETE FROM code_config
+        WHERE table_name = #{tableName}
+          AND config_id != #{configId}
+    </delete>
 </mapper>

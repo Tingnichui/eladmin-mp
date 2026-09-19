@@ -8,6 +8,7 @@
         <result column="column_type" property="columnType"/>
         <result column="key_type" property="keyType"/>
         <result column="extra" property="extra"/>
+        <result column="column_default" property="columnDefault"/>
         <result column="remark" property="remark"/>
         <result column="not_null" property="notNull"/>
         <result column="list_show" property="listShow"/>
@@ -24,7 +25,7 @@
     <select id="getTables" resultType="me.zhengjie.domain.dto.TableInfo">
         select table_name, create_time, engine, table_collation as coding, table_comment as remark
         from information_schema.tables
-        where table_schema in ('eladmin','media_crawler')
+        where table_schema = (select database())
         and table_name like concat('%',#{tableName},'%')
         order by create_time desc
     </select>
@@ -40,10 +41,10 @@
     <select id="getColumns" resultMap="BaseResultMap">
         select column_name, if(is_nullable = 'NO', 1, 0) not_null,
                data_type as column_type, column_comment as remark,
-               column_key key_type, extra
+               column_key key_type, extra, column_default
         from information_schema.columns
         where table_name = #{tableName}
-        and table_schema in ('eladmin','media_crawler')
+        and table_schema = (select database())
         order by ordinal_position
     </select>
 </mapper>

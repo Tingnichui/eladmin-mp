@@ -68,6 +68,10 @@
                       value="Textarea"
                     />
                     <el-option
+                      label="数字框"
+                      value="Number"
+                    />
+                    <el-option
                       label="单选框"
                       value="Radio"
                     />

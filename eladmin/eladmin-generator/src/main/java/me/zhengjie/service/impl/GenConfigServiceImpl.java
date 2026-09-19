@@ -15,13 +15,18 @@
  */
 package me.zhengjie.service.impl;
 
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import me.zhengjie.domain.GenConfig;
+import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.mapper.GenConfigMapper;
 import me.zhengjie.service.GenConfigService;
 import org.springframework.stereotype.Service;
-import java.io.File;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /**
  * @author Zheng Jie
@@ -44,26 +49,45 @@ public class GenConfigServiceImpl extends ServiceImpl<GenConfigMapper, GenConfig
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public GenConfig update(String tableName, GenConfig genConfig) {
-        String separator = File.separator;
-        String[] paths;
-        String symbol = "\\";
-        if (symbol.equals(separator)) {
-            paths = genConfig.getPath().split("\\\\");
+        genConfig.setTableName(tableName);
+        genConfig.setApiPath(resolveApiPath(genConfig.getPath()));
+        GenConfig existing = genConfigMapper.findByTableName(tableName);
+        if (existing != null) {
+            genConfig.setId(existing.getId());
+            genConfigMapper.updateById(genConfig);
         } else {
-            paths = genConfig.getPath().split(File.separator);
+            genConfigMapper.insert(genConfig);
         }
-        StringBuilder api = new StringBuilder();
-        for (String path : paths) {
-            api.append(path);
-            api.append(separator);
-            if ("src".equals(path)) {
-                api.append("api");
-                break;
-            }
-        }
-        genConfig.setApiPath(api.toString());
-        saveOrUpdate(genConfig);
+        genConfigMapper.deleteDuplicates(tableName, genConfig.getId());
         return genConfig;
+    }
+
+    private String resolveApiPath(String viewPathValue) {
+        if (StrUtil.isBlank(viewPathValue)) {
+            throw new BadRequestException("前端文件路径不能为空");
+        }
+        Path viewPath = Paths.get(viewPathValue).toAbsolutePath().normalize();
+        Path webRoot = findParent(viewPath, "eladmin-web");
+        if (webRoot == null) {
+            throw new BadRequestException("前端文件路径必须位于 eladmin-web 目录下");
+        }
+        Path viewsRoot = webRoot.resolve("src").resolve("views").normalize();
+        if (!viewPath.startsWith(viewsRoot)) {
+            throw new BadRequestException("前端文件路径必须位于 eladmin-web/src/views 下");
+        }
+        return webRoot.resolve("src").resolve("api").normalize().toString();
+    }
+
+    private Path findParent(Path path, String name) {
+        Path current = path;
+        while (current != null) {
+            if (name.equalsIgnoreCase(String.valueOf(current.getFileName()))) {
+                return current;
+            }
+            current = current.getParent();
+        }
+        return null;
     }
 }

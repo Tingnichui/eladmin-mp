@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.*;
 import static me.zhengjie.utils.FileUtil.SYS_TEM_DIR;
@@ -152,9 +154,10 @@ public class GenUtil {
         TemplateEngine engine = TemplateUtil.createEngine(new TemplateConfig("template", TemplateConfig.ResourceMode.CLASSPATH));
         // 生成后端代码
         List<String> templates = getAdminTemplateNames();
+        String rootPath = resolveBackendRoot(genConfig);
+        validateFrontendPaths(genConfig);
         for (String templateName : templates) {
             Template template = engine.getTemplate("admin/" + templateName + ".ftl");
-            String rootPath = System.getProperty("user.dir");
             String filePath = getAdminFilePath(templateName, genConfig, genMap.get("className").toString(), rootPath);
 
             assert filePath != null;
@@ -203,14 +206,14 @@ public class GenUtil {
         // 表名
         genMap.put("tableName", genConfig.getTableName());
         // 大写开头的类名
-        String className = StringUtils.toCapitalizeCamelCase(genConfig.getTableName());
+        String className = toCapitalizeCamelCase(genConfig.getTableName());
         // 小写开头的类名
-        String changeClassName = StringUtils.toCamelCase(genConfig.getTableName());
+        String changeClassName = toCamelCase(genConfig.getTableName());
         // 判断是否去除表前缀
-        if (StringUtils.isNotEmpty(genConfig.getPrefix())) {
-            className = StringUtils.toCapitalizeCamelCase(StrUtil.removePrefix(genConfig.getTableName(), genConfig.getPrefix()));
-            changeClassName = StringUtils.toCamelCase(StrUtil.removePrefix(genConfig.getTableName(), genConfig.getPrefix()));
-            changeClassName = StringUtils.uncapitalize(changeClassName);
+        if (StrUtil.isNotEmpty(genConfig.getPrefix())) {
+            className = toCapitalizeCamelCase(StrUtil.removePrefix(genConfig.getTableName(), genConfig.getPrefix()));
+            changeClassName = toCamelCase(StrUtil.removePrefix(genConfig.getTableName(), genConfig.getPrefix()));
+            changeClassName = StrUtil.lowerFirst(changeClassName);
         }
         // 保存类名
         genMap.put("className", className);
@@ -260,9 +263,9 @@ public class GenUtil {
             // 主键类型
             String colType = ColUtil.cloToJava(column.getColumnType());
             // 小写开头的字段名
-            String changeColumnName = StringUtils.toCamelCase(column.getColumnName());
+            String changeColumnName = toCamelCase(column.getColumnName());
             // 大写开头的字段名
-            String capitalColumnName = StringUtils.toCapitalizeCamelCase(column.getColumnName());
+            String capitalColumnName = toCapitalizeCamelCase(column.getColumnName());
             // 是否是框架自动维护字段
             boolean autoMaintain = isAutoMaintainColumn(column);
             // 是否是 Long 类型
@@ -301,7 +304,7 @@ public class GenUtil {
                 genMap.put("auto", true);
             }
             // 主键存在字典
-            if (StringUtils.isNotBlank(column.getDictName())) {
+            if (StrUtil.isNotBlank(column.getDictName())) {
                 genMap.put("hasDict", true);
                 if(!dicts.contains(column.getDictName()))
                     dicts.add(column.getDictName());
@@ -330,7 +333,7 @@ public class GenUtil {
             // 表单显示
             listMap.put("formShow", formShow);
             // 表单组件类型
-            listMap.put("formType", StringUtils.isNotBlank(column.getFormType()) ? column.getFormType() : "Input");
+            listMap.put("formType", StrUtil.isNotBlank(column.getFormType()) ? column.getFormType() : "Input");
             // 小写开头的字段名称
             listMap.put("changeColumnName", changeColumnName);
             //大写开头的字段名称
@@ -342,7 +345,7 @@ public class GenUtil {
                 isNotNullColumns.add(listMap);
             }
             // 判断是否有查询，如有则把查询的字段set进columnQuery
-            if (!StringUtils.isBlank(column.getQueryType())) {
+            if (StrUtil.isNotBlank(column.getQueryType())) {
                 // 查询类型
                 listMap.put("queryType", column.getQueryType());
                 // 是否存在查询
@@ -384,7 +387,7 @@ public class GenUtil {
             if (PK.equals(column.getKeyType())) {
                 continue;
             }
-            String changeColumnName = StringUtils.toCamelCase(column.getColumnName());
+            String changeColumnName = toCamelCase(column.getColumnName());
             String exportName = getExportBaseName(column, changeColumnName);
             exportNameCount.put(exportName, exportNameCount.getOrDefault(exportName, 0) + 1);
         }
@@ -400,7 +403,7 @@ public class GenUtil {
     }
 
     private static String getExportBaseName(ColumnInfo column, String changeColumnName) {
-        return StringUtils.isNotBlank(column.getRemark()) ? column.getRemark() : changeColumnName;
+        return StrUtil.isNotBlank(column.getRemark()) ? column.getRemark() : changeColumnName;
     }
 
     public static boolean isAutoMaintainColumn(ColumnInfo column) {
@@ -474,6 +477,109 @@ public class GenUtil {
         }
 
         return null;
+    }
+
+    /**
+     * 从运行目录向上查找真实后端根目录；找不到时根据 eladmin-web 的同级目录反推。
+     */
+    static String resolveBackendRoot(GenConfig genConfig) throws IOException {
+        validateModuleName(genConfig.getModuleName());
+        Path current = Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize();
+        while (current != null) {
+            if (isModuleRoot(current, genConfig.getModuleName())) {
+                return current.toString();
+            }
+            current = current.getParent();
+        }
+
+        if (StrUtil.isNotBlank(genConfig.getPath())) {
+            Path frontPath = Paths.get(genConfig.getPath()).toAbsolutePath().normalize();
+            current = frontPath;
+            while (current != null) {
+                if ("eladmin-web".equalsIgnoreCase(String.valueOf(current.getFileName()))) {
+                    Path parent = current.getParent();
+                    if (parent != null) {
+                        Path backendRoot = parent.resolve("eladmin").normalize();
+                        if (isModuleRoot(backendRoot, genConfig.getModuleName())) {
+                            return backendRoot.toString();
+                        }
+                    }
+                    break;
+                }
+                current = current.getParent();
+            }
+        }
+
+        throw new IOException("未找到后端模块 " + genConfig.getModuleName()
+                + "，请确认模块名称和前端路径配置正确");
+    }
+
+    private static boolean isModuleRoot(Path root, String moduleName) {
+        Path modulePath = root.resolve(moduleName).normalize();
+        return Files.isDirectory(modulePath) && Files.isRegularFile(modulePath.resolve("pom.xml"));
+    }
+
+    private static void validateModuleName(String moduleName) throws IOException {
+        if (StrUtil.isBlank(moduleName) || moduleName.contains("/")
+                || moduleName.contains("\\") || moduleName.contains("..")) {
+            throw new IOException("模块名称不合法：" + moduleName);
+        }
+    }
+
+    private static void validateFrontendPaths(GenConfig genConfig) throws IOException {
+        if (StrUtil.isBlank(genConfig.getPath()) || StrUtil.isBlank(genConfig.getApiPath())) {
+            throw new IOException("前端页面路径和 API 路径不能为空");
+        }
+        Path viewPath = Paths.get(genConfig.getPath()).toAbsolutePath().normalize();
+        Path apiPath = Paths.get(genConfig.getApiPath()).toAbsolutePath().normalize();
+        Path webRoot = findParent(viewPath, "eladmin-web");
+        if (webRoot == null) {
+            throw new IOException("前端页面路径必须位于 eladmin-web 目录下：" + viewPath);
+        }
+        Path viewsRoot = webRoot.resolve("src").resolve("views").normalize();
+        Path apiRoot = webRoot.resolve("src").resolve("api").normalize();
+        if (!viewPath.startsWith(viewsRoot)) {
+            throw new IOException("前端页面路径必须位于 eladmin-web/src/views 下：" + viewPath);
+        }
+        if (!apiPath.startsWith(apiRoot)) {
+            throw new IOException("前端 API 路径必须位于 eladmin-web/src/api 下：" + apiPath);
+        }
+    }
+
+    private static Path findParent(Path path, String name) {
+        Path current = path;
+        while (current != null) {
+            if (name.equalsIgnoreCase(String.valueOf(current.getFileName()))) {
+                return current;
+            }
+            current = current.getParent();
+        }
+        return null;
+    }
+
+    private static String toCamelCase(String value) {
+        if (value == null) {
+            return null;
+        }
+        String lowerCase = value.toLowerCase(Locale.ROOT);
+        StringBuilder result = new StringBuilder(lowerCase.length());
+        boolean upperCase = false;
+        for (int i = 0; i < lowerCase.length(); i++) {
+            char current = lowerCase.charAt(i);
+            if (current == '_') {
+                upperCase = true;
+            } else if (upperCase) {
+                result.append(Character.toUpperCase(current));
+                upperCase = false;
+            } else {
+                result.append(current);
+            }
+        }
+        return result.toString();
+    }
+
+    private static String toCapitalizeCamelCase(String value) {
+        return StrUtil.upperFirst(toCamelCase(value));
     }
 
     private static void genFile(File file, Template template, Map<String, Object> map) throws IOException {

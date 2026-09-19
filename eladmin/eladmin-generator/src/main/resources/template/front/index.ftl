@@ -43,6 +43,8 @@
           <el-form-item label="<#if column.remark != ''>${column.remark}<#else>${column.changeColumnName}</#if>"<#if column.istNotNull> prop="${column.changeColumnName}"</#if>>
             <#if column.formType = 'Input'>
             <el-input v-model="form.${column.changeColumnName}" style="width: 370px;" />
+            <#elseif column.formType = 'Number'>
+            <el-input-number v-model="form.${column.changeColumnName}" :controls="false" style="width: 370px;" />
             <#elseif column.formType = 'Textarea'>
             <el-input v-model="form.${column.changeColumnName}" :rows="3" type="textarea" style="width: 370px;" />
             <#elseif column.formType = 'Radio'>
@@ -112,7 +114,9 @@
 <script>
 import crud${className} from '@/api/${changeClassName}'
 import CRUD, { presenter, header, form, crud } from '@crud/crud'
+<#if hasQuery>
 import rrOperation from '@crud/RR.operation'
+</#if>
 import crudOperation from '@crud/CRUD.operation'
 import udOperation from '@crud/UD.operation'
 import pagination from '@crud/Pagination'
@@ -123,7 +127,7 @@ import DateRangePicker from '@/components/DateRangePicker'
 const defaultForm = { <#if columns??><#list columns as column>${column.changeColumnName}: null<#if column_has_next>, </#if></#list></#if> }
 export default {
   name: '${className}',
-  components: { <#if betweens?? && (betweens?size > 0)>DateRangePicker, </#if>pagination, crudOperation, rrOperation, udOperation },
+  components: { <#if betweens?? && (betweens?size > 0)>DateRangePicker, </#if>pagination, crudOperation, <#if hasQuery>rrOperation, </#if>udOperation },
   mixins: [presenter(), header(), form(defaultForm), crud()],
   <#if hasDict>
   dicts: [<#if hasDict??><#list dicts as dict>'${dict}'<#if dict_has_next>, </#if></#list></#if>],
@@ -158,7 +162,7 @@ export default {
         </#list>
         </#if>
       ]
-      </#if>
+</#if>
     }
   },
   methods: {

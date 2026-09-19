@@ -16,6 +16,7 @@
 package me.zhengjie.service.impl;
 
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.util.ZipUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -38,6 +39,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -62,6 +64,22 @@ public class GeneratorServiceImpl extends ServiceImpl<ColumnInfoMapper, ColumnIn
     public List<ColumnInfo> getColumns(String tableName) {
         List<ColumnInfo> columnInfos = columnInfoMapper.findByTableNameOrderByIdAsc(tableName);
         if (CollectionUtil.isNotEmpty(columnInfos)) {
+            Map<String, ColumnInfo> databaseColumns = query(tableName).stream()
+                    .collect(Collectors.toMap(ColumnInfo::getColumnName, column -> column));
+            for (ColumnInfo columnInfo : columnInfos) {
+                ColumnInfo databaseColumn = databaseColumns.get(columnInfo.getColumnName());
+                if (databaseColumn == null) {
+                    continue;
+                }
+                if (GenUtil.PK.equalsIgnoreCase(databaseColumn.getKeyType())) {
+                    applyPrimaryKeyDefaults(columnInfo);
+                }
+                if (isAutoMaintainedTime(databaseColumn) || GenUtil.isAutoMaintainColumn(databaseColumn)) {
+                    applyAutoMaintainDefaults(columnInfo, databaseColumn);
+                } else if (StrUtil.isBlank(columnInfo.getFormType())) {
+                    columnInfo.setFormType(defaultFormType(databaseColumn));
+                }
+            }
             return columnInfos;
         } else {
             columnInfos = query(tableName);
@@ -75,16 +93,56 @@ public class GeneratorServiceImpl extends ServiceImpl<ColumnInfoMapper, ColumnIn
         List<ColumnInfo> columnInfos = columnInfoMapper.getColumns(tableName);
         for (ColumnInfo columnInfo : columnInfos) {
             columnInfo.setTableName(tableName);
-            if(GenUtil.PK.equalsIgnoreCase(columnInfo.getKeyType())
-                    && GenUtil.EXTRA.equalsIgnoreCase(columnInfo.getExtra())){
-                columnInfo.setNotNull(false);
+            if (GenUtil.PK.equalsIgnoreCase(columnInfo.getKeyType())) {
+                applyPrimaryKeyDefaults(columnInfo);
             }
-            if (GenUtil.isAutoMaintainColumn(columnInfo)) {
-                columnInfo.setNotNull(false);
-                columnInfo.setFormShow(false);
+            if (isAutoMaintainedTime(columnInfo) || GenUtil.isAutoMaintainColumn(columnInfo)) {
+                applyAutoMaintainDefaults(columnInfo, columnInfo);
+            } else {
+                columnInfo.setFormType(defaultFormType(columnInfo));
             }
         }
         return columnInfos;
+    }
+
+    private void applyPrimaryKeyDefaults(ColumnInfo columnInfo) {
+        columnInfo.setNotNull(false);
+        columnInfo.setListShow(false);
+        columnInfo.setFormShow(false);
+    }
+
+    private void applyAutoMaintainDefaults(ColumnInfo target, ColumnInfo databaseColumn) {
+        target.setNotNull(false);
+        target.setFormShow(false);
+        if (isTimeField(databaseColumn)) {
+            target.setFormType("Date");
+        }
+    }
+
+    private boolean isAutoMaintainedTime(ColumnInfo columnInfo) {
+        String defaultValue = Objects.toString(columnInfo.getColumnDefault(), "").toLowerCase();
+        String extra = Objects.toString(columnInfo.getExtra(), "").toLowerCase();
+        return isTimeField(columnInfo)
+                && (defaultValue.contains("current_timestamp") || extra.contains("on update"));
+    }
+
+    private boolean isTimeField(ColumnInfo columnInfo) {
+        String type = Objects.toString(columnInfo.getColumnType(), "").toLowerCase();
+        return "timestamp".equals(type) || "datetime".equals(type) || "date".equals(type);
+    }
+
+    private String defaultFormType(ColumnInfo columnInfo) {
+        if (isTimeField(columnInfo)) {
+            return "Date";
+        }
+        String type = Objects.toString(columnInfo.getColumnType(), "").toLowerCase();
+        if (!"bigint".equals(type) && ("tinyint".equals(type) || "smallint".equals(type)
+                || "mediumint".equals(type) || "int".equals(type) || "integer".equals(type)
+                || "decimal".equals(type) || "numeric".equals(type) || "float".equals(type)
+                || "double".equals(type))) {
+            return "Number";
+        }
+        return "Input";
     }
 
     @Override

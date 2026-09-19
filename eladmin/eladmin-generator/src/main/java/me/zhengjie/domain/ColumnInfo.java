@@ -16,6 +16,7 @@
 package me.zhengjie.domain;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModelProperty;
@@ -53,6 +54,10 @@ public class ColumnInfo implements Serializable {
 
     @ApiModelProperty(value = "字段额外的参数")
     private String extra;
+
+    @TableField(exist = false)
+    @ApiModelProperty(value = "数据库字段默认值")
+    private String columnDefault;
 
     @ApiModelProperty(value = "数据库字段描述")
     private String remark;

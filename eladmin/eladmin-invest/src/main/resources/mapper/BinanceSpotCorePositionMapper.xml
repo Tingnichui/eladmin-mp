@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="me.zhengjie.invest.mapper.BinanceSpotCorePositionMapper">
+    <resultMap id="BaseResultMap" type="me.zhengjie.invest.domain.BinanceSpotCorePosition">
+        <id column="id" property="id"/>
+        <result column="uid" property="uid"/>
+        <result column="symbol" property="symbol"/>
+        <result column="trade_id" property="tradeId"/>
+        <result column="core_qty" property="coreQty"/>
+        <result column="locked_at" property="lockedAt"/>
+        <result column="released_at" property="releasedAt"/>
+        <result column="remark" property="remark"/>
+        <result column="create_by" property="createBy"/>
+        <result column="update_by" property="updateBy"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, uid, symbol, trade_id, core_qty, locked_at, released_at, remark, create_by, update_by, create_time, update_time
+    </sql>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM binance_spot_core_position t1
+        WHERE 1 = 1
+        ORDER BY t1.id DESC
+    </select>
+</mapper>
