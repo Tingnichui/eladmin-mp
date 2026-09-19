@@ -14,6 +14,7 @@
         <result column="match_status" property="matchStatus"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
+        <result column="price" property="price"/>
     </resultMap>
 
     <sql id="Base_Column_List">
@@ -45,4 +46,58 @@
             </if>
         ORDER BY t1.id DESC
     </select>
+
+    <insert id="initializeFromTrades">
+        INSERT IGNORE INTO binance_spot_trade_match_state
+            (trade_id, uid, symbol, is_buyer, trade_time, original_qty,
+             matched_qty, remaining_qty, match_status)
+        SELECT
+            t1.id, t1.uid, t1.symbol, t1.is_buyer, t1.time, t1.qty,
+            0, t1.qty, 'PENDING'
+        FROM binance_trade_info t1
+        WHERE t1.uid = #{uid}
+          AND t1.symbol = #{symbol}
+          AND t1.qty &gt; 0
+          AND t1.time IS NOT NULL
+          AND t1.is_buyer IN (0, 1)
+    </insert>
+
+    <select id="findPendingSellsForUpdate" resultMap="BaseResultMap">
+        SELECT s.*, t.price
+        FROM binance_spot_trade_match_state s
+        INNER JOIN binance_trade_info t ON t.id = s.trade_id
+        WHERE s.uid = #{uid}
+          AND s.symbol = #{symbol}
+          AND s.is_buyer = 0
+          AND s.remaining_qty &gt; 0
+          AND s.match_status IN ('PENDING', 'PARTIAL')
+        ORDER BY s.trade_time ASC, s.trade_id ASC
+        FOR UPDATE
+    </select>
+
+    <select id="findAvailableBuysForUpdate" resultMap="BaseResultMap">
+        SELECT s.*, t.price
+        FROM binance_spot_trade_match_state s
+        INNER JOIN binance_trade_info t ON t.id = s.trade_id
+        WHERE s.uid = #{uid}
+          AND s.symbol = #{symbol}
+          AND s.is_buyer = 1
+          AND s.remaining_qty &gt; 0
+          AND s.match_status IN ('PENDING', 'PARTIAL')
+          AND (
+              s.trade_time &lt; #{sellTime}
+              OR (s.trade_time = #{sellTime} AND s.trade_id &lt; #{sellTradeId})
+          )
+        ORDER BY s.trade_time ASC, s.trade_id ASC
+        FOR UPDATE
+    </select>
+
+    <update id="updateMatchProgress">
+        UPDATE binance_spot_trade_match_state
+        SET matched_qty = #{matchedQty},
+            remaining_qty = #{remainingQty},
+            match_status = #{matchStatus},
+            update_time = CURRENT_TIMESTAMP(3)
+        WHERE id = #{id}
+    </update>
 </mapper>

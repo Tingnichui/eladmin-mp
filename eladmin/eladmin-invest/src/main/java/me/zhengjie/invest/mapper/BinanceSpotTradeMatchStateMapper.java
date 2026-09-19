@@ -23,6 +23,10 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
+import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.util.List;
+
 /**
 * @author genghui
 * @date 2026-09-19
@@ -31,4 +35,19 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 public interface BinanceSpotTradeMatchStateMapper extends BaseMapper<BinanceSpotTradeMatchState> {
 
     IPage<BinanceSpotTradeMatchState> findAll(@Param("criteria") BinanceSpotTradeMatchStateQueryCriteria criteria, Page<Object> page);
+
+    int initializeFromTrades(@Param("uid") Integer uid, @Param("symbol") String symbol);
+
+    List<BinanceSpotTradeMatchState> findPendingSellsForUpdate(@Param("uid") Integer uid,
+                                                               @Param("symbol") String symbol);
+
+    List<BinanceSpotTradeMatchState> findAvailableBuysForUpdate(@Param("uid") Integer uid,
+                                                                @Param("symbol") String symbol,
+                                                                @Param("sellTime") Timestamp sellTime,
+                                                                @Param("sellTradeId") Long sellTradeId);
+
+    int updateMatchProgress(@Param("id") Long id,
+                            @Param("matchedQty") BigDecimal matchedQty,
+                            @Param("remainingQty") BigDecimal remainingQty,
+                            @Param("matchStatus") String matchStatus);
 }

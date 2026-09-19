@@ -27,6 +27,7 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
@@ -86,6 +87,10 @@ public class BinanceSpotTradeMatchState implements Serializable {
 
     @ApiModelProperty(value = "更新时间")
     private Timestamp updateTime;
+
+    @TableField(exist = false)
+    @ApiModelProperty(value = "成交价格")
+    private BigDecimal price;
 
     public void copy(BinanceSpotTradeMatchState source){
         BeanUtil.copyProperties(source,this, CopyOptions.create().setIgnoreNullValue(true));
