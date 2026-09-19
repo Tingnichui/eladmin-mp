@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="me.zhengjie.invest.mapper.BinanceSpotTradeMatchStateMapper">
+    <resultMap id="BaseResultMap" type="me.zhengjie.invest.domain.BinanceSpotTradeMatchState">
+        <id column="id" property="id"/>
+        <result column="trade_id" property="tradeId"/>
+        <result column="uid" property="uid"/>
+        <result column="symbol" property="symbol"/>
+        <result column="is_buyer" property="isBuyer"/>
+        <result column="trade_time" property="tradeTime"/>
+        <result column="original_qty" property="originalQty"/>
+        <result column="matched_qty" property="matchedQty"/>
+        <result column="remaining_qty" property="remainingQty"/>
+        <result column="match_status" property="matchStatus"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, trade_id, uid, symbol, is_buyer, trade_time, original_qty, matched_qty, remaining_qty, match_status, create_time, update_time
+    </sql>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM binance_spot_trade_match_state t1
+        WHERE 1 = 1
+            <if test="criteria.tradeId != null and criteria.tradeId != ''">
+                AND t1.trade_id = #{criteria.tradeId}
+            </if>
+            <if test="criteria.uid != null">
+                AND t1.uid = #{criteria.uid}
+            </if>
+            <if test="criteria.symbol != null and criteria.symbol != ''">
+                AND t1.symbol = #{criteria.symbol}
+            </if>
+            <if test="criteria.isBuyer != null">
+                AND t1.is_buyer = #{criteria.isBuyer}
+            </if>
+            <if test="criteria.matchStatus != null and criteria.matchStatus != ''">
+                AND t1.match_status = #{criteria.matchStatus}
+            </if>
+            <if test="criteria.tradeTime != null and criteria.tradeTime.size() > 1">
+                AND t1.trade_time BETWEEN #{criteria.tradeTime[0]} AND #{criteria.tradeTime[1]}
+            </if>
+        ORDER BY t1.id DESC
+    </select>
+</mapper>

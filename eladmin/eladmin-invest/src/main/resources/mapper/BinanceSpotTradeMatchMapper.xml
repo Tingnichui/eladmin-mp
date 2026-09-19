@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="me.zhengjie.invest.mapper.BinanceSpotTradeMatchMapper">
+    <resultMap id="BaseResultMap" type="me.zhengjie.invest.domain.BinanceSpotTradeMatch">
+        <id column="id" property="id"/>
+        <result column="uid" property="uid"/>
+        <result column="symbol" property="symbol"/>
+        <result column="buy_trade_id" property="buyTradeId"/>
+        <result column="sell_trade_id" property="sellTradeId"/>
+        <result column="matched_qty" property="matchedQty"/>
+        <result column="buy_price" property="buyPrice"/>
+        <result column="sell_price" property="sellPrice"/>
+        <result column="buy_time" property="buyTime"/>
+        <result column="sell_time" property="sellTime"/>
+        <result column="buy_amount" property="buyAmount"/>
+        <result column="sell_amount" property="sellAmount"/>
+        <result column="fee_rate" property="feeRate"/>
+        <result column="pnl" property="pnl"/>
+        <result column="fee" property="fee"/>
+        <result column="net_pnl" property="netPnl"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, uid, symbol, buy_trade_id, sell_trade_id, matched_qty, buy_price, sell_price, buy_time, sell_time, buy_amount, sell_amount, fee_rate, pnl, fee, net_pnl, create_time
+    </sql>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM binance_spot_trade_match t1
+        WHERE 1 = 1
+            <if test="criteria.uid != null">
+                AND t1.uid = #{criteria.uid}
+            </if>
+            <if test="criteria.symbol != null and criteria.symbol != ''">
+                AND t1.symbol = #{criteria.symbol}
+            </if>
+            <if test="criteria.buyTradeId != null and criteria.buyTradeId != ''">
+                AND t1.buy_trade_id = #{criteria.buyTradeId}
+            </if>
+            <if test="criteria.sellTradeId != null and criteria.sellTradeId != ''">
+                AND t1.sell_trade_id = #{criteria.sellTradeId}
+            </if>
+            <if test="criteria.buyTime != null and criteria.buyTime.size() > 1">
+                AND t1.buy_time BETWEEN #{criteria.buyTime[0]} AND #{criteria.buyTime[1]}
+            </if>
+            <if test="criteria.sellTime != null and criteria.sellTime.size() > 1">
+                AND t1.sell_time BETWEEN #{criteria.sellTime[0]} AND #{criteria.sellTime[1]}
+            </if>
+        ORDER BY t1.id DESC
+    </select>
+</mapper>
