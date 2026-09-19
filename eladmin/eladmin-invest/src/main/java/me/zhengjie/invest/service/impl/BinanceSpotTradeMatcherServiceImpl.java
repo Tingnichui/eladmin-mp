@@ -15,7 +15,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * 将现货 FIFO 撮合结果固化到数据库。现有统计读取逻辑暂不依赖本服务。
+ * 将现货 FIFO 撮合结果固化到数据库，现货统计直接读取固化结果与剩余持仓。
  */
 @Service
 @RequiredArgsConstructor

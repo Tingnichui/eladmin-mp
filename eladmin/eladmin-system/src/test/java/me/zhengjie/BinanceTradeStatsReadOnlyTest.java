@@ -50,7 +50,7 @@ class BinanceTradeStatsReadOnlyTest {
             criteria.setUid(TEST_UID);
             criteria.setSymbol("BTCUSDT");
             criteria.setMinProfitPct(new BigDecimal("0.002"));
-            binanceTradeInfoService.stats(criteria, hedgeContext);
+            binanceTradeInfoService.stats(criteria);
             binanceTradeInfoService.hedgedStats(hedgeContext);
         });
 
