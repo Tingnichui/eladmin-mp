@@ -1,5 +1,6 @@
 package me.zhengjie.invest.domain.dto;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import me.zhengjie.invest.constants.BinanceEnum;
@@ -30,7 +31,7 @@ public class BinanceOrderApiDto {
 
     public Map<String, Object> toMap() {
         ObjectMapper mapper = new ObjectMapper();
-        return mapper.convertValue(this, Map.class);
+        return mapper.convertValue(this, new TypeReference<Map<String, Object>>() { });
     }
 
 
