@@ -18,4 +18,4 @@ CREATE TABLE IF NOT EXISTS `binance_spot_core_position` (
   KEY `idx_core_trade` (`trade_id`, `released_at`),
   KEY `idx_core_account_symbol` (`uid`, `symbol`, `released_at`),
   KEY `idx_core_replay` (`uid`, `symbol`, `locked_at`, `released_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='币安现货底仓锁定记录';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='币安现货底仓锁定记录';

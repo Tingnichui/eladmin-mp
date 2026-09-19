@@ -16,6 +16,12 @@
 package me.zhengjie.invest.service.impl;
 
 import me.zhengjie.invest.domain.BinanceSpotCorePosition;
+import me.zhengjie.exception.BadRequestException;
+import me.zhengjie.invest.domain.BinanceSpotTradeMatchState;
+import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionAdjustRequest;
+import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionCandidate;
+import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionLockRequest;
+import me.zhengjie.invest.mapper.BinanceSpotTradeMatchStateMapper;
 import me.zhengjie.utils.FileUtil;
 import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -33,6 +39,10 @@ import javax.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import me.zhengjie.utils.PageResult;
+import org.springframework.util.StringUtils;
+
+import java.math.BigDecimal;
+import java.sql.Timestamp;
 
 /**
 * @description 服务实现
@@ -44,6 +54,7 @@ import me.zhengjie.utils.PageResult;
 public class BinanceSpotCorePositionServiceImpl extends ServiceImpl<BinanceSpotCorePositionMapper, BinanceSpotCorePosition> implements BinanceSpotCorePositionService {
 
     private final BinanceSpotCorePositionMapper binanceSpotCorePositionMapper;
+    private final BinanceSpotTradeMatchStateMapper binanceSpotTradeMatchStateMapper;
 
     @Override
     public PageResult<BinanceSpotCorePosition> queryAll(BinanceSpotCorePositionQueryCriteria criteria, Page<Object> page){
@@ -53,21 +64,114 @@ public class BinanceSpotCorePositionServiceImpl extends ServiceImpl<BinanceSpotC
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void create(BinanceSpotCorePosition resources) {
-        binanceSpotCorePositionMapper.insert(resources);
+        BinanceSpotCorePositionLockRequest request = new BinanceSpotCorePositionLockRequest();
+        request.setUid(resources.getUid());
+        request.setSymbol(resources.getSymbol());
+        request.setTradeId(resources.getTradeId());
+        request.setCoreQty(resources.getCoreQty());
+        request.setRemark(resources.getRemark());
+        lock(request);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(BinanceSpotCorePosition resources) {
-        BinanceSpotCorePosition binanceSpotCorePosition = getById(resources.getId());
-        binanceSpotCorePosition.copy(resources);
-        binanceSpotCorePositionMapper.updateById(binanceSpotCorePosition);
+        BinanceSpotCorePositionAdjustRequest request = new BinanceSpotCorePositionAdjustRequest();
+        request.setCoreQty(resources.getCoreQty());
+        request.setRemark(resources.getRemark());
+        adjust(resources.getId(), request);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteAll(List<Long> ids) {
-        binanceSpotCorePositionMapper.deleteBatchIds(ids);
+        throw new BadRequestException("底仓记录需要解除，不能直接删除");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BinanceSpotCorePosition lock(BinanceSpotCorePositionLockRequest request) {
+        validateScope(request.getUid(), request.getSymbol());
+        validateQty(request.getCoreQty());
+        if (request.getTradeId() == null) {
+            throw new BadRequestException("成交 ID 不能为空");
+        }
+        binanceSpotTradeMatchStateMapper.initializeFromTrades(request.getUid(), request.getSymbol());
+        BinanceSpotTradeMatchState state = requireBuyState(
+                request.getUid(), request.getSymbol(), request.getTradeId());
+        BinanceSpotCorePosition active = binanceSpotCorePositionMapper.findActiveByTradeForUpdate(
+                request.getUid(), request.getSymbol(), request.getTradeId());
+        if (active != null) {
+            throw new BadRequestException("该买入成交已经设置底仓，请直接调整数量");
+        }
+        validateNotExceedRemaining(request.getCoreQty(), state.getRemainingQty());
+
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        BinanceSpotCorePosition position = new BinanceSpotCorePosition();
+        position.setUid(request.getUid());
+        position.setSymbol(request.getSymbol());
+        position.setTradeId(request.getTradeId());
+        position.setCoreQty(request.getCoreQty());
+        position.setLockedAt(now);
+        position.setRemark(request.getRemark());
+        position.setCreateTime(now);
+        position.setUpdateTime(now);
+        binanceSpotCorePositionMapper.insert(position);
+        return position;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BinanceSpotCorePosition adjust(Long id, BinanceSpotCorePositionAdjustRequest request) {
+        if (id == null) {
+            throw new BadRequestException("底仓记录 ID 不能为空");
+        }
+        validateQty(request.getCoreQty());
+        BinanceSpotCorePosition snapshot = binanceSpotCorePositionMapper.selectById(id);
+        if (snapshot == null) {
+            throw new BadRequestException("底仓记录不存在");
+        }
+        BinanceSpotTradeMatchState state = requireBuyState(
+                snapshot.getUid(), snapshot.getSymbol(), snapshot.getTradeId());
+        BinanceSpotCorePosition position = binanceSpotCorePositionMapper.findByIdForUpdate(id);
+        requireActive(position);
+        validateNotExceedRemaining(request.getCoreQty(), state.getRemainingQty());
+        position.setCoreQty(request.getCoreQty());
+        position.setRemark(request.getRemark());
+        position.setUpdateTime(new Timestamp(System.currentTimeMillis()));
+        binanceSpotCorePositionMapper.updateById(position);
+        return position;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BinanceSpotCorePosition release(Long id) {
+        if (id == null) {
+            throw new BadRequestException("底仓记录 ID 不能为空");
+        }
+        BinanceSpotCorePosition snapshot = binanceSpotCorePositionMapper.selectById(id);
+        if (snapshot == null) {
+            throw new BadRequestException("底仓记录不存在");
+        }
+        requireBuyState(snapshot.getUid(), snapshot.getSymbol(), snapshot.getTradeId());
+        BinanceSpotCorePosition position = binanceSpotCorePositionMapper.findByIdForUpdate(id);
+        if (position == null) {
+            throw new BadRequestException("底仓记录不存在");
+        }
+        if (position.getReleasedAt() != null) {
+            return position;
+        }
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        position.setReleasedAt(now);
+        position.setUpdateTime(now);
+        binanceSpotCorePositionMapper.updateById(position);
+        return position;
+    }
+
+    @Override
+    public List<BinanceSpotCorePositionCandidate> listCandidates(Integer uid, String symbol) {
+        validateScope(uid, symbol);
+        return binanceSpotCorePositionMapper.findCandidates(uid, symbol);
     }
 
     @Override
@@ -120,5 +224,46 @@ public class BinanceSpotCorePositionServiceImpl extends ServiceImpl<BinanceSpotC
 
     private Object getExportValue(Object value) {
         return value instanceof Long ? String.valueOf(value) : value;
+    }
+
+    private BinanceSpotTradeMatchState requireBuyState(Integer uid, String symbol, Long tradeId) {
+        BinanceSpotTradeMatchState state = binanceSpotTradeMatchStateMapper.findBuyStateForUpdate(uid, symbol, tradeId);
+        if (state == null) {
+            throw new BadRequestException("未找到可设置底仓的买入成交");
+        }
+        if (state.getRemainingQty() == null || state.getRemainingQty().signum() <= 0) {
+            throw new BadRequestException("该买入成交已全部卖出");
+        }
+        return state;
+    }
+
+    private void requireActive(BinanceSpotCorePosition position) {
+        if (position == null) {
+            throw new BadRequestException("底仓记录不存在");
+        }
+        if (position.getReleasedAt() != null) {
+            throw new BadRequestException("底仓已经解除，不能继续调整");
+        }
+    }
+
+    private void validateNotExceedRemaining(BigDecimal coreQty, BigDecimal remainingQty) {
+        if (remainingQty == null || coreQty.compareTo(remainingQty) > 0) {
+            throw new BadRequestException("底仓数量不能超过当前剩余持仓数量");
+        }
+    }
+
+    private void validateScope(Integer uid, String symbol) {
+        if (uid == null) {
+            throw new BadRequestException("账户不能为空");
+        }
+        if (!StringUtils.hasText(symbol)) {
+            throw new BadRequestException("交易对不能为空");
+        }
+    }
+
+    private void validateQty(BigDecimal coreQty) {
+        if (coreQty == null || coreQty.signum() <= 0) {
+            throw new BadRequestException("底仓数量必须大于 0");
+        }
     }
 }

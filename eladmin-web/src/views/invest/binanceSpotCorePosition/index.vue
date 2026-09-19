@@ -19,12 +19,6 @@
           <el-form-item label="锁定为底仓的数量" prop="coreQty">
             <el-input-number v-model="form.coreQty" :controls="false" style="width: 370px;" />
           </el-form-item>
-          <el-form-item label="设为底仓时间" prop="lockedAt">
-            <el-date-picker v-model="form.lockedAt" type="datetime" style="width: 370px;" />
-          </el-form-item>
-          <el-form-item label="解除底仓时间，空表示仍在锁定">
-            <el-date-picker v-model="form.releasedAt" type="datetime" style="width: 370px;" />
-          </el-form-item>
           <el-form-item label="备注">
             <el-input v-model="form.remark" style="width: 370px;" />
           </el-form-item>
@@ -48,12 +42,17 @@
         <el-table-column prop="updateBy" label="更新者" />
         <el-table-column prop="createTime" label="创建时间" />
         <el-table-column prop="updateTime" label="更新时间" />
-        <el-table-column v-if="checkPer(['admin','binanceSpotCorePosition:edit','binanceSpotCorePosition:del'])" label="操作" width="150px" align="center">
+        <el-table-column v-if="checkPer(['admin','binanceSpotCorePosition:edit'])" label="操作" width="180px" align="center">
           <template slot-scope="scope">
             <udOperation
               :data="scope.row"
               :permission="permission"
             />
+            <el-button
+              v-if="!scope.row.releasedAt"
+              type="text"
+              @click="releasePosition(scope.row)"
+            >解除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -64,7 +63,7 @@
 </template>
 
 <script>
-import crudBinanceSpotCorePosition from '@/api/binanceSpotCorePosition'
+import crudBinanceSpotCorePosition, { release } from '@/api/binanceSpotCorePosition'
 import CRUD, { presenter, header, form, crud } from '@crud/crud'
 import crudOperation from '@crud/CRUD.operation'
 import udOperation from '@crud/UD.operation'
@@ -83,7 +82,7 @@ export default {
       permission: {
         add: ['admin', 'binanceSpotCorePosition:add'],
         edit: ['admin', 'binanceSpotCorePosition:edit'],
-        del: ['admin', 'binanceSpotCorePosition:del']
+        del: []
       },
       rules: {
         uid: [
@@ -97,9 +96,6 @@ export default {
         ],
         coreQty: [
           { required: true, message: '锁定为底仓的数量不能为空', trigger: 'blur' }
-        ],
-        lockedAt: [
-          { required: true, message: '设为底仓时间不能为空', trigger: 'blur' }
         ]
       }
     }
@@ -108,6 +104,16 @@ export default {
     // 钩子：在获取表格数据之前执行，false 则代表不获取数据
     [CRUD.HOOK.beforeRefresh]() {
       return true
+    },
+    releasePosition(row) {
+      this.$confirm('解除后该数量将重新参与后续 FIFO 撮合，是否继续？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => release(row.id)).then(() => {
+        this.crud.notify('解除成功', CRUD.NOTIFICATION_TYPE.SUCCESS)
+        this.crud.refresh()
+      }).catch(() => {})
     }
   }
 }

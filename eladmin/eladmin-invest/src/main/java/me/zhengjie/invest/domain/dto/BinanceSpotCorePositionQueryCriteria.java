@@ -25,6 +25,12 @@ import io.swagger.annotations.ApiModelProperty;
 @Data
 public class BinanceSpotCorePositionQueryCriteria{
 
+    private Integer uid;
+
+    private String symbol;
+
+    private Boolean active;
+
     @ApiModelProperty(value = "页码", example = "1")
     private Integer page = 1;
 

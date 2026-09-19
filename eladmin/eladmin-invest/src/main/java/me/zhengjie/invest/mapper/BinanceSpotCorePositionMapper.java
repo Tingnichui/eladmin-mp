@@ -16,12 +16,15 @@
 package me.zhengjie.invest.mapper;
 
 import me.zhengjie.invest.domain.BinanceSpotCorePosition;
+import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionCandidate;
 import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionQueryCriteria;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+
+import java.util.List;
 
 /**
 * @author genghui
@@ -31,4 +34,13 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 public interface BinanceSpotCorePositionMapper extends BaseMapper<BinanceSpotCorePosition> {
 
     IPage<BinanceSpotCorePosition> findAll(@Param("criteria") BinanceSpotCorePositionQueryCriteria criteria, Page<Object> page);
+
+    BinanceSpotCorePosition findActiveByTradeForUpdate(@Param("uid") Integer uid,
+                                                        @Param("symbol") String symbol,
+                                                        @Param("tradeId") Long tradeId);
+
+    BinanceSpotCorePosition findByIdForUpdate(@Param("id") Long id);
+
+    List<BinanceSpotCorePositionCandidate> findCandidates(@Param("uid") Integer uid,
+                                                          @Param("symbol") String symbol);
 }

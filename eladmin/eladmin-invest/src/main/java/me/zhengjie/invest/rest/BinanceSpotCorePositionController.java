@@ -19,6 +19,9 @@ import me.zhengjie.annotation.Log;
 import me.zhengjie.invest.domain.BinanceSpotCorePosition;
 import me.zhengjie.invest.service.BinanceSpotCorePositionService;
 import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionQueryCriteria;
+import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionAdjustRequest;
+import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionCandidate;
+import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionLockRequest;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -63,18 +66,35 @@ public class BinanceSpotCorePositionController {
     @Log("新增现货底仓")
     @ApiOperation("新增现货底仓")
     @PreAuthorize("@el.check('binanceSpotCorePosition:add')")
-    public ResponseEntity<Object> createBinanceSpotCorePosition(@Validated @RequestBody BinanceSpotCorePosition resources){
-        binanceSpotCorePositionService.create(resources);
-        return new ResponseEntity<>(HttpStatus.CREATED);
+    public ResponseEntity<BinanceSpotCorePosition> createBinanceSpotCorePosition(
+            @Validated @RequestBody BinanceSpotCorePositionLockRequest resources){
+        return new ResponseEntity<>(binanceSpotCorePositionService.lock(resources), HttpStatus.CREATED);
     }
 
-    @PutMapping
+    @PutMapping("/{id}")
     @Log("修改现货底仓")
     @ApiOperation("修改现货底仓")
     @PreAuthorize("@el.check('binanceSpotCorePosition:edit')")
-    public ResponseEntity<Object> updateBinanceSpotCorePosition(@Validated @RequestBody BinanceSpotCorePosition resources){
-        binanceSpotCorePositionService.update(resources);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    public ResponseEntity<BinanceSpotCorePosition> updateBinanceSpotCorePosition(
+            @PathVariable Long id,
+            @Validated @RequestBody BinanceSpotCorePositionAdjustRequest resources){
+        return ResponseEntity.ok(binanceSpotCorePositionService.adjust(id, resources));
+    }
+
+    @PutMapping("/{id}/release")
+    @Log("解除现货底仓")
+    @ApiOperation("解除现货底仓")
+    @PreAuthorize("@el.check('binanceSpotCorePosition:edit')")
+    public ResponseEntity<BinanceSpotCorePosition> releaseBinanceSpotCorePosition(@PathVariable Long id) {
+        return ResponseEntity.ok(binanceSpotCorePositionService.release(id));
+    }
+
+    @GetMapping("/candidates")
+    @ApiOperation("查询可设置底仓的现货持仓批次")
+    @PreAuthorize("@el.check('binanceSpotCorePosition:list')")
+    public ResponseEntity<List<BinanceSpotCorePositionCandidate>> candidates(@RequestParam Integer uid,
+                                                                              @RequestParam String symbol) {
+        return ResponseEntity.ok(binanceSpotCorePositionService.listCandidates(uid, symbol));
     }
 
     @DeleteMapping

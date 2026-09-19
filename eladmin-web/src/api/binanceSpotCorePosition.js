@@ -4,7 +4,13 @@ export function add(data) {
   return request({
     url: 'api/binanceSpotCorePosition',
     method: 'post',
-    data
+    data: {
+      uid: data.uid,
+      symbol: data.symbol,
+      tradeId: data.tradeId,
+      coreQty: data.coreQty,
+      remark: data.remark
+    }
   })
 }
 
@@ -18,10 +24,28 @@ export function del(ids) {
 
 export function edit(data) {
   return request({
-    url: 'api/binanceSpotCorePosition',
+    url: `api/binanceSpotCorePosition/${data.id}`,
     method: 'put',
-    data
+    data: {
+      coreQty: data.coreQty,
+      remark: data.remark
+    }
   })
 }
 
-export default { add, edit, del }
+export function release(id) {
+  return request({
+    url: `api/binanceSpotCorePosition/${id}/release`,
+    method: 'put'
+  })
+}
+
+export function getCandidates(params) {
+  return request({
+    url: 'api/binanceSpotCorePosition/candidates',
+    method: 'get',
+    params
+  })
+}
+
+export default { add, edit, del, release, getCandidates }

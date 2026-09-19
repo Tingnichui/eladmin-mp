@@ -83,6 +83,29 @@ class BinanceSpotTradeMatcherServiceImplTest {
     }
 
     @Test
+    void shouldExcludeActiveCoreQtyWithoutChangingTotalRemainingQty() {
+        BinanceSpotTradeMatchStateMapper stateMapper = mock(BinanceSpotTradeMatchStateMapper.class);
+        BinanceSpotTradeMatchMapper matchMapper = mock(BinanceSpotTradeMatchMapper.class);
+        BinanceSpotTradeMatcherServiceImpl service = new BinanceSpotTradeMatcherServiceImpl(stateMapper, matchMapper);
+        BinanceSpotTradeMatchState sell = state(30L, 3L, 0, "0.5", "150", 3_000L);
+        BinanceSpotTradeMatchState firstBuy = state(10L, 1L, 1, "1", "120", 1_000L);
+        firstBuy.setActiveCoreQty(new BigDecimal("0.7"));
+        BinanceSpotTradeMatchState secondBuy = state(20L, 2L, 1, "2", "100", 2_000L);
+        when(stateMapper.findPendingSellsForUpdate(7, "BTCUSDT"))
+                .thenReturn(Collections.singletonList(sell));
+        when(stateMapper.findAvailableBuysForUpdate(7, "BTCUSDT", sell.getTradeTime(), sell.getTradeId()))
+                .thenReturn(Arrays.asList(firstBuy, secondBuy));
+
+        BinanceSpotTradeMatchResult result = service.match(7, "BTCUSDT");
+
+        assertEquals(2, result.getMatchCount());
+        assertEquals(new BigDecimal("0.5"), result.getMatchedQty());
+        verify(stateMapper).updateMatchProgress(10L, new BigDecimal("0.3"), new BigDecimal("0.7"), "PARTIAL");
+        verify(stateMapper).updateMatchProgress(20L, new BigDecimal("0.2"), new BigDecimal("1.8"), "PARTIAL");
+        verify(stateMapper).updateMatchProgress(30L, new BigDecimal("0.5"), new BigDecimal("0.0"), "COMPLETED");
+    }
+
+    @Test
     void shouldBeIdempotentWhenNoPendingSellRemains() {
         BinanceSpotTradeMatchStateMapper stateMapper = mock(BinanceSpotTradeMatchStateMapper.class);
         BinanceSpotTradeMatchMapper matchMapper = mock(BinanceSpotTradeMatchMapper.class);

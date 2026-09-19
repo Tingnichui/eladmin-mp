@@ -76,11 +76,12 @@ public class BinanceSpotTradeMatcherServiceImpl implements BinanceSpotTradeMatch
                 break;
             }
             BigDecimal buyRemaining = positive(buy.getRemainingQty());
-            if (buyRemaining.signum() <= 0) {
+            BigDecimal buyAvailable = buyRemaining.subtract(positive(buy.getActiveCoreQty()));
+            if (buyAvailable.signum() <= 0) {
                 continue;
             }
 
-            BigDecimal matchedQty = buyRemaining.min(sellRemaining);
+            BigDecimal matchedQty = buyAvailable.min(sellRemaining);
             matchMapper.insert(createMatch(uid, symbol, buy, sell, matchedQty));
             result.addMatch(matchedQty);
 

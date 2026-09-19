@@ -17,6 +17,9 @@ package me.zhengjie.invest.service;
 
 import me.zhengjie.invest.domain.BinanceSpotCorePosition;
 import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionQueryCriteria;
+import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionAdjustRequest;
+import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionCandidate;
+import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionLockRequest;
 import java.util.List;
 import java.io.IOException;
 import javax.servlet.http.HttpServletResponse;
@@ -56,6 +59,14 @@ public interface BinanceSpotCorePositionService extends IService<BinanceSpotCore
     * @param ids /
     */
     void deleteAll(List<Long> ids);
+
+    BinanceSpotCorePosition lock(BinanceSpotCorePositionLockRequest request);
+
+    BinanceSpotCorePosition adjust(Long id, BinanceSpotCorePositionAdjustRequest request);
+
+    BinanceSpotCorePosition release(Long id);
+
+    List<BinanceSpotCorePositionCandidate> listCandidates(Integer uid, String symbol);
 
     /**
     * 导出数据

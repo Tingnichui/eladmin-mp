@@ -82,6 +82,15 @@
           :disabled="query.uid == null || !query.symbol"
           @click="syncSpotTradeInfo"
         >同步</el-button>
+        <el-button
+          v-if="checkPer(['admin', 'binanceSpotCorePosition:list'])"
+          class="filter-item"
+          size="mini"
+          type="primary"
+          icon="el-icon-lock"
+          :disabled="query.uid == null || !query.symbol"
+          @click="openCorePositionDialog"
+        >底仓管理</el-button>
       </div>
       <div>
         <el-alert
@@ -181,6 +190,53 @@
       </el-table>
     </el-dialog>
 
+    <el-dialog
+      title="现货底仓管理"
+      :visible.sync="showCorePositions"
+      width="88%"
+    >
+      <el-alert
+        title="底仓只影响未来撮合；已经固化的历史撮合不会重排。"
+        type="info"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 16px"
+      />
+      <el-table v-loading="corePositionLoading" :data="corePositionCandidates" border stripe>
+        <el-table-column prop="tradeId" label="成交 ID" min-width="150" />
+        <el-table-column prop="tradeTime" label="买入时间" min-width="160" />
+        <el-table-column prop="price" label="买入价格" min-width="120" />
+        <el-table-column prop="remainingQty" label="剩余数量" min-width="120" />
+        <el-table-column prop="coreQty" label="底仓数量" min-width="120" />
+        <el-table-column prop="availableQty" label="可撮合数量" min-width="120" />
+        <el-table-column prop="remark" label="备注" min-width="140" />
+        <el-table-column label="操作" min-width="210" fixed="right">
+          <template slot-scope="scope">
+            <el-button
+              v-if="!scope.row.corePositionId && checkPer(['admin', 'binanceSpotCorePosition:add'])"
+              type="primary"
+              size="mini"
+              @click="lockCorePosition(scope.row)"
+            >设为底仓</el-button>
+            <template v-else-if="scope.row.corePositionId">
+              <el-button
+                v-if="checkPer(['admin', 'binanceSpotCorePosition:edit'])"
+                type="primary"
+                size="mini"
+                @click="adjustCorePosition(scope.row)"
+              >调整</el-button>
+              <el-button
+                v-if="checkPer(['admin', 'binanceSpotCorePosition:edit'])"
+                type="warning"
+                size="mini"
+                @click="releaseCorePosition(scope.row)"
+              >解除</el-button>
+            </template>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
+
   </div>
 </template>
 
@@ -191,6 +247,7 @@ import { listAllAccount } from '@/api/binanceAccountInfo'
 import TradePositionDistributionBar from '@/views/invest/binance/tradeInfo/TradePositionDistributionBar.vue'
 import CRUD from '@crud/crud'
 import * as numberUtil from '@/utils/numberUtil'
+import { add as addCorePosition, edit as editCorePosition, getCandidates, release as releaseCorePositionApi } from '@/api/binanceSpotCorePosition'
 
 const ACCOUNT_STORAGE_KEY = 'binanceTradeInfoStats.uid'
 
@@ -211,6 +268,9 @@ export default {
       statsDebounceTimer: null,
       statsRequestId: 0,
       showOpenTrades: false,
+      showCorePositions: false,
+      corePositionLoading: false,
+      corePositionCandidates: [],
       tradeList: [],
       query: {
         symbol: 'BTCUSDT',
@@ -461,6 +521,61 @@ export default {
       }).catch(() => {
         this.syncLoading = false
       })
+    },
+    openCorePositionDialog() {
+      this.showCorePositions = true
+      this.loadCorePositionCandidates()
+    },
+    loadCorePositionCandidates() {
+      this.corePositionLoading = true
+      return getCandidates({ uid: this.query.uid, symbol: this.query.symbol }).then(data => {
+        this.corePositionCandidates = data || []
+      }).finally(() => {
+        this.corePositionLoading = false
+      })
+    },
+    lockCorePosition(row) {
+      this.promptCoreQty('设置底仓数量', row.remainingQty, row.remainingQty).then(value => {
+        return addCorePosition({
+          uid: row.uid,
+          symbol: row.symbol,
+          tradeId: row.tradeId,
+          coreQty: value,
+          remark: null
+        })
+      }).then(() => {
+        this.$message.success('底仓设置成功')
+        return this.loadCorePositionCandidates()
+      }).catch(() => {})
+    },
+    adjustCorePosition(row) {
+      this.promptCoreQty('调整底仓数量', row.coreQty, row.remainingQty).then(value => {
+        return editCorePosition({ id: row.corePositionId, coreQty: value, remark: row.remark })
+      }).then(() => {
+        this.$message.success('底仓调整成功')
+        return this.loadCorePositionCandidates()
+      }).catch(() => {})
+    },
+    releaseCorePosition(row) {
+      this.$confirm('解除后，该数量会按原买入时间重新参与后续 FIFO 撮合，是否继续？', '解除底仓', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => releaseCorePositionApi(row.corePositionId)).then(() => {
+        this.$message.success('底仓已解除')
+        return this.loadCorePositionCandidates()
+      }).catch(() => {})
+    },
+    promptCoreQty(title, value, maxQty) {
+      return this.$prompt(`数量必须大于 0，且不能超过当前剩余数量 ${maxQty}`, title, {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        inputValue: String(value),
+        inputValidator: input => {
+          const qty = Number(input)
+          return (!Number.isNaN(qty) && qty > 0 && qty <= Number(maxQty)) || '请输入有效的底仓数量'
+        }
+      }).then(({ value: input }) => input)
     }
   }
 }

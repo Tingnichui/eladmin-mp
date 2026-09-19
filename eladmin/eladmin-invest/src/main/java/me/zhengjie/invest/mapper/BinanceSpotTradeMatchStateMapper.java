@@ -38,6 +38,10 @@ public interface BinanceSpotTradeMatchStateMapper extends BaseMapper<BinanceSpot
 
     int initializeFromTrades(@Param("uid") Integer uid, @Param("symbol") String symbol);
 
+    BinanceSpotTradeMatchState findBuyStateForUpdate(@Param("uid") Integer uid,
+                                                       @Param("symbol") String symbol,
+                                                       @Param("tradeId") Long tradeId);
+
     List<BinanceSpotTradeMatchState> findPendingSellsForUpdate(@Param("uid") Integer uid,
                                                                @Param("symbol") String symbol);
 

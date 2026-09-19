@@ -92,6 +92,10 @@ public class BinanceSpotTradeMatchState implements Serializable {
     @ApiModelProperty(value = "成交价格")
     private BigDecimal price;
 
+    @TableField(exist = false)
+    @ApiModelProperty(value = "当前有效底仓数量")
+    private BigDecimal activeCoreQty;
+
     public void copy(BinanceSpotTradeMatchState source){
         BeanUtil.copyProperties(source,this, CopyOptions.create().setIgnoreNullValue(true));
     }

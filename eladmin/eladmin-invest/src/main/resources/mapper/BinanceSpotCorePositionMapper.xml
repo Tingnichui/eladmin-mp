@@ -25,6 +25,63 @@
         <include refid="Base_Column_List"/>
         FROM binance_spot_core_position t1
         WHERE 1 = 1
+        <if test="criteria.uid != null">
+            AND t1.uid = #{criteria.uid}
+        </if>
+        <if test="criteria.symbol != null and criteria.symbol != ''">
+            AND t1.symbol = #{criteria.symbol}
+        </if>
+        <if test="criteria.active != null and criteria.active">
+            AND t1.released_at IS NULL
+        </if>
+        <if test="criteria.active != null and criteria.active == false">
+            AND t1.released_at IS NOT NULL
+        </if>
         ORDER BY t1.id DESC
+    </select>
+
+    <select id="findActiveByTradeForUpdate" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM binance_spot_core_position
+        WHERE uid = #{uid}
+          AND symbol = #{symbol}
+          AND trade_id = #{tradeId}
+          AND released_at IS NULL
+        ORDER BY id DESC
+        LIMIT 1
+        FOR UPDATE
+    </select>
+
+    <select id="findByIdForUpdate" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM binance_spot_core_position
+        WHERE id = #{id}
+        FOR UPDATE
+    </select>
+
+    <select id="findCandidates" resultType="me.zhengjie.invest.domain.dto.BinanceSpotCorePositionCandidate">
+        SELECT c.id AS core_position_id,
+               s.uid,
+               s.symbol,
+               s.trade_id,
+               s.trade_time,
+               t.price,
+               s.remaining_qty,
+               COALESCE(c.core_qty, 0) AS core_qty,
+               s.remaining_qty - COALESCE(c.core_qty, 0) AS available_qty,
+               c.locked_at,
+               c.remark
+        FROM binance_spot_trade_match_state s
+        INNER JOIN binance_trade_info t ON t.id = s.trade_id
+        LEFT JOIN binance_spot_core_position c
+          ON c.uid = s.uid
+         AND c.symbol = s.symbol
+         AND c.trade_id = s.trade_id
+         AND c.released_at IS NULL
+        WHERE s.uid = #{uid}
+          AND s.symbol = #{symbol}
+          AND s.is_buyer = 1
+          AND s.remaining_qty &gt; 0
+        ORDER BY s.trade_time ASC, s.trade_id ASC
     </select>
 </mapper>

@@ -15,6 +15,7 @@
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
         <result column="price" property="price"/>
+        <result column="active_core_qty" property="activeCoreQty"/>
     </resultMap>
 
     <sql id="Base_Column_List">
@@ -62,6 +63,25 @@
           AND t1.is_buyer IN (0, 1)
     </insert>
 
+    <select id="findBuyStateForUpdate" resultMap="BaseResultMap">
+        SELECT s.*, t.price,
+               COALESCE((
+                   SELECT SUM(c.core_qty)
+                   FROM binance_spot_core_position c
+                   WHERE c.uid = s.uid
+                     AND c.symbol = s.symbol
+                     AND c.trade_id = s.trade_id
+                     AND c.released_at IS NULL
+               ), 0) AS active_core_qty
+        FROM binance_spot_trade_match_state s
+        INNER JOIN binance_trade_info t ON t.id = s.trade_id
+        WHERE s.uid = #{uid}
+          AND s.symbol = #{symbol}
+          AND s.trade_id = #{tradeId}
+          AND s.is_buyer = 1
+        FOR UPDATE
+    </select>
+
     <select id="findPendingSellsForUpdate" resultMap="BaseResultMap">
         SELECT s.*, t.price
         FROM binance_spot_trade_match_state s
@@ -76,13 +96,28 @@
     </select>
 
     <select id="findAvailableBuysForUpdate" resultMap="BaseResultMap">
-        SELECT s.*, t.price
+        SELECT s.*, t.price,
+               COALESCE((
+                   SELECT SUM(c.core_qty)
+                   FROM binance_spot_core_position c
+                   WHERE c.uid = s.uid
+                     AND c.symbol = s.symbol
+                     AND c.trade_id = s.trade_id
+                     AND c.released_at IS NULL
+               ), 0) AS active_core_qty
         FROM binance_spot_trade_match_state s
         INNER JOIN binance_trade_info t ON t.id = s.trade_id
         WHERE s.uid = #{uid}
           AND s.symbol = #{symbol}
           AND s.is_buyer = 1
-          AND s.remaining_qty &gt; 0
+          AND s.remaining_qty &gt; COALESCE((
+              SELECT SUM(c.core_qty)
+              FROM binance_spot_core_position c
+              WHERE c.uid = s.uid
+                AND c.symbol = s.symbol
+                AND c.trade_id = s.trade_id
+                AND c.released_at IS NULL
+          ), 0)
           AND s.match_status IN ('PENDING', 'PARTIAL')
           AND (
               s.trade_time &lt; #{sellTime}
