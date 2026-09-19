@@ -6,6 +6,7 @@ import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
 import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
+import me.zhengjie.invest.service.BinanceSpotTradeMatcherService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceCoinFuturesUtil;
 import me.zhengjie.invest.util.BinanceSpotUtil;
@@ -34,8 +35,10 @@ class BinanceTradeIncrementalSyncTest {
     @SuppressWarnings("unchecked")
     void shouldPageSpotTradesFromBeginningAndAccumulateInsertedCount() {
         BinanceSpotUtil spotUtil = mock(BinanceSpotUtil.class);
+        BinanceSpotTradeMatcherService matcherService = mock(BinanceSpotTradeMatcherService.class);
         BinanceTradeInfoServiceImpl service = spy(new BinanceTradeInfoServiceImpl());
         ReflectionTestUtils.setField(service, "binanceSpotUtil", spotUtil);
+        ReflectionTestUtils.setField(service, "binanceSpotTradeMatcherService", matcherService);
         doReturn(Collections.emptyList()).when(service).list(any(Wrapper.class));
         doReturn(true).when(service).saveOrUpdateBatch(anyCollection());
         List<BinanceTradeInfo> firstPage = spotTrades(0L, 1000);
@@ -49,6 +52,26 @@ class BinanceTradeIncrementalSyncTest {
         verify(spotUtil).getMyTrades("BTCUSDT", 0L, 1000);
         verify(spotUtil).getMyTrades("BTCUSDT", 1000L, 1000);
         verify(service, times(2)).saveOrUpdateBatch(anyCollection());
+        verify(matcherService).initializeAndMatch(7, "BTCUSDT");
+        assertNull(BinanceAccountContextHolder.get());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldRunSpotMatcherWhenNoIncrementalTradesExist() {
+        BinanceSpotUtil spotUtil = mock(BinanceSpotUtil.class);
+        BinanceSpotTradeMatcherService matcherService = mock(BinanceSpotTradeMatcherService.class);
+        BinanceTradeInfoServiceImpl service = spy(new BinanceTradeInfoServiceImpl());
+        ReflectionTestUtils.setField(service, "binanceSpotUtil", spotUtil);
+        ReflectionTestUtils.setField(service, "binanceSpotTradeMatcherService", matcherService);
+        doReturn(Collections.emptyList()).when(service).list(any(Wrapper.class));
+        when(spotUtil.getMyTrades("BNBUSDT", 0L, 1000)).thenReturn(Collections.emptyList());
+
+        int count = service.syncTradeInfo(account(9), "BNBUSDT");
+
+        assertEquals(0, count);
+        verify(service, times(0)).saveOrUpdateBatch(anyCollection());
+        verify(matcherService).initializeAndMatch(9, "BNBUSDT");
         assertNull(BinanceAccountContextHolder.get());
     }
 

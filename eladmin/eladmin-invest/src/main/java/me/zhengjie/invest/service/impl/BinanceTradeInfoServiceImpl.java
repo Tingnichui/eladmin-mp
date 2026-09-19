@@ -32,6 +32,7 @@ import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.mapper.BinanceTradeInfoMapper;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
+import me.zhengjie.invest.service.BinanceSpotTradeMatcherService;
 import me.zhengjie.invest.service.BinanceTradeInfoExtService;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
 import me.zhengjie.invest.service.support.BinanceSpotHedgeContext;
@@ -75,6 +76,8 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
     private BinanceAccountInfoService binanceAccountInfoService;
     @Resource
     private BinanceSpotUtil binanceSpotUtil;
+    @Resource
+    private BinanceSpotTradeMatcherService binanceSpotTradeMatcherService;
     @Resource
     private BinanceTradeInfoExtService binanceTradeInfoExtService;
     @Resource
@@ -191,6 +194,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                 }
             }
         });
+        binanceSpotTradeMatcherService.initializeAndMatch(accountInfo.getUid(), symbol);
         return syncedCount[0];
     }
 
