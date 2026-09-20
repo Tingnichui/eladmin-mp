@@ -5,7 +5,8 @@ param(
     [string]$MavenRepository = 'C:\MyProgram\develop\Maven\apache-maven-3.5.4\repo',
     [string]$NodeExe = '',
     [switch]$SkipBuild,
-    [switch]$RunTests
+    [switch]$RunTests,
+    [switch]$RestartBackend
 )
 
 $ErrorActionPreference = 'Stop'
@@ -21,6 +22,11 @@ $logRoot = Join-Path $projectRoot 'runtime-logs'
 $mavenCommand = Join-Path $MavenHome 'bin\mvn.cmd'
 $mavenSettings = Join-Path $MavenHome 'conf\settings.xml'
 $vueCli = Join-Path $frontendRoot 'node_modules\@vue\cli-service\bin\vue-cli-service.js'
+$localEnvFile = Join-Path $projectRoot '.codex-local\env.ps1'
+
+if (Test-Path -LiteralPath $localEnvFile) {
+    . $localEnvFile
+}
 
 function Assert-PathExists {
     param(
@@ -56,7 +62,9 @@ function Wait-HttpEndpoint {
     param(
         [Parameter(Mandatory = $true)][string]$Uri,
         [Parameter(Mandatory = $true)][string]$ServiceName,
-        [int]$TimeoutSeconds = 120
+        [int]$TimeoutSeconds = 120,
+        [System.Diagnostics.Process]$Process,
+        [string[]]$FailureLogPaths = @()
     )
 
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
@@ -65,10 +73,119 @@ function Wait-HttpEndpoint {
             Write-Host "$ServiceName 已就绪：$Uri"
             return
         }
+        if ($null -ne $Process) {
+            $Process.Refresh()
+            if ($Process.HasExited) {
+                foreach ($logPath in $FailureLogPaths) {
+                    if (Test-Path -LiteralPath $logPath) {
+                        Write-Host "===== $logPath ====="
+                        Get-Content -LiteralPath $logPath -Encoding UTF8 -Tail 40
+                    }
+                }
+                throw "$ServiceName 启动进程已提前退出，退出码：$($Process.ExitCode)"
+            }
+        }
         Start-Sleep -Seconds 2
     }
 
     throw "$ServiceName 在 $TimeoutSeconds 秒内未就绪，请检查 runtime-logs。"
+}
+
+function Wait-PortClosed {
+    param(
+        [Parameter(Mandatory = $true)][int]$Port,
+        [int]$TimeoutSeconds = 30
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while ((Get-Date) -lt $deadline) {
+        if (-not (Test-PortListening -Port $Port)) {
+            return
+        }
+        Start-Sleep -Milliseconds 500
+    }
+
+    throw "端口 $Port 在 $TimeoutSeconds 秒内未释放。"
+}
+
+function Get-BackendListenerProcess {
+    $processIds = @(Get-NetTCPConnection -LocalPort 11280 -State Listen -ErrorAction SilentlyContinue |
+        Select-Object -ExpandProperty OwningProcess -Unique)
+    if ($processIds.Count -eq 0) {
+        return $null
+    }
+    if ($processIds.Count -ne 1) {
+        throw "后端端口 11280 存在多个监听进程，拒绝自动停止：$($processIds -join ', ')"
+    }
+    return Get-CimInstance Win32_Process -Filter "ProcessId = $($processIds[0])"
+}
+
+function Stop-BackendService {
+    $backendProcess = Get-BackendListenerProcess
+    if ($null -eq $backendProcess) {
+        Write-Host '后端未运行，无需停止。'
+        return
+    }
+
+    $expectedClasses = Join-Path $backendRoot 'eladmin-system\target\classes'
+    $commandLine = [string]$backendProcess.CommandLine
+    if (-not $commandLine.Contains($expectedClasses) -or -not $commandLine.Contains('me.zhengjie.AppRun')) {
+        throw "端口 11280 的进程不属于当前项目，拒绝停止。PID：$($backendProcess.ProcessId)"
+    }
+
+    $parentProcess = Get-CimInstance Win32_Process -Filter "ProcessId = $($backendProcess.ParentProcessId)" -ErrorAction SilentlyContinue
+    $parentOwned = $null -ne $parentProcess -and
+        ([string]$parentProcess.CommandLine).Contains($backendRoot) -and
+        ([string]$parentProcess.CommandLine).Contains('spring-boot:run')
+
+    Write-Host "停止后端进程 PID：$($backendProcess.ProcessId)"
+    Stop-Process -Id $backendProcess.ProcessId -Force
+    if ($parentOwned -and (Get-Process -Id $parentProcess.ProcessId -ErrorAction SilentlyContinue)) {
+        Write-Host "停止 Maven 父进程 PID：$($parentProcess.ProcessId)"
+        Stop-Process -Id $parentProcess.ProcessId -Force
+    }
+    Wait-PortClosed -Port 11280
+}
+
+function Invoke-BackendBuild {
+    $testArgument = if ($RunTests) { '-DskipTests=false' } else { '-DskipTests' }
+    Write-Host '开始构建后端模块...'
+    & $mavenCommand `
+        -s $mavenSettings `
+        "-Dmaven.repo.local=$MavenRepository" `
+        $testArgument `
+        clean install
+    if ($LASTEXITCODE -ne 0) {
+        throw "后端构建失败，退出码：$LASTEXITCODE"
+    }
+}
+
+function Start-BackendService {
+    $stdoutLog = Join-Path $logRoot 'backend.out.log'
+    $stderrLog = Join-Path $logRoot 'backend.err.log'
+    Write-Host '启动后端...'
+    $backendProcess = Start-Process `
+        -FilePath $mavenCommand `
+        -ArgumentList @(
+            '-s',
+            $mavenSettings,
+            "-Dmaven.repo.local=$MavenRepository",
+            '-pl',
+            'eladmin-system',
+            '-DskipTests',
+            'spring-boot:run'
+        ) `
+        -WorkingDirectory $backendRoot `
+        -RedirectStandardOutput $stdoutLog `
+        -RedirectStandardError $stderrLog `
+        -WindowStyle Hidden `
+        -PassThru
+    Write-Host "后端启动进程 PID：$($backendProcess.Id)"
+    Wait-HttpEndpoint `
+        -Uri $backendHealthUri `
+        -ServiceName '后端' `
+        -Process $backendProcess `
+        -FailureLogPaths @($stdoutLog, $stderrLog)
 }
 
 function Resolve-NodeExecutable {
@@ -140,7 +257,13 @@ $backendHealthUri = 'http://127.0.0.1:11280/auth/code'
 $frontendUri = 'http://127.0.0.1:8013/'
 $proxyHealthUri = 'http://127.0.0.1:8013/auth/code'
 
-if (-not (Test-HttpEndpoint -Uri $backendHealthUri)) {
+if ($RestartBackend) {
+    if (-not $SkipBuild) {
+        Invoke-BackendBuild
+    }
+    Stop-BackendService
+    Start-BackendService
+} elseif (-not (Test-HttpEndpoint -Uri $backendHealthUri)) {
     if (Test-PortListening -Port 11280) {
         Write-Host '后端端口已监听，等待服务完成初始化...'
         Wait-HttpEndpoint -Uri $backendHealthUri -ServiceName '后端' -TimeoutSeconds 60
@@ -150,37 +273,9 @@ if (-not (Test-HttpEndpoint -Uri $backendHealthUri)) {
         Write-Host "后端已在运行：$backendHealthUri"
     } else {
         if (-not $SkipBuild) {
-            $testArgument = if ($RunTests) { '-DskipTests=false' } else { '-DskipTests' }
-            Write-Host '开始构建后端模块...'
-            & $mavenCommand `
-                -s $mavenSettings `
-                "-Dmaven.repo.local=$MavenRepository" `
-                $testArgument `
-                clean install
-            if ($LASTEXITCODE -ne 0) {
-                throw "后端构建失败，退出码：$LASTEXITCODE"
-            }
+            Invoke-BackendBuild
         }
-
-        Write-Host '启动后端...'
-        $backendProcess = Start-Process `
-            -FilePath $mavenCommand `
-            -ArgumentList @(
-                '-s',
-                $mavenSettings,
-                "-Dmaven.repo.local=$MavenRepository",
-                '-pl',
-                'eladmin-system',
-                '-DskipTests',
-                'spring-boot:run'
-            ) `
-            -WorkingDirectory $backendRoot `
-            -RedirectStandardOutput (Join-Path $logRoot 'backend.out.log') `
-            -RedirectStandardError (Join-Path $logRoot 'backend.err.log') `
-            -WindowStyle Hidden `
-            -PassThru
-        Write-Host "后端启动进程 PID：$($backendProcess.Id)"
-        Wait-HttpEndpoint -Uri $backendHealthUri -ServiceName '后端'
+        Start-BackendService
     }
 } else {
     Write-Host "后端已在运行：$backendHealthUri"

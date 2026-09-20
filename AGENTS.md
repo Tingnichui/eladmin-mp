@@ -46,4 +46,6 @@ Java 代码目标版本为 Java 8，并沿用现有 `me.zhengjie` 包结构。Sp
 
 启动 Java 后端项目前，必须向用户确认 `JASYPT_ENCRYPTOR_PASSWORD` 的值；这是后端配置解密密钥，未确认前不要启动后端服务。
 
+本地开发服务的启动和后端重启优先使用 `scripts/start-dev.ps1`。只修改前端时依赖热更新，不重启后端；修改后端并需要运行验证时，使用 `-RestartBackend`，脚本会先构建再停止旧服务。不要手工拼接 Maven 启动参数、把运行日志写入业务模块目录或硬编码进程 PID；快速重启且已确认构建产物最新时使用 `-RestartBackend -SkipBuild`。
+
 所有文件读写、终端命令、构建测试和数据库导入导出都必须使用 UTF-8 字符集。若工具支持显式编码参数，优先指定 UTF-8。
