@@ -17,6 +17,12 @@ jest.mock('@/api/binanceAccountInfo', () => ({
 jest.mock('@/views/invest/binance/tradeInfo/TradePositionDistributionBar.vue', () => ({
   name: 'TradePositionDistributionBar'
 }))
+jest.mock('@/api/binanceSpotCorePosition', () => ({
+  add: jest.fn(),
+  edit: jest.fn(),
+  getCandidates: jest.fn(),
+  release: jest.fn()
+}))
 jest.mock('@crud/crud', () => ({
   NOTIFICATION_TYPE: { SUCCESS: 'success' }
 }), { virtual: true })
@@ -66,7 +72,7 @@ describe('trade stats request lifecycle', () => {
       statsRequestId: 1,
       statsLoading: false,
       statsInfo: {},
-      buildStatsParams: Stats.methods.buildStatsParams
+      lastUpdatedAt: ''
     }
 
     Stats.methods.executeStats.call(vm, 1)
@@ -84,54 +90,35 @@ describe('trade stats request lifecycle', () => {
     expect(vm.statsLoading).toBe(false)
   })
 
-  it('uses the end of the selected day without mutating the query', () => {
-    const vm = {
-      query: {
-        uid: 1,
-        symbol: 'BTCUSDT',
-        endTime: '2026-09-18'
+  it('reads only the spot statistics payload', () => {
+    const spot = { roi: 0.12, unmatchedSellQty: 0 }
+    const result = Stats.computed.spotStats.call({
+      statsInfo: {
+        spotFuturesStatsInfo: spot,
+        usdFuturesStatsInfo: { roi: 0.3 }
       }
-    }
-
-    const params = Stats.methods.buildStatsParams.call(vm)
-
-    expect(params.endTime).toBe('2026-09-18 23:59:59')
-    expect(vm.query.endTime).toBe('2026-09-18')
-  })
-
-  it('omits the cutoff when no date is selected', () => {
-    const vm = {
-      query: {
-        uid: 1,
-        symbol: 'BTCUSDT',
-        endTime: null
-      }
-    }
-
-    const params = Stats.methods.buildStatsParams.call(vm)
-
-    expect(params).not.toHaveProperty('endTime')
-  })
-
-  it('maps the spot return field to roi', () => {
-    const descriptions = Stats.computed.statsDescriptions.call({ statsInfo: {}})
-    const spotStats = descriptions.find(item => item.title === '现货统计')
-
-    expect(spotStats.descriptionsItems).toContainEqual({
-      label: '收益率',
-      key: 'roi',
-      type: 'percent'
     })
-    expect(spotStats.descriptionsItems).toContainEqual({
-      label: '未匹配卖出数量',
-      key: 'unmatchedSellQty'
-    })
+
+    expect(result).toBe(spot)
   })
 
   it('keeps zero values visible in statistics', () => {
-    expect(Stats.methods.formatValue({}, 'amount')).toBe('--')
-    expect(Stats.methods.formatValue({ amount: 0 }, 'amount')).toBe('0.0000')
-    expect(Stats.methods.formatValue({ roi: 0 }, 'roi', 'percent')).toBe('0.00%')
+    const vm = { decimalValue: Stats.methods.decimalValue }
+    expect(Stats.methods.decimalValue(null, 2)).toBe('--')
+    expect(Stats.methods.decimalValue(0, 4)).toBe('0.0000')
+    expect(Stats.methods.signedPercentValue(0)).toBe('0.00%')
+    expect(Stats.methods.currencyValue.call(vm, 0, '$')).toBe('$0.00')
+  })
+
+  it('hides futures warnings from the spot page', () => {
+    const text = Stats.computed.realtimeWarningText.call({
+      statsInfo: {
+        warnings: ['现货数据延迟', 'U本位合约不可用', '币本位接口超时'],
+        realtimeStatus: {}
+      }
+    })
+
+    expect(text).toBe('现货数据延迟')
   })
 
   it('initializes the reactive open price filter', () => {
@@ -185,7 +172,7 @@ describe('trade stats request lifecycle', () => {
     })
     expect(vm.doStats).toHaveBeenCalledTimes(1)
     expect(vm.$notify).toHaveBeenCalledWith(expect.objectContaining({
-      title: '同步成功：现货 2 条，U 本位 1 条，币本位 0 条'
+      title: '同步成功：现货 2 条'
     }))
     expect(vm.syncLoading).toBe(false)
   })

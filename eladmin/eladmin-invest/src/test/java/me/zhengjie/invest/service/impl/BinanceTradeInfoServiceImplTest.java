@@ -16,6 +16,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.util.Arrays;
 import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -122,6 +123,23 @@ class BinanceTradeInfoServiceImplTest {
         assertEquals(new BigDecimal("100.00000000"), result.getPosAvgPrice());
         assertEquals(new BigDecimal("1"), result.getPosQty());
         assertEquals(BigDecimal.ZERO, result.getUnmatchedSellQty());
+    }
+
+    @Test
+    void shouldKeepEachOpenBuyAndItsOriginalTradeTime() {
+        when(stateMapper.findStatsOpenBuys(eq(1), eq("BTCUSDT")))
+                .thenReturn(Arrays.asList(
+                        position(2L, "100", "1", 2_000L),
+                        position(1L, "100", "0.5", 1_000L)));
+        when(spotUtil.getPrice(BinanceEnum.SYMBOL.BTCUSDT)).thenReturn(new BigDecimal("140"));
+
+        BinanceTradeStatsInfoVO result = service.stats(criteria());
+
+        assertEquals(2, result.getTradeList().size());
+        assertEquals(new Timestamp(1_000L), result.getTradeList().get(0).getOpenTime());
+        assertEquals(new Timestamp(2_000L), result.getTradeList().get(1).getOpenTime());
+        assertEquals(new BigDecimal("0.5"), result.getTradeList().get(0).getQty());
+        assertEquals(new BigDecimal("1"), result.getTradeList().get(1).getQty());
     }
 
     @Test

@@ -278,19 +278,10 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             // 持仓盈亏
             statsInfoVO.setHoldingProfitLoss(matchedTradeInfos.stream().map(MatchedTradeInfo::getNetPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
             // 持仓订单
-            statsInfoVO.setTradeList(
-                    matchedTradeInfos.stream().collect(Collectors.groupingBy(MatchedTradeInfo::getOpenPrice))
-                            .entrySet()
-                            .stream().map(v -> {
-                                MatchedTradeInfo m = new MatchedTradeInfo(side, feeRate);
-                                m.setOpenPrice(v.getKey());
-                                m.setClosePrice(currentPrice);
-                                m.setQty(v.getValue().stream().map(MatchedTradeInfo::getQty).reduce(BigDecimal.ZERO, BigDecimal::add));
-                                return m;
-                            }).collect(Collectors.toList())
-                            .stream().sorted(Comparator.comparing(MatchedTradeInfo::getRoi).reversed())
-                            .collect(Collectors.toList())
-            );
+            // 按未平仓买入批次逐笔返回，保留真实成交时间；价格区间聚合由前端按需完成。
+            statsInfoVO.setTradeList(matchedTradeInfos.stream()
+                    .sorted(Comparator.comparing(MatchedTradeInfo::getOpenTime))
+                    .collect(Collectors.toList()));
 
         } catch (Exception e) {
             statsInfoVO.setCurrentSpotPrice(null);

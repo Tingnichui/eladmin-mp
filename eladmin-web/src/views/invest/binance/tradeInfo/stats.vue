@@ -1,33 +1,25 @@
 <template>
-  <div class="app-container">
-    <!--工具栏-->
-    <div class="head-container">
-      <div>
-        <label class="el-form-item-label">账户</label>
+  <div class="app-container stats-page">
+    <section class="panel toolbar-panel">
+      <div class="toolbar-row">
+        <label class="field-label">账户</label>
         <el-select
           v-model="query.uid"
           clearable
           filterable
           size="small"
           placeholder="账户"
-          class="filter-item"
-          style="width: 185px"
+          class="account-select"
           @change="handleAccountChange"
         >
-          <el-option
-            v-for="item in accountList"
-            :key="item.id"
-            :label="item.idCardName"
-            :value="item.uid"
-          />
+          <el-option v-for="item in accountList" :key="item.id" :label="item.idCardName" :value="item.uid" />
         </el-select>
-        <label class="el-form-item-label">交易对</label>
+        <label class="field-label">交易对</label>
         <el-select
           v-model="query.symbol"
           size="small"
-          placeholder="投资类型"
-          class="filter-item"
-          style="width: 185px"
+          placeholder="交易对"
+          class="symbol-select"
           @change="scheduleStats"
         >
           <el-option
@@ -37,137 +29,105 @@
             :value="item.value"
           />
         </el-select>
-        <!--        <label class="el-form-item-label">撮合逻辑</label>-->
-        <!--        <el-select-->
-        <!--          v-model="query.tradePairingLogic"-->
-        <!--          size="small"-->
-        <!--          placeholder="投资类型"-->
-        <!--          class="filter-item"-->
-        <!--          style="width: 185px"-->
-        <!--          @change="doStats"-->
-        <!--        >-->
-        <!--          <el-option-->
-        <!--            v-for="item in dict.invest_binance_trade_pairing_logic"-->
-        <!--            :key="item.value"-->
-        <!--            :label="item.label"-->
-        <!--            :value="item.value"-->
-        <!--          />-->
-        <!--        </el-select>-->
         <el-button
-          slot="right"
-          class="filter-item"
-          size="mini"
+          size="small"
           type="success"
-          icon="el-icon-tickets"
+          icon="el-icon-search"
           :loading="statsLoading"
           :disabled="query.uid == null || !query.symbol"
           @click="doStats"
         >查询</el-button>
         <el-button
-          class="filter-item"
-          size="mini"
+          size="small"
+          plain
           type="success"
           icon="el-icon-refresh"
           :loading="syncLoading"
           :disabled="query.uid == null || !query.symbol"
           @click="syncSpotTradeInfo"
-        >同步</el-button>
+        >同步数据</el-button>
         <el-button
           v-if="checkPer(['admin', 'binanceSpotCorePosition:list'])"
-          class="filter-item"
-          size="mini"
+          size="small"
           type="primary"
           icon="el-icon-lock"
           :disabled="query.uid == null || !query.symbol"
           @click="openCorePositionDialog"
         >底仓管理</el-button>
       </div>
-      <div>
-        <el-alert
-          v-if="realtimeWarningText"
-          :title="realtimeWarningText"
-          type="warning"
-          :closable="false"
-          show-icon
-          style="margin-top: 16px"
-        />
-        <el-descriptions
-          v-for="description in statsDescriptions"
-          :key="description.title"
-          :title="description.title"
-          :column="3"
-          border
-          style="margin-bottom: 20px;margin-top: 20px"
-        >
-          <el-descriptions-item
-            v-for="(item, index) in description.descriptionsItems"
-            :key="index"
-            :label="item.label"
-          >
-            <div v-if="item.showType === 'link'">
-              <el-link type="primary" @click="showOpenTrades = true;tradeList = description.data.tradeList">
-                {{ formatValue(description.data, item.key, item.type) }}
-              </el-link>
-            </div>
-            <template v-else-if="item.showType === 'diff'">
-              <span>
-                {{ formatValue(description.data, item.key, item.type) }}
-                <span
-                  v-if="description.data.lastNetPnl != null"
-                  :style="{
-                    color: description.data[item.key] - description.data[item.diffKey] > 0 ? 'green' : description.data[item.key] - description.data[item.diffKey] < 0 ? 'red' : '#999',
-                    fontSize: '12px',
-                    marginLeft: '4px'
-                  }"
-                >
-                  (
-                  {{
-                    (description.data[item.key] - description.data[item.diffKey] > 0 ? '+' : '') + (description.data[item.key] - description.data[item.diffKey]).toFixed(2)
-                  }}
-                  )
-                </span>
-              </span>
-            </template>
-            <div v-else> {{ formatValue(description.data, item.key, item.type) }}</div>
-          </el-descriptions-item>
-        </el-descriptions>
-        <div>
-          <trade-position-distribution-bar
-            :row-data="statsInfo.spotFuturesStatsInfo.tradeList"
-            :current-price="statsInfo.spotFuturesStatsInfo.currentSpotPrice"
-            height="400px"
-            style="margin-top: 20px"
-          />
-          <!--          <trade-profit-rate-scatter :row-data="statsInfo.matchedTradeInfoList" height="400px" style="margin-top: 20px" />-->
+      <el-alert
+        v-if="realtimeWarningText"
+        :title="realtimeWarningText"
+        type="warning"
+        :closable="false"
+        show-icon
+        class="realtime-warning"
+      />
+    </section>
+
+    <section v-loading="statsLoading" class="panel position-panel">
+      <div class="panel-title-row">
+        <h3>{{ query.symbol || '现货' }} 持仓买入分布</h3>
+      </div>
+      <div class="position-metrics">
+        <div v-for="item in positionMetrics" :key="item.label" class="metric-item">
+          <span class="metric-label">{{ item.label }}</span>
+          <strong :class="['metric-value', item.tone]">{{ item.value }}</strong>
         </div>
       </div>
+      <trade-position-distribution-bar
+        :row-data="spotStats.tradeList || []"
+        :current-price="spotStats.currentSpotPrice"
+        :average-price="spotStats.posAvgPrice"
+        height="100%"
+        @show-details="openTradeDetails"
+      />
+    </section>
+
+    <div class="summary-layout">
+      <section class="panel account-panel">
+        <h3>账户统计</h3>
+        <div v-for="item in accountSummaryItems" :key="item.label" class="account-row">
+          <span><i :class="item.icon" />{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+        </div>
+      </section>
+      <section class="panel trade-summary-panel">
+        <div class="panel-title-row">
+          <h3>交易汇总</h3>
+          <el-button type="text" @click="openTradeDetails()">
+            持仓订单 {{ tradeCount }} 笔<i class="el-icon-arrow-right" />
+          </el-button>
+        </div>
+        <div class="summary-grid">
+          <div v-for="item in tradeSummaryItems" :key="item.label" class="summary-item">
+            <span class="summary-icon"><i :class="item.icon" /></span>
+            <div>
+              <span class="summary-label">{{ item.label }}</span>
+              <strong :class="['summary-value', item.tone]">{{ item.value }}</strong>
+              <small v-if="item.note">{{ item.note }}</small>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
 
-    <!-- 🔹 弹窗 -->
-    <el-dialog
-      title="未平仓交易详情"
-      :visible.sync="showOpenTrades"
-      width="80%"
-    >
-      <el-form inline :model="filterForm" class="mb-2">
+    <el-dialog title="持仓订单详情" :visible.sync="showOpenTrades" width="88%">
+      <el-form inline :model="filterForm" class="trade-filter-form">
         <el-form-item label="方向">
-          <el-select v-model="filterForm.side">
+          <el-select v-model="filterForm.side" clearable>
             <el-option label="全部" :value="null" />
             <el-option label="做多" :value="true" />
             <el-option label="做空" :value="false" />
           </el-select>
         </el-form-item>
-
         <el-form-item label="开仓价格">
           <el-input v-model="filterForm.openPrice" clearable />
         </el-form-item>
-
         <el-form-item label="价格范围">
-          <el-input-number v-model="filterForm.priceRange" :step="100" />
+          <el-input-number v-model="filterForm.priceRange" :step="100" :min="1" />
         </el-form-item>
-
       </el-form>
-
       <el-table :data="filteredTrades" border stripe>
         <el-table-column
           v-for="(col, index) in tableColumns"
@@ -175,16 +135,12 @@
           :prop="col.prop"
           :formatter="col.formatter"
           :label="col.label"
-          :min-width="col.width || 100"
+          :min-width="col.width || 110"
         />
       </el-table>
     </el-dialog>
 
-    <el-dialog
-      title="现货底仓管理"
-      :visible.sync="showCorePositions"
-      width="88%"
-    >
+    <el-dialog title="现货底仓管理" :visible.sync="showCorePositions" width="88%">
       <el-alert
         title="底仓只影响未来撮合；已经固化的历史撮合不会重排。"
         type="info"
@@ -226,13 +182,11 @@
         </el-table-column>
       </el-table>
     </el-dialog>
-
   </div>
 </template>
 
 <script>
 import crudBinanceTradeInfo from '@/api/binanceTradeInfo'
-import { formatDuration } from '@/utils/dateUtil'
 import { listAllAccount } from '@/api/binanceAccountInfo'
 import TradePositionDistributionBar from '@/views/invest/binance/tradeInfo/TradePositionDistributionBar.vue'
 import CRUD from '@crud/crud'
@@ -267,15 +221,16 @@ export default {
         uid: null
       },
       tableColumns: [
-        { prop: 'side', label: '方向', formatter: (row) => (row.side ? '做多' : '做空') },
+        { prop: 'side', label: '方向', formatter: row => row.side ? '做多' : '做空' },
+        { prop: 'openTime', label: '买入时间', width: 165 },
         { prop: 'qty', label: '成交数量' },
         { prop: 'openPrice', label: '开仓价' },
-        { prop: 'closePrice', label: '平仓价' },
+        { prop: 'closePrice', label: '当前价' },
         { prop: 'breakEvenPrice', label: '盈亏平衡价' },
         { prop: 'pnl', label: '盈亏' },
         { prop: 'fee', label: '手续费' },
         { prop: 'netPnl', label: '净盈亏' },
-        { prop: 'roi', label: '回报率', formatter: (row) => (numberUtil.formatByType(row.roi, 'percent')) }
+        { prop: 'roi', label: '回报率', formatter: row => numberUtil.formatByType(row.roi, 'percent') }
       ],
       filterForm: {
         side: null,
@@ -285,128 +240,75 @@ export default {
     }
   },
   computed: {
-    realtimeWarningText() {
-      const warnings = (this.statsInfo && this.statsInfo.warnings) || []
-      const statuses = (this.statsInfo && this.statsInfo.realtimeStatus) || {}
-      const labels = {
-        usdFuturesPrice: 'U本位价格',
-        coinFuturesPrice: '币本位价格',
-        coinFundingFee: '币本位资金费',
-        accountInfo: '账户资产'
-      }
-      const cacheTimes = Object.keys(statuses)
-        .filter(key => statuses[key] && statuses[key].status === 'CACHE' && statuses[key].updatedAt)
-        .map(key => `${labels[key] || key}缓存时间：${new Date(statuses[key].updatedAt).toLocaleString('zh-CN')}`)
-      return warnings.concat(cacheTimes).join('；')
+    spotStats() {
+      return (this.statsInfo && this.statsInfo.spotFuturesStatsInfo) || {}
     },
-    statsDescriptions() {
+    accountStats() {
+      return (this.statsInfo && this.statsInfo.accountInfo) || {}
+    },
+    tradeCount() {
+      return (this.spotStats.tradeList || []).length
+    },
+    realtimeWarningText() {
+      const warnings = ((this.statsInfo && this.statsInfo.warnings) || [])
+        .filter(message => !/U本位|币本位|合约|对冲/.test(message))
+      const accountStatus = this.statsInfo && this.statsInfo.realtimeStatus && this.statsInfo.realtimeStatus.accountInfo
+      if (accountStatus && accountStatus.status === 'CACHE' && accountStatus.updatedAt) {
+        warnings.push(`账户资产缓存时间：${new Date(accountStatus.updatedAt).toLocaleString('zh-CN')}`)
+      }
+      return warnings.join('；')
+    },
+    positionMetrics() {
       return [
-        {
-          title: '账户统计',
-          data: (this.statsInfo && this.statsInfo.accountInfo) || {},
-          descriptionsItems: [
-            { label: '汇率', key: 'rmbToUsdRate' },
-            { label: 'RMB总额', key: 'rmbAmount' },
-            { label: 'USD总额', key: 'usdAmount' }
-          ]
-        },
-        {
-          title: '现货统计',
-          data: (this.statsInfo && this.statsInfo.spotFuturesStatsInfo) || {},
-          descriptionsItems: [
-            { label: '买入总额', key: 'totalBuyAmount' },
-            { label: '卖出总额', key: 'totalSellAmount' },
-            { label: '收益率', key: 'roi', type: 'percent' },
-            { label: '盈亏', key: 'pnl' },
-            { label: '手续费', key: 'fee' },
-            { label: '净盈亏', key: 'netPnl', showType: 'diff', diffKey: 'lastNetPnl' },
-            { label: '未匹配卖出数量', key: 'unmatchedSellQty' },
-            { label: '持仓均价', key: 'posAvgPrice' },
-            { label: '持仓数量', key: 'posQty' },
-            { label: '持仓总额', key: 'posAmount' },
-            { label: '持仓盈利', key: 'holdingProfit' },
-            { label: '持仓亏损', key: 'holdingLoss' },
-            { label: '持仓盈亏', key: 'holdingProfitLoss' },
-            { label: '', key: '' },
-            { label: '持仓订单', key: 'tradeList', type: 'length', showType: 'link' }
-          ]
-        },
-        {
-          title: 'U本位-合约统计',
-          data: (this.statsInfo && this.statsInfo.usdFuturesStatsInfo) || {},
-          descriptionsItems: [
-            { label: '持仓均价', key: 'posAvgPrice' },
-            { label: '持仓数量', key: 'posQty' },
-            { label: '持仓金额', key: 'posAmount' },
-            { label: '盈亏', key: 'pnl' },
-            { label: '手续费', key: 'fee' },
-            { label: '净盈亏', key: 'netPnl' },
-            { label: '', key: '' },
-            { label: '', key: '' },
-            { label: '对冲止损', key: 'stopLossAmount' },
-            { label: '', key: '' },
-            { label: '', key: '' },
-            { label: '持仓订单', key: 'tradeList', type: 'length', showType: 'link' }
-          ]
-        },
-        {
-          title: '币本位-合约统计',
-          data: (this.statsInfo && this.statsInfo.coinFuturesStatsInfo) || {},
-          descriptionsItems: [
-            { label: '持仓均价', key: 'posAvgPrice' },
-            { label: '持仓数量', key: 'posQty' },
-            { label: '持仓金额', key: 'posAmount' },
-            { label: '盈亏', key: 'pnl' },
-            { label: '手续费', key: 'fee' },
-            { label: '净盈亏', key: 'netPnl' },
-            { label: '', key: '' },
-            { label: '资金费', key: 'fundingFee' },
-            { label: '对冲止损', key: 'stopLossAmount' },
-            { label: '', key: '' },
-            { label: '', key: '' },
-            { label: '持仓订单', key: 'tradeList', type: 'length', showType: 'link' }
-          ]
-        },
-        {
-          title: '对冲统计',
-          data: (this.statsInfo && this.statsInfo.spotHedgedFuturesStatsInfo) || {},
-          descriptionsItems: [
-            { label: '锁仓均价', key: 'posAvgPrice' },
-            { label: '锁仓数量', key: 'posQty' },
-            { label: '锁仓总额', key: 'posAmount' }
-          ]
-        }
+        { label: '当前价格', value: this.moneyValue(this.spotStats.currentSpotPrice), tone: 'primary' },
+        { label: '持仓均价', value: this.moneyValue(this.spotStats.posAvgPrice), tone: 'warning' },
+        { label: '持仓数量', value: this.quantityValue(this.spotStats.posQty), tone: '' },
+        { label: '持仓盈亏', value: this.signedMoneyValue(this.spotStats.holdingProfitLoss), tone: this.valueTone(this.spotStats.holdingProfitLoss) },
+        { label: '收益率', value: this.signedPercentValue(this.spotStats.roi), tone: this.valueTone(this.spotStats.roi) }
       ]
+    },
+    accountSummaryItems() {
+      return [
+        { label: '汇率', value: this.decimalValue(this.accountStats.rmbToUsdRate, 4), icon: 'el-icon-sort' },
+        { label: 'RMB总额', value: this.currencyValue(this.accountStats.rmbAmount, '¥'), icon: 'el-icon-money' },
+        { label: 'USD总额', value: this.currencyValue(this.accountStats.usdAmount, '$'), icon: 'el-icon-coin' }
+      ]
+    },
+    tradeSummaryItems() {
+      const netPnlDelta = this.netPnlDelta
+      return [
+        { label: '买入总额', value: this.moneyValue(this.spotStats.totalBuyAmount), icon: 'el-icon-shopping-cart-2' },
+        { label: '卖出总额', value: this.moneyValue(this.spotStats.totalSellAmount), icon: 'el-icon-sold-out' },
+        { label: '收益率', value: this.signedPercentValue(this.spotStats.roi), tone: this.valueTone(this.spotStats.roi), icon: 'el-icon-data-analysis' },
+        { label: '盈亏', value: this.signedMoneyValue(this.spotStats.pnl), tone: this.valueTone(this.spotStats.pnl), icon: 'el-icon-s-data' },
+        { label: '手续费', value: this.moneyValue(this.spotStats.fee), icon: 'el-icon-coin' },
+        {
+          label: '净盈亏',
+          value: this.signedMoneyValue(this.spotStats.netPnl),
+          tone: this.valueTone(this.spotStats.netPnl),
+          icon: 'el-icon-s-marketing',
+          note: netPnlDelta == null ? '' : `较上次 ${this.signedMoneyValue(netPnlDelta)}`
+        },
+        { label: '未匹配卖出', value: this.quantityValue(this.spotStats.unmatchedSellQty, false), icon: 'el-icon-document' },
+        { label: '持仓总额', value: this.moneyValue(this.spotStats.posAmount), icon: 'el-icon-pie-chart' },
+        { label: '持仓盈利', value: this.signedMoneyValue(this.spotStats.holdingProfit), tone: 'positive', icon: 'el-icon-top-right' },
+        { label: '持仓亏损', value: this.signedMoneyValue(this.spotStats.holdingLoss), tone: 'negative', icon: 'el-icon-bottom-right' }
+      ]
+    },
+    netPnlDelta() {
+      if (this.spotStats.netPnl == null || this.spotStats.lastNetPnl == null) return null
+      return numberUtil.subAmount(this.spotStats.netPnl, this.spotStats.lastNetPnl, 2)
     },
     filteredTrades() {
       return this.tradeList.filter(item => {
-        // 按方向筛选
-        if (this.filterForm.side != null && item.side !== this.filterForm.side) {
-          return false
-        }
-
+        if (this.filterForm.side != null && item.side !== this.filterForm.side) return false
         const base = Number(this.filterForm.openPrice)
-        const range = Number(this.filterForm.priceRange) || 500 // 默认 500
-
-        // 只有输入了 openPrice 时才筛选
-        if (!isNaN(base) && this.filterForm.openPrice) {
-          let min, max
-
-          if (item.side === true) {
-            // 做多 → openPrice + range
-            min = base
-            max = base + range
-          } else {
-            // 做空 → openPrice - range
-            min = base - range
-            max = base
-          }
-
-          if (!(item.openPrice >= min && item.openPrice <= max)) {
-            return false
-          }
+        const range = Number(this.filterForm.priceRange) || 500
+        if (!Number.isNaN(base) && this.filterForm.openPrice) {
+          const min = item.side === true ? base : base - range
+          const max = item.side === true ? base + range : base
+          if (!(item.openPrice >= min && item.openPrice <= max)) return false
         }
-
         return true
       })
     }
@@ -419,7 +321,6 @@ export default {
     this.statsRequestId++
   },
   methods: {
-    formatDuration,
     scheduleStats() {
       this.clearStatsDebounce()
       const requestId = ++this.statsRequestId
@@ -434,40 +335,25 @@ export default {
         this.statsDebounceTimer = null
       }
     },
-    // 显示汇总，手动查询不等待防抖
     doStats() {
       this.clearStatsDebounce()
       this.executeStats(++this.statsRequestId)
     },
     executeStats(requestId) {
       if (this.query.uid == null || !this.query.symbol) {
-        if (requestId === this.statsRequestId) {
-          this.statsLoading = false
-        }
+        if (requestId === this.statsRequestId) this.statsLoading = false
         return
       }
-      const params = this.buildStatsParams()
       this.statsLoading = true
-      crudBinanceTradeInfo.stats(params).then(res => {
+      crudBinanceTradeInfo.stats({ ...this.query }).then(res => {
         if (requestId === this.statsRequestId) {
           this.statsInfo = res
         }
       }).catch(() => {
         // 请求错误由全局拦截器提示；过期请求不改变当前页面状态
       }).then(() => {
-        if (requestId === this.statsRequestId) {
-          this.statsLoading = false
-        }
+        if (requestId === this.statsRequestId) this.statsLoading = false
       })
-    },
-    buildStatsParams() {
-      return { ...this.query }
-    },
-    formatValue(info, key, type) {
-      if (!info || info[key] === null || info[key] === undefined) {
-        return '--'
-      }
-      return numberUtil.formatByType(info[key], type)
     },
     handleAccountChange(uid) {
       if (uid == null) {
@@ -491,13 +377,10 @@ export default {
     },
     syncSpotTradeInfo() {
       this.syncLoading = true
-      crudBinanceTradeInfo.syncSelected({
-        uid: this.query.uid,
-        symbol: this.query.symbol
-      }).then((res) => {
+      crudBinanceTradeInfo.syncSelected({ uid: this.query.uid, symbol: this.query.symbol }).then(res => {
         this.doStats()
         this.$notify({
-          title: `同步成功：现货 ${res.spotCount || 0} 条，U 本位 ${res.usdFuturesCount || 0} 条，币本位 ${res.coinFuturesCount || 0} 条`,
+          title: `同步成功：现货 ${res.spotCount || 0} 条`,
           type: CRUD.NOTIFICATION_TYPE.SUCCESS,
           duration: 2500
         })
@@ -505,6 +388,56 @@ export default {
       }).catch(() => {
         this.syncLoading = false
       })
+    },
+    openTradeDetails(selectedTrade) {
+      this.tradeList = this.spotStats.tradeList || []
+      this.filterForm.side = null
+      this.filterForm.openPrice = selectedTrade ? String(selectedTrade.openPrice) : null
+      this.filterForm.priceRange = selectedTrade ? 1 : 500
+      this.showOpenTrades = true
+    },
+    decimalValue(value, digits) {
+      if (value === null || value === undefined || value === '') return '--'
+      const number = Number(value)
+      if (!Number.isFinite(number)) return '--'
+      return number.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits })
+    },
+    currencyValue(value, prefix) {
+      if (value === null || value === undefined || value === '') return '--'
+      const number = Number(value)
+      if (!Number.isFinite(number)) return '--'
+      const formatted = this.decimalValue(Math.abs(number), 2)
+      return `${number < 0 ? '-' : ''}${prefix}${formatted}`
+    },
+    moneyValue(value) {
+      return this.currencyValue(value, '$')
+    },
+    signedMoneyValue(value) {
+      if (value === null || value === undefined || value === '') return '--'
+      const number = Number(value)
+      if (!Number.isFinite(number)) return '--'
+      return `${number > 0 ? '+' : number < 0 ? '-' : ''}$${this.decimalValue(Math.abs(number), 2)}`
+    },
+    signedPercentValue(value) {
+      if (value === null || value === undefined || value === '') return '--'
+      const number = Number(value)
+      if (!Number.isFinite(number)) return '--'
+      return `${number > 0 ? '+' : ''}${numberUtil.formatPercent(number)}`
+    },
+    quantityValue(value, withSymbol = true) {
+      if (value === null || value === undefined || value === '') return '--'
+      const number = Number(value)
+      if (!Number.isFinite(number)) return '--'
+      const formatted = number.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 8 })
+      if (formatted === '--' || !withSymbol || !this.query.symbol) return formatted
+      const asset = this.query.symbol.replace(/USDT$|BUSD$|USDC$/, '')
+      return `${formatted} ${asset}`
+    },
+    valueTone(value) {
+      const number = Number(value)
+      if (number > 0) return 'positive'
+      if (number < 0) return 'negative'
+      return ''
     },
     openCorePositionDialog() {
       this.showCorePositions = true
@@ -566,5 +499,53 @@ export default {
 </script>
 
 <style scoped>
-
+.stats-page { display: flex; flex-direction: column; gap: 12px; box-sizing: border-box; height: calc(100vh - 117px); overflow: hidden; background: #f5f7fa; padding: 12px 16px; }
+.panel { background: #fff; border: 1px solid #ebeef5; border-radius: 10px; box-shadow: 0 4px 14px rgba(31, 45, 61, 0.05); }
+.toolbar-panel { flex: 0 0 auto; padding: 12px 16px; }
+.toolbar-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.field-label { color: #303133; font-weight: 500; }
+.account-select, .symbol-select { width: 210px; }
+.toolbar-row .el-button + .el-button { margin-left: 0; }
+.realtime-warning { margin-top: 12px; }
+.position-panel { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; padding: 12px 18px 6px; overflow: hidden; }
+.position-panel .position-chart { flex: 1 1 auto; min-height: 0; }
+.panel-title-row { display: flex; align-items: center; justify-content: space-between; }
+.panel-title-row h3, .account-panel h3 { margin: 0; color: #17233d; font-size: 18px; }
+.position-metrics { display: grid; flex: 0 0 auto; grid-template-columns: repeat(5, minmax(150px, 1fr)); margin-top: 8px; }
+.metric-item { padding: 4px 20px; border-right: 1px solid #ebeef5; }
+.metric-item:first-child { padding-left: 0; }
+.metric-item:last-child { border-right: 0; }
+.metric-label, .summary-label { display: block; margin-bottom: 6px; color: #8492a6; font-size: 13px; }
+.metric-value { display: block; color: #17233d; font-size: 21px; line-height: 1.2; }
+.primary { color: #409eff !important; }
+.warning { color: #e6a23c !important; }
+.positive { color: #13a76f !important; }
+.negative { color: #f56c6c !important; }
+.summary-layout { display: grid; flex: 0 0 166px; grid-template-columns: minmax(260px, 0.8fr) minmax(720px, 3.2fr); gap: 12px; min-height: 0; }
+.account-panel, .trade-summary-panel { padding: 10px 14px; overflow: hidden; }
+.account-row { display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; height: 32px; margin-top: 6px; padding: 4px 9px; background: #f8fafc; border-radius: 6px; }
+.account-row span { color: #637083; }
+.account-row i { margin-right: 8px; color: #409eff; }
+.account-row strong { color: #17233d; }
+.summary-grid { display: grid; grid-auto-rows: 48px; grid-template-columns: repeat(5, minmax(125px, 1fr)); margin-top: 4px; }
+.summary-item { display: flex; align-items: center; min-height: 0; padding: 4px 12px; border-right: 1px solid #ebeef5; border-top: 1px solid #f1f3f7; }
+.summary-item:nth-child(5n) { border-right: 0; }
+.summary-icon { display: flex; align-items: center; justify-content: center; flex: 0 0 34px; height: 34px; margin-right: 10px; color: #409eff; background: #ecf5ff; border-radius: 50%; }
+.summary-value { display: block; color: #17233d; font-size: 16px; white-space: nowrap; }
+.summary-item small { display: block; margin-top: 3px; color: #8492a6; white-space: nowrap; }
+.trade-filter-form { margin-bottom: 8px; }
+@media (max-width: 1200px) {
+  .stats-page { height: auto; min-height: calc(100vh - 117px); overflow: visible; }
+  .position-panel .position-chart { min-height: 430px; }
+  .position-metrics { grid-template-columns: repeat(3, 1fr); row-gap: 12px; }
+  .summary-layout { flex-basis: auto; grid-template-columns: 1fr; }
+  .summary-grid { grid-template-columns: repeat(3, 1fr); }
+  .summary-item:nth-child(5n) { border-right: 1px solid #ebeef5; }
+  .summary-item:nth-child(3n) { border-right: 0; }
+}
+@media (max-height: 760px) {
+  .stats-page { height: auto; min-height: calc(100vh - 117px); overflow: visible; }
+  .position-panel .position-chart { min-height: 360px; }
+  .summary-layout { flex-basis: auto; }
+}
 </style>
