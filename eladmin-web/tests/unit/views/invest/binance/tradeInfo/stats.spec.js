@@ -1,7 +1,7 @@
 /* eslint-env jest */
 import crudBinanceTradeInfo from '@/api/binanceTradeInfo'
 import { listAllAccount } from '@/api/binanceAccountInfo'
-import { release as releaseCorePositionApi } from '@/api/binanceSpotCorePosition'
+import { release as releaseCorePositionApi, releaseAll as releaseAllCorePositionsApi } from '@/api/binanceSpotCorePosition'
 import Stats from '@/views/invest/binance/tradeInfo/stats.vue'
 
 jest.mock('@/api/binanceTradeInfo', () => ({
@@ -22,7 +22,8 @@ jest.mock('@/api/binanceSpotCorePosition', () => ({
   add: jest.fn(),
   edit: jest.fn(),
   getCandidates: jest.fn(),
-  release: jest.fn()
+  release: jest.fn(),
+  releaseAll: jest.fn()
 }))
 jest.mock('@crud/crud', () => ({
   NOTIFICATION_TYPE: { SUCCESS: 'success' }
@@ -255,6 +256,29 @@ describe('trade stats request lifecycle', () => {
     expect(releaseCorePositionApi).toHaveBeenCalledWith('9')
     expect(vm.$message.success).toHaveBeenCalledWith('底仓已解除')
     expect(vm.handleCorePositionMutation).toHaveBeenCalledWith(row, resource, 'release')
+  })
+
+  it('releases every core position in the selected price bucket at once', async() => {
+    const coreRows = [
+      { corePositionId: '9' },
+      { corePositionId: '10' }
+    ]
+    releaseAllCorePositionsApi.mockResolvedValue([])
+    const vm = {
+      coreActionCoreRows: coreRows,
+      batchReleaseLoading: false,
+      handleCorePositionMutation: jest.fn().mockResolvedValue(),
+      $message: { success: jest.fn() }
+    }
+
+    await Stats.methods.releaseAllCorePositions.call(vm)
+
+    expect(releaseAllCorePositionsApi).toHaveBeenCalledWith(['9', '10'])
+    expect(vm.handleCorePositionMutation).toHaveBeenCalledTimes(2)
+    expect(vm.handleCorePositionMutation).toHaveBeenNthCalledWith(1, coreRows[0], null, 'release')
+    expect(vm.handleCorePositionMutation).toHaveBeenNthCalledWith(2, coreRows[1], null, 'release')
+    expect(vm.$message.success).toHaveBeenCalledWith('已解除 2 笔底仓')
+    expect(vm.batchReleaseLoading).toBe(false)
   })
 
   it('syncs only the selected account and symbol before refreshing stats', async() => {

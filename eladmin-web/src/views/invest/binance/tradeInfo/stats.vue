@@ -236,6 +236,26 @@
           <el-tag>底仓 {{ selectedCoreRange.coreCount || 0 }} 笔</el-tag>
           <el-tag>底仓 {{ decimalValue(selectedCoreRange.coreQty || 0, 8) }} BTC</el-tag>
           <el-tag type="success">可撮合 {{ decimalValue(selectedCoreRange.availableQty || 0, 8) }} BTC</el-tag>
+          <el-popconfirm
+            title="确定解除当前区间内的全部底仓吗？解除后将重新参与后续 FIFO 撮合。"
+            placement="bottom-end"
+            :width="320"
+            :disabled="coreActionCoreRows.length === 0 || batchReleaseLoading"
+            confirm-button-text="全部解除"
+            cancel-button-text="取消"
+            icon="el-icon-warning"
+            icon-color="#e6a23c"
+            @confirm="releaseAllCorePositions"
+          >
+            <el-button
+              slot="reference"
+              type="warning"
+              size="mini"
+              plain
+              :disabled="coreActionCoreRows.length === 0"
+              :loading="batchReleaseLoading"
+            >一键解除</el-button>
+          </el-popconfirm>
         </div>
         <el-alert
           title="底仓只影响未来撮合；聚合区间需选择具体买入批次进行操作。"
@@ -312,7 +332,7 @@ import { listAllAccount } from '@/api/binanceAccountInfo'
 import TradePositionDistributionBar from '@/views/invest/binance/tradeInfo/TradePositionDistributionBar.vue'
 import CRUD from '@crud/crud'
 import * as numberUtil from '@/utils/numberUtil'
-import { add as addCorePosition, edit as editCorePosition, getCandidates, release as releaseCorePositionApi } from '@/api/binanceSpotCorePosition'
+import { add as addCorePosition, edit as editCorePosition, getCandidates, release as releaseCorePositionApi, releaseAll as releaseAllCorePositionsApi } from '@/api/binanceSpotCorePosition'
 
 const ACCOUNT_STORAGE_KEY = 'binanceTradeInfoStats.uid'
 
@@ -340,6 +360,7 @@ export default {
       coreActionRows: [],
       selectedCoreRange: null,
       coreActionsDirty: false,
+      batchReleaseLoading: false,
       tradeList: [],
       query: {
         symbol: 'BTCUSDT',
@@ -376,6 +397,9 @@ export default {
     },
     coreActionTitle() {
       return this.selectedCoreRange ? `${this.selectedCoreRange.range} 区间持仓` : '底仓操作'
+    },
+    coreActionCoreRows() {
+      return this.coreActionRows.filter(row => this.hasCorePosition(row))
     },
     realtimeWarningText() {
       const warnings = ((this.statsInfo && this.statsInfo.warnings) || [])
@@ -654,6 +678,17 @@ export default {
         return this.handleCorePositionMutation(row, resource, 'release')
       }).catch(() => {})
     },
+    releaseAllCorePositions() {
+      const rows = this.coreActionCoreRows.slice()
+      if (rows.length === 0) return Promise.resolve()
+      this.batchReleaseLoading = true
+      return releaseAllCorePositionsApi(rows.map(row => row.corePositionId)).then(() => {
+        rows.forEach(row => this.handleCorePositionMutation(row, null, 'release'))
+        this.$message.success(`已解除 ${rows.length} 笔底仓`)
+      }).catch(() => {}).finally(() => {
+        this.batchReleaseLoading = false
+      })
+    },
     handleCorePositionMutation(row, resource, action) {
       if (this.showCoreActions) {
         if (action === 'release') {
@@ -750,7 +785,7 @@ export default {
 .summary-item small { display: block; margin-top: 3px; color: #8492a6; white-space: nowrap; }
 .trade-filter-form { margin-bottom: 8px; }
 .core-action-content { padding: 0 20px 24px; }
-.core-range-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.core-range-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
 .core-action-tip { margin-bottom: 14px; }
 .core-action-table { width: 100%; }
 .core-action-buttons { display: flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; }

@@ -40,6 +40,14 @@ export function release(id) {
   })
 }
 
+export function releaseAll(ids) {
+  return request({
+    url: 'api/binanceSpotCorePosition/batch-release',
+    method: 'put',
+    data: ids
+  })
+}
+
 export function getCandidates(params) {
   return request({
     url: 'api/binanceSpotCorePosition/candidates',
@@ -48,4 +56,4 @@ export function getCandidates(params) {
   })
 }
 
-export default { add, edit, del, release, getCandidates }
+export default { add, edit, del, release, releaseAll, getCandidates }

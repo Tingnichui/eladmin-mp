@@ -37,6 +37,7 @@ import java.util.Map;
 import java.io.IOException;
 import javax.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import me.zhengjie.utils.PageResult;
 import org.springframework.util.StringUtils;
@@ -166,6 +167,19 @@ public class BinanceSpotCorePositionServiceImpl extends ServiceImpl<BinanceSpotC
         position.setUpdateTime(now);
         binanceSpotCorePositionMapper.updateById(position);
         return position;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public List<BinanceSpotCorePosition> releaseAll(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            throw new BadRequestException("请选择需要解除的底仓");
+        }
+        List<BinanceSpotCorePosition> positions = new ArrayList<>();
+        for (Long id : new LinkedHashSet<>(ids)) {
+            positions.add(release(id));
+        }
+        return positions;
     }
 
     @Override

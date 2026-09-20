@@ -89,6 +89,15 @@ public class BinanceSpotCorePositionController {
         return ResponseEntity.ok(binanceSpotCorePositionService.release(id));
     }
 
+    @PutMapping("/batch-release")
+    @Log("批量解除现货底仓")
+    @ApiOperation("批量解除现货底仓")
+    @PreAuthorize("@el.check('binanceSpotCorePosition:edit')")
+    public ResponseEntity<List<BinanceSpotCorePosition>> releaseBinanceSpotCorePositions(
+            @RequestBody List<Long> ids) {
+        return ResponseEntity.ok(binanceSpotCorePositionService.releaseAll(ids));
+    }
+
     @GetMapping("/candidates")
     @ApiOperation("查询可设置底仓的现货持仓批次")
     @PreAuthorize("@el.check('binanceSpotCorePosition:list')")

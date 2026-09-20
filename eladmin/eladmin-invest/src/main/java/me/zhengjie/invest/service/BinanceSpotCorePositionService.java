@@ -66,6 +66,8 @@ public interface BinanceSpotCorePositionService extends IService<BinanceSpotCore
 
     BinanceSpotCorePosition release(Long id);
 
+    List<BinanceSpotCorePosition> releaseAll(List<Long> ids);
+
     List<BinanceSpotCorePositionCandidate> listCandidates(Integer uid, String symbol);
 
     /**
