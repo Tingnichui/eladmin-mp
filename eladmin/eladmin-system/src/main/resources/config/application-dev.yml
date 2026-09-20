@@ -2,9 +2,9 @@ mybatis-plus:
   # 开启sql runner
   global-config:
     enable-sql-runner: true
-  # Sql日志
+  # 使用日志框架管理 SQL，避免大结果集逐行写入标准输出
   configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
 
 #配置数据源
 spring:

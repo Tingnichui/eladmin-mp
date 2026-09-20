@@ -165,24 +165,17 @@
         WHERE s.uid = #{uid}
           AND s.symbol = #{symbol}
           AND s.is_buyer = 1
-        HAVING remaining_qty &gt; 0
+          AND s.match_status IN ('PENDING', 'PARTIAL')
+          AND s.remaining_qty &gt; 0
         ORDER BY s.trade_time ASC, s.trade_id ASC
     </select>
 
     <select id="sumStatsUnmatchedSellQty" resultType="java.math.BigDecimal">
-        SELECT COALESCE(SUM(GREATEST(
-                   s.original_qty - COALESCE((
-                       SELECT SUM(m.matched_qty)
-                       FROM binance_spot_trade_match m
-                       WHERE m.uid = s.uid
-                         AND m.symbol = s.symbol
-                         AND m.sell_trade_id = s.trade_id
-                   ), 0),
-                   0
-               )), 0)
+        SELECT COALESCE(SUM(s.remaining_qty), 0)
         FROM binance_spot_trade_match_state s
         WHERE s.uid = #{uid}
           AND s.symbol = #{symbol}
           AND s.is_buyer = 0
+          AND s.remaining_qty &gt; 0
     </select>
 </mapper>

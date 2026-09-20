@@ -127,6 +127,18 @@ class BinanceTradeInfoServiceImplTest {
     }
 
     @Test
+    void shouldUseProvidedRealtimePriceWithoutAnotherHttpRequest() {
+        when(stateMapper.findStatsOpenBuys(eq(1), eq("BTCUSDT")))
+                .thenReturn(Collections.singletonList(position(2L, "100", "1", 2_000L)));
+
+        BinanceTradeStatsInfoVO result = service.stats(criteria(), new BigDecimal("140"));
+
+        assertEquals(new BigDecimal("140"), result.getCurrentSpotPrice());
+        assertEquals(1, result.getTradeList().size());
+        verify(spotUtil, never()).getPrice(any(BinanceEnum.SYMBOL.class));
+    }
+
+    @Test
     void shouldKeepEachOpenBuyAndItsOriginalTradeTime() {
         when(stateMapper.findStatsOpenBuys(eq(1), eq("BTCUSDT")))
                 .thenReturn(Arrays.asList(

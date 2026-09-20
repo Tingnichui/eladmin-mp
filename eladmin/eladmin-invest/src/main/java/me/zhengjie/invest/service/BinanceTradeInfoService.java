@@ -30,6 +30,8 @@ import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.service.support.BinanceSpotHedgeContext;
 import me.zhengjie.utils.PageResult;
 
+import java.math.BigDecimal;
+
 /**
 * @description 服务接口
 * @author genghui
@@ -83,6 +85,8 @@ public interface BinanceTradeInfoService extends IService<BinanceTradeInfo> {
     int syncTradeInfo(BinanceAccountInfo accountInfo, String symbol);
 
     BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria);
+
+    BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria, BigDecimal currentPrice);
 
     void syncAll();
 

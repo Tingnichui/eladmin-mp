@@ -12,6 +12,7 @@ import java.util.Map;
 @Data
 public class BinanceStatsRealtimeSnapshot {
 
+    private BigDecimal currentSpotPrice;
     private BigDecimal usdFuturesPrice;
     private BigDecimal coinFuturesPrice;
     private BigDecimal coinFundingFee;

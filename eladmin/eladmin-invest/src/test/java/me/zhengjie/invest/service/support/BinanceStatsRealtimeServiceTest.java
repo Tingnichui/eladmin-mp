@@ -65,6 +65,22 @@ class BinanceStatsRealtimeServiceTest {
     }
 
     @Test
+    void shouldLoadOnlySpotPriceAndAccountForSpotStats() {
+        when(spotUtil.getPrice(BinanceEnum.SYMBOL.BTCUSDT)).thenReturn(new BigDecimal("63000"));
+        when(spotUtil.usdStats(true)).thenReturn(Collections.singletonMap("usdAmount", new BigDecimal("100")));
+
+        BinanceStatsRealtimeSnapshot snapshot = service.loadSpot(1, BinanceEnum.SYMBOL.BTCUSDT.name());
+
+        assertEquals(new BigDecimal("63000"), snapshot.getCurrentSpotPrice());
+        assertEquals("LIVE", snapshot.getStatuses().get("currentSpotPrice").getStatus());
+        assertEquals("LIVE", snapshot.getStatuses().get("accountInfo").getStatus());
+        verify(usdFuturesUtil, never()).price(any(BinanceEnum.SYMBOL.class));
+        verify(coinFuturesUtil, never()).price(any(BinanceEnum.SYMBOL.class));
+        verify(coinFuturesService, never()).calculatePositionFundingFee(
+                any(Integer.class), any(BinanceEnum.SYMBOL.class));
+    }
+
+    @Test
     void shouldReuseSnapshotPositionStartForFundingFee() {
         Date positionStart = new Date(1_000L);
 

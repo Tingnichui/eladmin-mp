@@ -48,6 +48,7 @@ public class BinanceStatsRealtimeService {
     private final AsyncTaskExecutor executor;
     private final Map<String, CircuitState> circuits = new ConcurrentHashMap<>();
     private final Map<Integer, CompletableFuture<BinanceStatsRealtimeSnapshot>> inFlightSnapshots = new ConcurrentHashMap<>();
+    private final Map<String, CompletableFuture<BinanceStatsRealtimeSnapshot>> inFlightSpotSnapshots = new ConcurrentHashMap<>();
 
     public BinanceStatsRealtimeService(RedisUtils redisUtils,
                                        BinanceUsdFuturesUtil binanceUsdFuturesUtil,
@@ -91,6 +92,32 @@ public class BinanceStatsRealtimeService {
         }
     }
 
+    public BinanceStatsRealtimeSnapshot loadSpot(Integer uid, String symbol) {
+        String requestKey = uid + ":" + symbol;
+        CompletableFuture<BinanceStatsRealtimeSnapshot> owner = new CompletableFuture<>();
+        CompletableFuture<BinanceStatsRealtimeSnapshot> existing = inFlightSpotSnapshots.putIfAbsent(requestKey, owner);
+        if (existing != null) {
+            try {
+                return existing.get(REQUEST_TIMEOUT_MILLIS + 500L, TimeUnit.MILLISECONDS);
+            } catch (Exception e) {
+                log.warn("等待合并的现货统计实时请求失败: uid={}, symbol={}, error={}",
+                        uid, symbol, e.getClass().getSimpleName());
+                return unavailableSnapshot("实时数据请求繁忙，请稍后重试", "currentSpotPrice", "accountInfo");
+            }
+        }
+
+        try {
+            BinanceStatsRealtimeSnapshot snapshot = loadSpotParallel(uid, symbol);
+            owner.complete(snapshot);
+            return snapshot;
+        } catch (RuntimeException e) {
+            owner.completeExceptionally(e);
+            throw e;
+        } finally {
+            inFlightSpotSnapshots.remove(requestKey, owner);
+        }
+    }
+
     private BinanceStatsRealtimeSnapshot loadParallel(Integer uid, Date coinPositionStartTime) {
         BinanceAccountInfo accountInfo = BinanceAccountContextHolder.get();
         long deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(REQUEST_TIMEOUT_MILLIS);
@@ -124,6 +151,27 @@ public class BinanceStatsRealtimeService {
         snapshot.setUsdFuturesPrice(apply(snapshot, usdPrice.statusKey, usdResult));
         snapshot.setCoinFuturesPrice(apply(snapshot, coinPrice.statusKey, coinResult));
         snapshot.setCoinFundingFee(apply(snapshot, fundingFee.statusKey, fundingResult));
+        snapshot.setAccountInfo(apply(snapshot, account.statusKey, accountResult));
+        return snapshot;
+    }
+
+    private BinanceStatsRealtimeSnapshot loadSpotParallel(Integer uid, String symbol) {
+        BinanceAccountInfo accountInfo = BinanceAccountContextHolder.get();
+        long deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(REQUEST_TIMEOUT_MILLIS);
+        PendingItem<BigDecimal> spotPrice = submit(
+                accountInfo, uid, "currentSpotPrice", CACHE_PREFIX + "PRICE:SPOT:" + symbol, "现货价格",
+                () -> binanceSpotUtil.getPrice(BinanceEnum.SYMBOL.valueOf(symbol)), this::toBigDecimal
+        );
+        PendingItem<Object> account = submit(
+                accountInfo, uid, "accountInfo", CACHE_PREFIX + "ACCOUNT:" + uid, "账户资产",
+                () -> binanceSpotUtil.usdStats(true), value -> value
+        );
+
+        ItemResult<BigDecimal> spotPriceResult = await(spotPrice, deadlineNanos);
+        ItemResult<Object> accountResult = await(account, deadlineNanos);
+
+        BinanceStatsRealtimeSnapshot snapshot = new BinanceStatsRealtimeSnapshot();
+        snapshot.setCurrentSpotPrice(apply(snapshot, spotPrice.statusKey, spotPriceResult));
         snapshot.setAccountInfo(apply(snapshot, account.statusKey, accountResult));
         return snapshot;
     }
@@ -257,9 +305,13 @@ public class BinanceStatsRealtimeService {
     }
 
     private BinanceStatsRealtimeSnapshot unavailableSnapshot(String message) {
+        return unavailableSnapshot(message,
+                "usdFuturesPrice", "coinFuturesPrice", "coinFundingFee", "accountInfo");
+    }
+
+    private BinanceStatsRealtimeSnapshot unavailableSnapshot(String message, String... keys) {
         BinanceStatsRealtimeSnapshot snapshot = new BinanceStatsRealtimeSnapshot();
         snapshot.getWarnings().add(message);
-        String[] keys = {"usdFuturesPrice", "coinFuturesPrice", "coinFundingFee", "accountInfo"};
         for (String key : keys) {
             snapshot.getStatuses().put(key,
                     new BinanceStatsRealtimeSnapshot.RealtimeStatus("UNAVAILABLE", null, message, 0L));

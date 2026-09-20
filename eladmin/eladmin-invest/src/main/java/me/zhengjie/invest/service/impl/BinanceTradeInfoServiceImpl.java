@@ -206,6 +206,17 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
     @Override
     public BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria) {
+        return stats(criteria, null, true);
+    }
+
+    @Override
+    public BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria, BigDecimal currentPrice) {
+        return stats(criteria, currentPrice, false);
+    }
+
+    private BinanceTradeStatsInfoVO stats(BinanceTradeInfoQueryCriteria criteria,
+                                          BigDecimal realtimePrice,
+                                          boolean loadRealtimePrice) {
         final String key = "SPOT_LAST_NET_PNL:" + criteria.getUid() + ":" + criteria.getSymbol();
         BinanceTradeStatsInfoVO statsInfoVO = new BinanceTradeStatsInfoVO();
         statsInfoVO.setLastNetPnl((BigDecimal) redisUtils.get(key));
@@ -256,7 +267,9 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         }
 
         try {
-            BigDecimal currentPrice = binanceSpotUtil.getPrice(BinanceEnum.SYMBOL.valueOf(criteria.getSymbol()));
+            BigDecimal currentPrice = loadRealtimePrice
+                    ? binanceSpotUtil.getPrice(BinanceEnum.SYMBOL.valueOf(criteria.getSymbol()))
+                    : realtimePrice;
             if (currentPrice == null || currentPrice.compareTo(BigDecimal.ZERO) <= 0) {
                 throw new IllegalStateException("现货价格为空或无效");
             }

@@ -32,9 +32,6 @@ import me.zhengjie.invest.domain.dto.BinanceSpotTradeMatchResult;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.service.*;
-import me.zhengjie.invest.service.support.BinanceSpotHedgeContext;
-import me.zhengjie.invest.service.support.BinanceStatsLocalDataService;
-import me.zhengjie.invest.service.support.BinanceStatsLocalDataSnapshot;
 import me.zhengjie.invest.service.support.BinanceStatsRealtimeService;
 import me.zhengjie.invest.service.support.BinanceStatsRealtimeSnapshot;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
@@ -54,7 +51,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
 * @author genghui
@@ -79,8 +75,6 @@ public class BinanceTradeInfoController {
     private BinanceSpotUtil binanceSpotUtil;
     @Resource
     private BinanceStatsRealtimeService binanceStatsRealtimeService;
-    @Resource
-    private BinanceStatsLocalDataService binanceStatsLocalDataService;
     @Resource
     private BinanceSpotTradeMatcherService binanceSpotTradeMatcherService;
 
@@ -143,30 +137,16 @@ public class BinanceTradeInfoController {
         Map<String, Object> resMap = new HashMap<>();
         BinanceAccountInfo accountInfo = binanceAccountInfoService.getAccountByUid(criteria.getUid());
         BinanceAccountContextHolder.runWith(accountInfo, () -> {
-            BinanceStatsLocalDataSnapshot localSnapshot = binanceStatsLocalDataService.load(criteria);
-            BinanceSpotHedgeContext hedgeContext = new BinanceSpotHedgeContext(
-                    localSnapshot.getSpotTrades().stream()
-                            .filter(trade -> Integer.valueOf(1).equals(trade.getIsBuyer()))
-                            .collect(Collectors.toCollection(ArrayList::new))
-            );
-            BinanceStatsRealtimeSnapshot realtimeSnapshot = binanceStatsRealtimeService.load(
-                    criteria.getUid(), localSnapshot.getCoinPositionStartTime());
-            resMap.put("usdFuturesStatsInfo", binanceFuturesTradeInfoService.stats(
-                    criteria.getUid(), hedgeContext, realtimeSnapshot.getUsdFuturesPrice(),
-                    localSnapshot.getUsdFuturesTrades()));
-            resMap.put("coinFuturesStatsInfo", binanceCoinFuturesTradeInfoService.stats(
-                    criteria.getUid(), hedgeContext, realtimeSnapshot.getCoinFuturesPrice(),
-                    realtimeSnapshot.getCoinFundingFee(), localSnapshot.getCoinFuturesTrades()));
-            BinanceTradeStatsInfoVO spotStats = binanceTradeInfoService.stats(criteria);
+            BinanceStatsRealtimeSnapshot realtimeSnapshot = binanceStatsRealtimeService.loadSpot(
+                    criteria.getUid(), criteria.getSymbol());
+            BinanceTradeStatsInfoVO spotStats = binanceTradeInfoService.stats(
+                    criteria, realtimeSnapshot.getCurrentSpotPrice());
             resMap.put("spotFuturesStatsInfo", spotStats);
-            resMap.put("spotHedgedFuturesStatsInfo", binanceTradeInfoService.hedgedStats(hedgeContext));
             resMap.put("accountInfo", realtimeSnapshot.getAccountInfo());
             resMap.put("realtimeStatus", realtimeSnapshot.getStatuses());
             List<String> warnings = new ArrayList<>(realtimeSnapshot.getWarnings());
-            warnings.addAll(localSnapshot.getWarnings());
             warnings.addAll(spotStats.getWarnings());
             resMap.put("warnings", warnings);
-            resMap.put("localQueryElapsedMillis", localSnapshot.getQueryElapsedMillis());
         });
 
         return new ResponseEntity<>(resMap,HttpStatus.OK);

@@ -150,13 +150,18 @@ function Stop-BackendService {
 function Invoke-BackendBuild {
     $testArgument = if ($RunTests) { '-DskipTests=false' } else { '-DskipTests' }
     Write-Host '开始构建后端模块...'
-    & $mavenCommand `
-        -s $mavenSettings `
-        "-Dmaven.repo.local=$MavenRepository" `
-        $testArgument `
-        clean install
-    if ($LASTEXITCODE -ne 0) {
-        throw "后端构建失败，退出码：$LASTEXITCODE"
+    Push-Location -LiteralPath $backendRoot
+    try {
+        & $mavenCommand `
+            -s $mavenSettings `
+            "-Dmaven.repo.local=$MavenRepository" `
+            $testArgument `
+            clean install
+        if ($LASTEXITCODE -ne 0) {
+            throw "后端构建失败，退出码：$LASTEXITCODE"
+        }
+    } finally {
+        Pop-Location
     }
 }
 
@@ -249,6 +254,7 @@ New-Item -ItemType Directory -Force -Path $logRoot | Out-Null
 $env:JAVA_HOME = $JavaHome
 $env:MAVEN_HOME = $MavenHome
 $env:JASYPT_ENCRYPTOR_PASSWORD = $jasyptPassword
+$env:LOG_PATH = Join-Path $logRoot 'backend'
 $env:MAVEN_OPTS = '-Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8'
 $env:JAVA_TOOL_OPTIONS = '-Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8'
 $env:Path = "$JavaHome\bin;$MavenHome\bin;$env:Path"

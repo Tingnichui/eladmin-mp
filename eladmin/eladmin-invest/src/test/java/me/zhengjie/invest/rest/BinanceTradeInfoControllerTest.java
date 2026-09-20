@@ -3,11 +3,15 @@ package me.zhengjie.invest.rest;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeMatchResult;
+import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
+import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.service.BinanceCoinFuturesTradeInfoService;
 import me.zhengjie.invest.service.BinanceFuturesTradeInfoService;
 import me.zhengjie.invest.service.BinanceSpotTradeMatcherService;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
+import me.zhengjie.invest.service.support.BinanceStatsRealtimeService;
+import me.zhengjie.invest.service.support.BinanceStatsRealtimeSnapshot;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceSpotUtil;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,9 +19,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -35,6 +42,7 @@ class BinanceTradeInfoControllerTest {
     private final BinanceAccountInfoService accountService = mock(BinanceAccountInfoService.class);
     private final BinanceSpotUtil spotUtil = mock(BinanceSpotUtil.class);
     private final BinanceSpotTradeMatcherService matcherService = mock(BinanceSpotTradeMatcherService.class);
+    private final BinanceStatsRealtimeService realtimeService = mock(BinanceStatsRealtimeService.class);
     private final BinanceTradeInfoController controller = new BinanceTradeInfoController();
 
     @BeforeEach
@@ -45,6 +53,35 @@ class BinanceTradeInfoControllerTest {
         ReflectionTestUtils.setField(controller, "binanceAccountInfoService", accountService);
         ReflectionTestUtils.setField(controller, "binanceSpotUtil", spotUtil);
         ReflectionTestUtils.setField(controller, "binanceSpotTradeMatcherService", matcherService);
+        ReflectionTestUtils.setField(controller, "binanceStatsRealtimeService", realtimeService);
+    }
+
+    @Test
+    void shouldQueryOnlySpotStatsAndAccountSummary() {
+        BinanceAccountInfo account = new BinanceAccountInfo();
+        account.setUid(7);
+        BinanceTradeInfoQueryCriteria criteria = new BinanceTradeInfoQueryCriteria();
+        criteria.setUid(7);
+        criteria.setSymbol("BTCUSDT");
+        BinanceStatsRealtimeSnapshot snapshot = new BinanceStatsRealtimeSnapshot();
+        snapshot.setCurrentSpotPrice(new BigDecimal("63000"));
+        snapshot.setAccountInfo(Collections.singletonMap("usdAmount", new BigDecimal("100")));
+        BinanceTradeStatsInfoVO spotStats = new BinanceTradeStatsInfoVO();
+        when(accountService.getAccountByUid(7)).thenReturn(account);
+        when(realtimeService.loadSpot(7, "BTCUSDT")).thenReturn(snapshot);
+        when(spotService.stats(criteria, new BigDecimal("63000"))).thenReturn(spotStats);
+
+        ResponseEntity<Object> response = controller.queryBinanceTradeStats(criteria);
+        Map<?, ?> body = (Map<?, ?>) response.getBody();
+
+        assertEquals(spotStats, body.get("spotFuturesStatsInfo"));
+        assertEquals(snapshot.getAccountInfo(), body.get("accountInfo"));
+        assertFalse(body.containsKey("usdFuturesStatsInfo"));
+        assertFalse(body.containsKey("coinFuturesStatsInfo"));
+        verify(realtimeService).loadSpot(7, "BTCUSDT");
+        verify(spotService).stats(criteria, new BigDecimal("63000"));
+        verifyNoInteractions(usdFuturesService, coinFuturesService);
+        assertNull(BinanceAccountContextHolder.get());
     }
 
     @Test
