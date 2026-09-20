@@ -81,6 +81,8 @@
         :average-price="spotStats.posAvgPrice"
         height="100%"
         @show-details="openTradeDetails"
+        @select-trade="openTradeCoreActions"
+        @select-bucket="openBucketCoreActions"
       />
     </section>
 
@@ -137,6 +139,43 @@
           :label="col.label"
           :min-width="col.width || 110"
         />
+        <el-table-column label="底仓状态" min-width="105" fixed="right">
+          <template slot-scope="scope">
+            <el-tag :type="hasCorePosition(scope.row) ? '' : 'info'" size="mini">
+              {{ hasCorePosition(scope.row) ? '已设置' : '未设置' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="底仓数量" min-width="125" fixed="right">
+          <template slot-scope="scope">{{ decimalValue(scope.row.coreQty || 0, 8) }}</template>
+        </el-table-column>
+        <el-table-column label="可撮合数量" min-width="125" fixed="right">
+          <template slot-scope="scope">{{ decimalValue(coreAvailableQty(scope.row), 8) }}</template>
+        </el-table-column>
+        <el-table-column label="底仓操作" min-width="190" fixed="right">
+          <template slot-scope="scope">
+            <el-button
+              v-if="!hasCorePosition(scope.row) && checkPer(['admin', 'binanceSpotCorePosition:add'])"
+              type="primary"
+              size="mini"
+              @click="lockCorePosition(toCoreActionRow(scope.row))"
+            >设为底仓</el-button>
+            <template v-else-if="hasCorePosition(scope.row)">
+              <el-button
+                v-if="checkPer(['admin', 'binanceSpotCorePosition:edit'])"
+                type="primary"
+                size="mini"
+                @click="adjustCorePosition(toCoreActionRow(scope.row))"
+              >调整</el-button>
+              <el-button
+                v-if="checkPer(['admin', 'binanceSpotCorePosition:edit'])"
+                type="warning"
+                size="mini"
+                @click="releaseCorePosition(toCoreActionRow(scope.row))"
+              >解除</el-button>
+            </template>
+          </template>
+        </el-table-column>
       </el-table>
     </el-dialog>
 
@@ -182,6 +221,88 @@
         </el-table-column>
       </el-table>
     </el-dialog>
+
+    <el-drawer
+      :title="coreActionTitle"
+      :visible.sync="showCoreActions"
+      direction="rtl"
+      size="900px"
+      custom-class="core-action-drawer"
+      @closed="handleCoreActionDrawerClosed"
+    >
+      <div class="core-action-content">
+        <div v-if="selectedCoreRange" class="core-range-summary">
+          <el-tag type="info">共 {{ coreActionRows.length }} 笔</el-tag>
+          <el-tag>底仓 {{ selectedCoreRange.coreCount || 0 }} 笔</el-tag>
+          <el-tag>底仓 {{ decimalValue(selectedCoreRange.coreQty || 0, 8) }} BTC</el-tag>
+          <el-tag type="success">可撮合 {{ decimalValue(selectedCoreRange.availableQty || 0, 8) }} BTC</el-tag>
+        </div>
+        <el-alert
+          title="底仓只影响未来撮合；聚合区间需选择具体买入批次进行操作。"
+          type="info"
+          :closable="false"
+          show-icon
+          class="core-action-tip"
+        />
+        <el-table :data="coreActionRows" border stripe class="core-action-table">
+          <el-table-column prop="tradeTime" label="买入时间" width="160" />
+          <el-table-column label="买入价格" width="110">
+            <template slot-scope="scope">{{ decimalValue(scope.row.price, 2) }}</template>
+          </el-table-column>
+          <el-table-column label="剩余数量" width="125">
+            <template slot-scope="scope">{{ decimalValue(scope.row.remainingQty, 8) }}</template>
+          </el-table-column>
+          <el-table-column label="底仓状态" width="100" align="center">
+            <template slot-scope="scope">
+              <el-tag :type="hasCorePosition(scope.row) ? '' : 'info'" size="mini">
+                {{ hasCorePosition(scope.row) ? '已设置' : '未设置' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="底仓数量" width="125">
+            <template slot-scope="scope">{{ decimalValue(scope.row.coreQty || 0, 8) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" min-width="170" align="center">
+            <template slot-scope="scope">
+              <div class="core-action-buttons">
+                <el-button
+                  v-if="!hasCorePosition(scope.row) && checkPer(['admin', 'binanceSpotCorePosition:add'])"
+                  type="primary"
+                  size="mini"
+                  @click="lockCorePosition(scope.row)"
+                >设为底仓</el-button>
+                <template v-else-if="hasCorePosition(scope.row)">
+                  <el-button
+                    v-if="checkPer(['admin', 'binanceSpotCorePosition:edit'])"
+                    type="primary"
+                    size="mini"
+                    @click="adjustCorePosition(scope.row)"
+                  >调整</el-button>
+                  <el-popconfirm
+                    v-if="checkPer(['admin', 'binanceSpotCorePosition:edit'])"
+                    title="解除后，该数量会按原买入时间重新参与后续 FIFO 撮合，是否继续？"
+                    placement="top-end"
+                    :width="320"
+                    confirm-button-text="确定"
+                    cancel-button-text="取消"
+                    icon="el-icon-warning"
+                    icon-color="#e6a23c"
+                    @confirm="confirmDrawerReleaseCorePosition(scope.row)"
+                  >
+                    <el-button
+                      slot="reference"
+                      type="warning"
+                      plain
+                      size="mini"
+                    >解除</el-button>
+                  </el-popconfirm>
+                </template>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+    </el-drawer>
   </div>
 </template>
 
@@ -213,8 +334,12 @@ export default {
       statsRequestId: 0,
       showOpenTrades: false,
       showCorePositions: false,
+      showCoreActions: false,
       corePositionLoading: false,
       corePositionCandidates: [],
+      coreActionRows: [],
+      selectedCoreRange: null,
+      coreActionsDirty: false,
       tradeList: [],
       query: {
         symbol: 'BTCUSDT',
@@ -248,6 +373,9 @@ export default {
     },
     tradeCount() {
       return (this.spotStats.tradeList || []).length
+    },
+    coreActionTitle() {
+      return this.selectedCoreRange ? `${this.selectedCoreRange.range} 区间持仓` : '底仓操作'
     },
     realtimeWarningText() {
       const warnings = ((this.statsInfo && this.statsInfo.warnings) || [])
@@ -396,6 +524,43 @@ export default {
       this.filterForm.priceRange = selectedTrade ? 1 : 500
       this.showOpenTrades = true
     },
+    openTradeCoreActions(trade) {
+      this.selectedCoreRange = null
+      this.coreActionRows = [this.toCoreActionRow(trade)]
+      this.coreActionsDirty = false
+      this.showCoreActions = true
+    },
+    openBucketCoreActions(bucket) {
+      this.selectedCoreRange = { ...bucket }
+      this.coreActionRows = (bucket.trades || []).map(trade => this.toCoreActionRow(trade.raw || trade))
+      this.coreActionsDirty = false
+      this.showCoreActions = true
+    },
+    toCoreActionRow(row) {
+      const remainingQty = row.remainingQty == null ? row.qty : row.remainingQty
+      const coreQty = Number(row.coreQty) || 0
+      const availableQty = row.availableQty == null
+        ? Math.max((Number(remainingQty) || 0) - coreQty, 0)
+        : row.availableQty
+      return {
+        ...row,
+        uid: row.uid == null ? this.query.uid : row.uid,
+        symbol: row.symbol || this.query.symbol,
+        tradeTime: row.tradeTime || row.openTime,
+        price: row.price == null ? row.openPrice : row.price,
+        remainingQty,
+        coreQty,
+        availableQty,
+        lockedAt: row.lockedAt || row.coreLockedAt
+      }
+    },
+    hasCorePosition(row) {
+      return Boolean(row && row.corePositionId && Number(row.coreQty) > 0)
+    },
+    coreAvailableQty(row) {
+      if (row.availableQty != null) return row.availableQty
+      return Math.max((Number(row.qty || row.remainingQty) || 0) - (Number(row.coreQty) || 0), 0)
+    },
     decimalValue(value, digits) {
       if (value === null || value === undefined || value === '') return '--'
       const number = Number(value)
@@ -460,17 +625,17 @@ export default {
           coreQty: value,
           remark: null
         })
-      }).then(() => {
+      }).then(resource => {
         this.$message.success('底仓设置成功')
-        return this.loadCorePositionCandidates()
+        return this.handleCorePositionMutation(row, resource, 'lock')
       }).catch(() => {})
     },
     adjustCorePosition(row) {
       this.promptCoreQty('调整底仓数量', row.coreQty, row.remainingQty).then(value => {
         return editCorePosition({ id: row.corePositionId, coreQty: value, remark: row.remark })
-      }).then(() => {
+      }).then(resource => {
         this.$message.success('底仓调整成功')
-        return this.loadCorePositionCandidates()
+        return this.handleCorePositionMutation(row, resource, 'adjust')
       }).catch(() => {})
     },
     releaseCorePosition(row) {
@@ -478,10 +643,60 @@ export default {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
-      }).then(() => releaseCorePositionApi(row.corePositionId)).then(() => {
+      }).then(() => releaseCorePositionApi(row.corePositionId)).then(resource => {
         this.$message.success('底仓已解除')
-        return this.loadCorePositionCandidates()
+        return this.handleCorePositionMutation(row, resource, 'release')
       }).catch(() => {})
+    },
+    confirmDrawerReleaseCorePosition(row) {
+      return releaseCorePositionApi(row.corePositionId).then(resource => {
+        this.$message.success('底仓已解除')
+        return this.handleCorePositionMutation(row, resource, 'release')
+      }).catch(() => {})
+    },
+    handleCorePositionMutation(row, resource, action) {
+      if (this.showCoreActions) {
+        if (action === 'release') {
+          Object.assign(row, {
+            corePositionId: null,
+            coreQty: 0,
+            availableQty: row.remainingQty,
+            lockedAt: null
+          })
+        } else {
+          const coreQty = resource && resource.coreQty != null ? resource.coreQty : row.coreQty
+          Object.assign(row, {
+            corePositionId: resource && resource.id ? resource.id : row.corePositionId,
+            coreQty,
+            availableQty: numberUtil.subAmount(row.remainingQty, coreQty, 8),
+            lockedAt: resource && resource.lockedAt ? resource.lockedAt : row.lockedAt,
+            remark: resource && resource.remark != null ? resource.remark : row.remark
+          })
+        }
+        this.coreActionsDirty = true
+        this.refreshSelectedCoreRangeSummary()
+        return Promise.resolve()
+      }
+      this.doStats()
+      if (this.showCorePositions) return this.loadCorePositionCandidates()
+      return Promise.resolve()
+    },
+    refreshSelectedCoreRangeSummary() {
+      if (!this.selectedCoreRange) return
+      const summary = this.coreActionRows.reduce((result, row) => {
+        const coreQty = Number(row.coreQty) || 0
+        if (coreQty > 0) result.coreCount++
+        result.coreQty = numberUtil.addAmount(result.coreQty, coreQty)
+        result.availableQty = numberUtil.addAmount(result.availableQty, this.coreAvailableQty(row))
+        return result
+      }, { coreCount: 0, coreQty: 0, availableQty: 0 })
+      Object.assign(this.selectedCoreRange, summary)
+    },
+    handleCoreActionDrawerClosed() {
+      if (!this.coreActionsDirty) return
+      this.coreActionsDirty = false
+      this.doStats()
+      if (this.showCorePositions) this.loadCorePositionCandidates()
     },
     promptCoreQty(title, value, maxQty) {
       return this.$prompt(`数量必须大于 0，且不能超过当前剩余数量 ${maxQty}`, title, {
@@ -534,6 +749,12 @@ export default {
 .summary-value { display: block; color: #17233d; font-size: 16px; white-space: nowrap; }
 .summary-item small { display: block; margin-top: 3px; color: #8492a6; white-space: nowrap; }
 .trade-filter-form { margin-bottom: 8px; }
+.core-action-content { padding: 0 20px 24px; }
+.core-range-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.core-action-tip { margin-bottom: 14px; }
+.core-action-table { width: 100%; }
+.core-action-buttons { display: flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; }
+.core-action-buttons .el-button + .el-button { margin-left: 0; }
 @media (max-width: 1200px) {
   .stats-page { height: auto; min-height: calc(100vh - 117px); overflow: visible; }
   .position-panel .position-chart { min-height: 430px; }

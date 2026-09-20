@@ -1,6 +1,7 @@
 /* eslint-env jest */
 import crudBinanceTradeInfo from '@/api/binanceTradeInfo'
 import { listAllAccount } from '@/api/binanceAccountInfo'
+import { release as releaseCorePositionApi } from '@/api/binanceSpotCorePosition'
 import Stats from '@/views/invest/binance/tradeInfo/stats.vue'
 
 jest.mock('@/api/binanceTradeInfo', () => ({
@@ -147,6 +148,113 @@ describe('trade stats request lifecycle', () => {
     })
 
     expect(filteredTrades.map(item => item.id)).toEqual([1])
+  })
+
+  it('normalizes a statistics trade for core position actions', () => {
+    const vm = { query: { uid: 7, symbol: 'BTCUSDT' }}
+
+    const row = Stats.methods.toCoreActionRow.call(vm, {
+      tradeId: '1001',
+      openTime: '2026-02-08 16:28:00',
+      openPrice: 78200,
+      qty: 0.0014,
+      coreQty: 0.0004
+    })
+
+    expect(row).toEqual(expect.objectContaining({
+      uid: 7,
+      symbol: 'BTCUSDT',
+      tradeId: '1001',
+      price: 78200,
+      remainingQty: 0.0014,
+      coreQty: 0.0004,
+      availableQty: 0.001
+    }))
+  })
+
+  it('opens a price bucket as individual actionable trades', () => {
+    const vm = {
+      query: { uid: 7, symbol: 'BTCUSDT' },
+      selectedCoreRange: null,
+      coreActionRows: [],
+      showCoreActions: false,
+      toCoreActionRow: Stats.methods.toCoreActionRow
+    }
+    const bucket = {
+      range: '77500-80000',
+      trades: [
+        { raw: { tradeId: '1', openPrice: 78000, qty: 0.001 }},
+        { raw: { tradeId: '2', openPrice: 79000, qty: 0.002 }}
+      ]
+    }
+
+    Stats.methods.openBucketCoreActions.call(vm, bucket)
+
+    expect(vm.selectedCoreRange).toEqual(expect.objectContaining({ range: '77500-80000' }))
+    expect(vm.coreActionRows.map(row => row.tradeId)).toEqual(['1', '2'])
+    expect(vm.showCoreActions).toBe(true)
+  })
+
+  it('keeps the drawer open and defers statistics refresh until it closes', async() => {
+    const row = {
+      corePositionId: '9',
+      coreQty: 0.0014,
+      remainingQty: 0.0014,
+      availableQty: 0
+    }
+    const vm = {
+      showCoreActions: true,
+      showCorePositions: false,
+      coreActionsDirty: false,
+      coreActionRows: [row],
+      selectedCoreRange: {
+        range: '67500-70000',
+        coreCount: 1,
+        coreQty: 0.0014,
+        availableQty: 0
+      },
+      coreAvailableQty: Stats.methods.coreAvailableQty,
+      refreshSelectedCoreRangeSummary: Stats.methods.refreshSelectedCoreRangeSummary,
+      doStats: jest.fn(),
+      loadCorePositionCandidates: jest.fn()
+    }
+
+    await Stats.methods.handleCorePositionMutation.call(vm, row, { releasedAt: '2026-09-20' }, 'release')
+
+    expect(vm.showCoreActions).toBe(true)
+    expect(vm.coreActionsDirty).toBe(true)
+    expect(row).toEqual(expect.objectContaining({
+      corePositionId: null,
+      coreQty: 0,
+      availableQty: 0.0014
+    }))
+    expect(vm.selectedCoreRange).toEqual(expect.objectContaining({
+      coreCount: 0,
+      coreQty: 0,
+      availableQty: 0.0014
+    }))
+    expect(vm.doStats).not.toHaveBeenCalled()
+
+    Stats.methods.handleCoreActionDrawerClosed.call(vm)
+
+    expect(vm.coreActionsDirty).toBe(false)
+    expect(vm.doStats).toHaveBeenCalledTimes(1)
+  })
+
+  it('releases a core position from the drawer popover without opening a global dialog', async() => {
+    const row = { corePositionId: '9' }
+    const resource = { releasedAt: '2026-09-20 20:00:00' }
+    releaseCorePositionApi.mockResolvedValue(resource)
+    const vm = {
+      $message: { success: jest.fn() },
+      handleCorePositionMutation: jest.fn().mockResolvedValue()
+    }
+
+    await Stats.methods.confirmDrawerReleaseCorePosition.call(vm, row)
+
+    expect(releaseCorePositionApi).toHaveBeenCalledWith('9')
+    expect(vm.$message.success).toHaveBeenCalledWith('底仓已解除')
+    expect(vm.handleCorePositionMutation).toHaveBeenCalledWith(row, resource, 'release')
   })
 
   it('syncs only the selected account and symbol before refreshing stats', async() => {

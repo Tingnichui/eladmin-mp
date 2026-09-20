@@ -96,6 +96,15 @@ public class BinanceSpotTradeMatchState implements Serializable {
     @ApiModelProperty(value = "当前有效底仓数量")
     private BigDecimal activeCoreQty;
 
+    @TableField(exist = false)
+    @ApiModelProperty(value = "当前有效底仓记录 ID")
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long corePositionId;
+
+    @TableField(exist = false)
+    @ApiModelProperty(value = "设为底仓时间")
+    private Timestamp coreLockedAt;
+
     public void copy(BinanceSpotTradeMatchState source){
         BeanUtil.copyProperties(source,this, CopyOptions.create().setIgnoreNullValue(true));
     }

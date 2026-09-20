@@ -265,6 +265,12 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
             List<MatchedTradeInfo> matchedTradeInfos = openList.stream().map(position -> {
                 MatchedTradeInfo trade = new MatchedTradeInfo(side, feeRate);
+                BigDecimal coreQty = zeroIfNull(position.getActiveCoreQty());
+                trade.setTradeId(position.getTradeId());
+                trade.setCorePositionId(position.getCorePositionId());
+                trade.setCoreQty(coreQty);
+                trade.setAvailableQty(zeroIfNull(position.getRemainingQty()).subtract(coreQty));
+                trade.setCoreLockedAt(position.getCoreLockedAt());
                 trade.setQty(position.getRemainingQty());
                 trade.setOpenPrice(position.getPrice());
                 trade.setOpenTime(position.getTradeTime());

@@ -1,5 +1,7 @@
 package me.zhengjie.invest.domain.dto;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -8,6 +10,33 @@ import java.sql.Timestamp;
 
 @Data
 public class MatchedTradeInfo {
+
+    /**
+     * 原始买入成交 ID。
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long tradeId;
+
+    /**
+     * 当前有效底仓记录 ID。
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long corePositionId;
+
+    /**
+     * 当前锁定的底仓数量。
+     */
+    private BigDecimal coreQty;
+
+    /**
+     * 扣除底仓后仍可参与撮合的数量。
+     */
+    private BigDecimal availableQty;
+
+    /**
+     * 底仓锁定时间。
+     */
+    private Timestamp coreLockedAt;
 
     /**
      * 开仓方向，true做多 false做空

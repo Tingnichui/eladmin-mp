@@ -15,6 +15,9 @@
         <el-radio-button label="profit">盈利 {{ tradeCounts.profit }}</el-radio-button>
         <el-radio-button label="loss">亏损 {{ tradeCounts.loss }}</el-radio-button>
       </el-radio-group>
+      <span v-if="coreTradeCount" class="core-legend">
+        <i class="el-icon-lock" />底仓持仓 {{ coreTradeCount }} 笔
+      </span>
       <el-button type="text" class="detail-button" @click="$emit('show-details')">
         查看持仓明细 {{ tradeCounts.all }} 笔<i class="el-icon-arrow-right" />
       </el-button>
@@ -58,6 +61,9 @@ export default {
         return result
       }, { all: 0, profit: 0, loss: 0 })
     },
+    coreTradeCount() {
+      return this.normalizedTrades.filter(trade => trade.coreQty > 0).length
+    },
     filteredTrades() {
       if (this.profitFilter === 'all') return this.normalizedTrades
       const profitable = this.profitFilter === 'profit'
@@ -87,7 +93,11 @@ export default {
     initChart() {
       this.chart = echarts.init(this.$refs.chartContainer, 'macarons')
       this.chart.on('click', params => {
-        if (params.data && params.data.trade) this.$emit('show-details', params.data.trade.raw)
+        if (params.data && params.data.trade) {
+          this.$emit('select-trade', params.data.trade.raw)
+        } else if (params.data && params.data.trades) {
+          this.$emit('select-bucket', params.data)
+        }
       })
       this.updateChart()
     },
@@ -107,6 +117,8 @@ export default {
       const parsedOpenTime = openTimeValue ? new Date(openTimeValue).getTime() : NaN
       const openTime = Number.isFinite(parsedOpenTime) ? parsedOpenTime : null
       const profitable = currentPrice > 0 && profit >= 0
+      const coreQty = Number(trade.coreQty) || 0
+      const availableQty = trade.availableQty == null ? Math.max(qty - coreQty, 0) : Number(trade.availableQty) || 0
       return {
         raw: trade,
         openPrice,
@@ -116,7 +128,10 @@ export default {
         breakEvenPrice,
         profit,
         roi,
-        profitable
+        profitable,
+        coreQty,
+        availableQty,
+        corePositionId: trade.corePositionId || null
       }
     },
     updateChart() {
@@ -158,7 +173,20 @@ export default {
         .map(item => ({
           value: [item.openTime, item.openPrice, item.qty],
           trade: item,
-          symbolSize: 9 + Math.sqrt(item.qty / maxQty) * 18
+          symbolSize: 9 + Math.sqrt(item.qty / maxQty) * 18,
+          itemStyle: item.coreQty > 0 ? {
+            borderColor: '#409eff',
+            borderWidth: 3,
+            shadowBlur: 12,
+            shadowColor: '#409eff'
+          } : undefined,
+          label: item.coreQty > 0 ? {
+            show: true,
+            position: 'top',
+            color: '#409eff',
+            fontSize: 13,
+            formatter: '🔒'
+          } : undefined
         }))
       const series = [
         this.createScatterSeries('盈利买入', '#13ce8a', makeData(true)),
@@ -264,8 +292,8 @@ export default {
           value: item.totalQty,
           itemStyle: {
             color,
-            borderColor: item.range === currentBucketKey ? '#409eff' : color,
-            borderWidth: item.range === currentBucketKey ? 2 : 0,
+            borderColor: item.coreCount > 0 || item.range === currentBucketKey ? '#409eff' : color,
+            borderWidth: item.coreCount > 0 || item.range === currentBucketKey ? 2 : 0,
             borderRadius: [0, 4, 4, 0]
           }
         }
@@ -281,7 +309,10 @@ export default {
           show: true,
           position: 'right',
           color: '#606266',
-          formatter: params => `${this.formatNumber(params.data.totalQty, 6)} BTC · ${params.data.count}笔  均价 ${this.formatNumber(params.data.avgPrice, 2)}`
+          formatter: params => {
+            const coreText = params.data.coreCount > 0 ? `  🔒${params.data.coreCount}笔` : ''
+            return `${this.formatNumber(params.data.totalQty, 6)} BTC · ${params.data.count}笔${coreText}  均价 ${this.formatNumber(params.data.avgPrice, 2)}`
+          }
         }
       })
       this.chart.clear()
@@ -338,13 +369,30 @@ export default {
       const buckets = {}
       trades.forEach(trade => {
         const key = this.bucketKey(trade.openPrice)
-        if (!buckets[key]) buckets[key] = { range: key, totalQty: 0, totalAmount: 0, profit: 0, count: 0, lower: 0 }
+        if (!buckets[key]) {
+          buckets[key] = {
+            range: key,
+            totalQty: 0,
+            totalAmount: 0,
+            profit: 0,
+            count: 0,
+            coreCount: 0,
+            coreQty: 0,
+            availableQty: 0,
+            lower: 0,
+            trades: []
+          }
+        }
         const bucket = buckets[key]
         bucket.totalQty = addAmount(bucket.totalQty, trade.qty)
         bucket.totalAmount = addAmount(bucket.totalAmount, trade.openAmount)
         bucket.profit = addAmount(bucket.profit, trade.profit)
+        bucket.coreQty = addAmount(bucket.coreQty, trade.coreQty)
+        bucket.availableQty = addAmount(bucket.availableQty, trade.availableQty)
+        if (trade.coreQty > 0) bucket.coreCount++
         bucket.count++
         bucket.lower = Number(key.split('-')[0])
+        bucket.trades.push(trade)
       })
       return Object.values(buckets).map(bucket => {
         const avgPrice = divAmount(bucket.totalAmount, bucket.totalQty, 2)
@@ -381,7 +429,10 @@ export default {
       return [
         `价格区间：${bucket.range}`,
         `买入笔数：${bucket.count}笔`,
-        `持仓数量：${this.formatNumber(bucket.totalQty, 8)}`,
+        `持仓数量：${this.formatNumber(bucket.totalQty, 8)} BTC`,
+        `底仓笔数：${bucket.coreCount}笔`,
+        `底仓数量：${this.formatNumber(bucket.coreQty, 8)} BTC`,
+        `可撮合数量：${this.formatNumber(bucket.availableQty, 8)} BTC`,
         `加权均价：${this.formatNumber(bucket.avgPrice, 2)}`,
         `当前盈亏：${this.signedNumber(bucket.profit, 2)}`,
         `收益率：${this.signedPercent(bucket.profitRate)}`
@@ -419,6 +470,8 @@ export default {
 .control-label { color: #606266; white-space: nowrap; }
 .interval-value { min-width: 84px; padding: 6px 10px; border: 1px solid #dcdfe6; border-radius: 4px; color: #303133; text-align: center; background: #fff; }
 .profit-filter { margin-left: 4px; }
+.core-legend { color: #409eff; font-size: 13px; white-space: nowrap; }
+.core-legend i { margin-right: 4px; }
 .detail-button { margin-left: auto; font-weight: 500; }
 @media (max-width: 1200px) { .detail-button { margin-left: 0; } }
 </style>

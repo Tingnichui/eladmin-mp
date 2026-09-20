@@ -5,6 +5,7 @@ import me.zhengjie.invest.domain.BinanceSpotTradeMatchState;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeStatsAggregate;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
+import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
 import me.zhengjie.invest.mapper.BinanceSpotTradeMatchMapper;
 import me.zhengjie.invest.mapper.BinanceSpotTradeMatchStateMapper;
 import me.zhengjie.invest.mapper.BinanceTradeInfoMapper;
@@ -140,6 +141,26 @@ class BinanceTradeInfoServiceImplTest {
         assertEquals(new Timestamp(2_000L), result.getTradeList().get(1).getOpenTime());
         assertEquals(new BigDecimal("0.5"), result.getTradeList().get(0).getQty());
         assertEquals(new BigDecimal("1"), result.getTradeList().get(1).getQty());
+    }
+
+    @Test
+    void shouldIncludeCorePositionStatusInOpenTrades() {
+        BinanceSpotTradeMatchState position = position(2L, "100", "1", 2_000L);
+        position.setCorePositionId(9L);
+        position.setActiveCoreQty(new BigDecimal("0.4"));
+        position.setCoreLockedAt(new Timestamp(1_500L));
+        when(stateMapper.findStatsOpenBuys(eq(1), eq("BTCUSDT")))
+                .thenReturn(Collections.singletonList(position));
+        when(spotUtil.getPrice(BinanceEnum.SYMBOL.BTCUSDT)).thenReturn(new BigDecimal("140"));
+
+        BinanceTradeStatsInfoVO result = service.stats(criteria());
+
+        MatchedTradeInfo trade = result.getTradeList().get(0);
+        assertEquals(Long.valueOf(2L), trade.getTradeId());
+        assertEquals(Long.valueOf(9L), trade.getCorePositionId());
+        assertEquals(new BigDecimal("0.4"), trade.getCoreQty());
+        assertEquals(new BigDecimal("0.6"), trade.getAvailableQty());
+        assertEquals(new Timestamp(1_500L), trade.getCoreLockedAt());
     }
 
     @Test

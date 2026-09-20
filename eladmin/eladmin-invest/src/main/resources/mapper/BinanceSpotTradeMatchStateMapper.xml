@@ -16,6 +16,8 @@
         <result column="update_time" property="updateTime"/>
         <result column="price" property="price"/>
         <result column="active_core_qty" property="activeCoreQty"/>
+        <result column="core_position_id" property="corePositionId"/>
+        <result column="core_locked_at" property="coreLockedAt"/>
     </resultMap>
 
     <sql id="Base_Column_List">
@@ -149,9 +151,17 @@
                s.match_status,
                s.create_time,
                s.update_time,
-               t.price
+               t.price,
+               c.id AS core_position_id,
+               COALESCE(c.core_qty, 0) AS active_core_qty,
+               c.locked_at AS core_locked_at
         FROM binance_spot_trade_match_state s
         INNER JOIN binance_trade_info t ON t.id = s.trade_id
+        LEFT JOIN binance_spot_core_position c
+          ON c.uid = s.uid
+         AND c.symbol = s.symbol
+         AND c.trade_id = s.trade_id
+         AND c.released_at IS NULL
         WHERE s.uid = #{uid}
           AND s.symbol = #{symbol}
           AND s.is_buyer = 1
