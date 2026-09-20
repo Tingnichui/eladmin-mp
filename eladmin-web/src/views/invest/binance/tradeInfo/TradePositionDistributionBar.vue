@@ -7,8 +7,25 @@
       </el-radio-group>
       <div v-if="viewMode === 'buckets'" class="interval-control">
         <span class="control-label">价格间隔</span>
-        <el-slider v-model="priceInterval" :min="500" :max="5000" :step="500" :show-tooltip="false" @input="updateChart" />
-        <span class="interval-value">{{ priceInterval }} USDT</span>
+        <div class="interval-stepper">
+          <el-button
+            size="mini"
+            class="interval-button interval-button-left"
+            icon="el-icon-arrow-left"
+            :disabled="!canDecreaseInterval"
+            aria-label="减小价格间隔"
+            @click="shiftPriceInterval(-1)"
+          />
+          <span class="interval-value">{{ priceInterval }} USDT</span>
+          <el-button
+            size="mini"
+            class="interval-button interval-button-right"
+            icon="el-icon-arrow-right"
+            :disabled="!canIncreaseInterval"
+            aria-label="增大价格间隔"
+            @click="shiftPriceInterval(1)"
+          />
+        </div>
       </div>
       <el-radio-group v-model="profitFilter" size="small" class="profit-filter" @change="updateChart">
         <el-radio-button label="all">全部 {{ tradeCounts.all }}</el-radio-button>
@@ -28,6 +45,8 @@ import echarts from 'echarts'
 require('echarts/theme/macarons')
 import { debounce } from '@/utils'
 import { addAmount, divAmount, formatPercent, mulAmount, subAmount } from '@/utils/numberUtil'
+
+const PRICE_INTERVALS = [500, 1000, 2500, 5000]
 
 export default {
   name: 'TradePositionDistributionBar',
@@ -65,6 +84,13 @@ export default {
       if (this.profitFilter === 'all') return this.normalizedTrades
       const profitable = this.profitFilter === 'profit'
       return this.normalizedTrades.filter(trade => trade.profitable === profitable)
+    },
+    canDecreaseInterval() {
+      return PRICE_INTERVALS.indexOf(this.priceInterval) > 0
+    },
+    canIncreaseInterval() {
+      const index = PRICE_INTERVALS.indexOf(this.priceInterval)
+      return index >= 0 && index < PRICE_INTERVALS.length - 1
     }
   },
   watch: {
@@ -87,6 +113,14 @@ export default {
     }
   },
   methods: {
+    shiftPriceInterval(direction) {
+      const currentIndex = PRICE_INTERVALS.indexOf(this.priceInterval)
+      if (currentIndex < 0) return
+      const nextIndex = currentIndex + direction
+      if (nextIndex < 0 || nextIndex >= PRICE_INTERVALS.length) return
+      this.priceInterval = PRICE_INTERVALS[nextIndex]
+      this.updateChart()
+    },
     initChart() {
       this.chart = echarts.init(this.$refs.chartContainer, 'macarons')
       this.chart.on('click', params => {
@@ -449,10 +483,13 @@ export default {
 .position-chart { display: flex; flex-direction: column; width: 100%; height: 100%; }
 .position-chart > .chart { flex: 1 1 auto; min-height: 250px; }
 .chart-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 14px 0 6px; border-top: 1px solid #ebeef5; }
-.interval-control { display: flex; align-items: center; gap: 10px; min-width: 320px; }
-.interval-control .el-slider { flex: 1; }
+.interval-control { display: flex; align-items: center; gap: 8px; }
 .control-label { color: #606266; white-space: nowrap; }
-.interval-value { min-width: 84px; padding: 6px 10px; border: 1px solid #dcdfe6; border-radius: 4px; color: #303133; text-align: center; background: #fff; }
+.interval-stepper { display: flex; align-items: stretch; }
+.interval-stepper .el-button { margin: 0; border-radius: 0; }
+.interval-stepper .interval-button-left { border-radius: 4px 0 0 4px; }
+.interval-stepper .interval-button-right { border-radius: 0 4px 4px 0; }
+.interval-value { display: flex; align-items: center; justify-content: center; min-width: 90px; margin: 0 -1px; padding: 0 8px; border: 1px solid #dcdfe6; color: #303133; font-size: 13px; white-space: nowrap; background: #fff; }
 .profit-filter { margin-left: 4px; }
 .core-legend { color: #409eff; font-size: 13px; white-space: nowrap; }
 .core-legend i { margin-right: 4px; }

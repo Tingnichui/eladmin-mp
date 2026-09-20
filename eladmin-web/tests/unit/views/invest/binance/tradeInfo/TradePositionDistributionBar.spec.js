@@ -7,6 +7,23 @@ describe('trade position distribution core position aggregation', () => {
     expect(Chart.data().priceInterval).toBe(2500)
   })
 
+  it('switches between fixed price interval levels', () => {
+    const vm = { priceInterval: 2500, updateChart: jest.fn() }
+
+    Chart.methods.shiftPriceInterval.call(vm, -1)
+    expect(vm.priceInterval).toBe(1000)
+    Chart.methods.shiftPriceInterval.call(vm, 1)
+    expect(vm.priceInterval).toBe(2500)
+    Chart.methods.shiftPriceInterval.call(vm, 1)
+    expect(vm.priceInterval).toBe(5000)
+    Chart.methods.shiftPriceInterval.call(vm, 1)
+
+    expect(vm.priceInterval).toBe(5000)
+    expect(vm.updateChart).toHaveBeenCalledTimes(3)
+    expect(Chart.computed.canIncreaseInterval.call(vm)).toBe(false)
+    expect(Chart.computed.canDecreaseInterval.call(vm)).toBe(true)
+  })
+
   it('aggregates core and available quantities inside each price bucket', () => {
     const vm = {
       priceInterval: 2500,
