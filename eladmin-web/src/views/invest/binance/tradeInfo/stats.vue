@@ -89,7 +89,7 @@
       <section class="panel account-panel">
         <h3>账户统计</h3>
         <div v-for="item in accountSummaryItems" :key="item.label" class="account-row">
-          <span><i :class="item.icon" />{{ item.label }}</span>
+          <span>{{ item.label }}</span>
           <strong>{{ item.value }}</strong>
         </div>
       </section>
@@ -99,11 +99,14 @@
         </div>
         <div class="summary-grid">
           <div v-for="item in tradeSummaryItems" :key="item.label" class="summary-item">
-            <span class="summary-icon"><i :class="item.icon" /></span>
             <div>
               <span class="summary-label">{{ item.label }}</span>
-              <strong :class="['summary-value', item.tone]">{{ item.value }}</strong>
-              <small v-if="item.note">{{ item.note }}</small>
+              <div class="summary-value-row">
+                <strong :class="['summary-value', item.tone]">{{ item.value }}</strong>
+                <el-tooltip v-if="item.delta" content="相对上次查询" placement="top">
+                  <span :class="['summary-delta', item.deltaTone]">{{ item.delta }}</span>
+                </el-tooltip>
+              </div>
             </div>
           </div>
         </div>
@@ -351,30 +354,30 @@ export default {
     },
     accountSummaryItems() {
       return [
-        { label: '汇率', value: this.decimalValue(this.accountStats.rmbToUsdRate, 4), icon: 'el-icon-sort' },
-        { label: 'RMB总额', value: this.currencyValue(this.accountStats.rmbAmount, '¥'), icon: 'el-icon-money' },
-        { label: 'USD总额', value: this.currencyValue(this.accountStats.usdAmount, '$'), icon: 'el-icon-coin' }
+        { label: '汇率', value: this.decimalValue(this.accountStats.rmbToUsdRate, 4) },
+        { label: 'RMB总额', value: this.currencyValue(this.accountStats.rmbAmount, '¥') },
+        { label: 'USD总额', value: this.currencyValue(this.accountStats.usdAmount, '$') }
       ]
     },
     tradeSummaryItems() {
       const netPnlDelta = this.netPnlDelta
       return [
-        { label: '买入总额', value: this.moneyValue(this.spotStats.totalBuyAmount), icon: 'el-icon-shopping-cart-2' },
-        { label: '卖出总额', value: this.moneyValue(this.spotStats.totalSellAmount), icon: 'el-icon-sold-out' },
-        { label: '收益率', value: this.signedPercentValue(this.spotStats.roi), tone: this.valueTone(this.spotStats.roi), icon: 'el-icon-data-analysis' },
-        { label: '盈亏', value: this.signedMoneyValue(this.spotStats.pnl), tone: this.valueTone(this.spotStats.pnl), icon: 'el-icon-s-data' },
-        { label: '手续费', value: this.moneyValue(this.spotStats.fee), icon: 'el-icon-coin' },
+        { label: '买入总额', value: this.moneyValue(this.spotStats.totalBuyAmount) },
+        { label: '卖出总额', value: this.moneyValue(this.spotStats.totalSellAmount) },
+        { label: '收益率', value: this.signedPercentValue(this.spotStats.roi), tone: this.valueTone(this.spotStats.roi) },
+        { label: '盈亏', value: this.signedMoneyValue(this.spotStats.pnl), tone: this.valueTone(this.spotStats.pnl) },
+        { label: '手续费', value: this.moneyValue(this.spotStats.fee) },
         {
           label: '净盈亏',
           value: this.signedMoneyValue(this.spotStats.netPnl),
           tone: this.valueTone(this.spotStats.netPnl),
-          icon: 'el-icon-s-marketing',
-          note: netPnlDelta == null ? '' : `较上次 ${this.signedMoneyValue(netPnlDelta)}`
+          delta: netPnlDelta == null || Number(netPnlDelta) === 0 ? '' : this.signedMoneyValue(netPnlDelta),
+          deltaTone: this.valueTone(netPnlDelta)
         },
-        { label: '未匹配卖出', value: this.quantityValue(this.spotStats.unmatchedSellQty, false), icon: 'el-icon-document' },
-        { label: '持仓总额', value: this.moneyValue(this.spotStats.posAmount), icon: 'el-icon-pie-chart' },
-        { label: '持仓盈利', value: this.signedMoneyValue(this.spotStats.holdingProfit), tone: 'positive', icon: 'el-icon-top-right' },
-        { label: '持仓亏损', value: this.signedMoneyValue(this.spotStats.holdingLoss), tone: 'negative', icon: 'el-icon-bottom-right' }
+        { label: '未匹配卖出', value: this.quantityValue(this.spotStats.unmatchedSellQty, false) },
+        { label: '持仓总额', value: this.moneyValue(this.spotStats.posAmount) },
+        { label: '持仓盈利', value: this.signedMoneyValue(this.spotStats.holdingProfit), tone: 'positive' },
+        { label: '持仓亏损', value: this.signedMoneyValue(this.spotStats.holdingLoss), tone: 'negative' }
       ]
     },
     netPnlDelta() {
@@ -685,14 +688,16 @@ export default {
 .account-panel, .trade-summary-panel { padding: 10px 14px; overflow: hidden; }
 .account-row { display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; height: 32px; margin-top: 6px; padding: 4px 9px; background: #f8fafc; border-radius: 6px; }
 .account-row span { color: #637083; }
-.account-row i { margin-right: 8px; color: #409eff; }
 .account-row strong { color: #17233d; }
 .summary-grid { display: grid; grid-auto-rows: 48px; grid-template-columns: repeat(5, minmax(125px, 1fr)); margin-top: 4px; }
 .summary-item { display: flex; align-items: center; min-height: 0; padding: 4px 12px; border-right: 1px solid #ebeef5; border-top: 1px solid #f1f3f7; }
 .summary-item:nth-child(5n) { border-right: 0; }
-.summary-icon { display: flex; align-items: center; justify-content: center; flex: 0 0 34px; height: 34px; margin-right: 10px; color: #409eff; background: #ecf5ff; border-radius: 50%; }
+.summary-item > div { min-width: 0; }
+.summary-value-row { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .summary-value { display: block; color: #17233d; font-size: 16px; white-space: nowrap; }
-.summary-item small { display: block; margin-top: 3px; color: #8492a6; white-space: nowrap; }
+.summary-delta { flex: 0 0 auto; padding: 1px 6px; background: #f4f4f5; border-radius: 9px; font-size: 12px; line-height: 18px; white-space: nowrap; }
+.summary-delta.positive { background: #ecf8f3; }
+.summary-delta.negative { background: #fef0f0; }
 .core-action-content { padding: 0 20px 24px; }
 .core-range-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
 .core-action-tip { margin-bottom: 14px; }

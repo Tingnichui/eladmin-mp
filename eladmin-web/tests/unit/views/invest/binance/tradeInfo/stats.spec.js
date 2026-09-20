@@ -112,6 +112,25 @@ describe('trade stats request lifecycle', () => {
     expect(Stats.methods.currencyValue.call(vm, 0, '$')).toBe('$0.00')
   })
 
+  it('shows only a non-zero net profit change', () => {
+    const vm = {
+      spotStats: {},
+      netPnlDelta: 0,
+      moneyValue: value => `$${value || 0}`,
+      signedMoneyValue: value => `${Number(value) > 0 ? '+' : ''}$${value || 0}`,
+      signedPercentValue: value => `${value || 0}%`,
+      quantityValue: value => String(value || 0),
+      valueTone: Stats.methods.valueTone
+    }
+
+    let netPnlItem = Stats.computed.tradeSummaryItems.call(vm).find(item => item.label === '净盈亏')
+    expect(netPnlItem.delta).toBe('')
+
+    vm.netPnlDelta = 12.34
+    netPnlItem = Stats.computed.tradeSummaryItems.call(vm).find(item => item.label === '净盈亏')
+    expect(netPnlItem).toEqual(expect.objectContaining({ delta: '+$12.34', deltaTone: 'positive' }))
+  })
+
   it('hides futures warnings from the spot page', () => {
     const text = Stats.computed.realtimeWarningText.call({
       statsInfo: {

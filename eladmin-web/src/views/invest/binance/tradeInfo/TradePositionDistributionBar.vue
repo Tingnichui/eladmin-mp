@@ -346,20 +346,7 @@ export default {
           makeBucketSeries('盈利区间', 'profit', '#13ce8a'),
           makeBucketSeries('亏损区间', 'loss', '#f56c6c'),
           makeBucketSeries('持仓均价区间', 'average', '#e6a23c')
-        ],
-        graphic: currentBucketKey ? [
-          {
-            type: 'text',
-            left: 10,
-            top: 42,
-            style: {
-              text: `当前价格\n${this.formatNumber(currentPrice, 2)}`,
-              fill: '#409eff',
-              font: 'bold 12px Arial',
-              lineHeight: 18
-            }
-          }
-        ] : []
+        ]
       }, true)
     },
     groupTradesByPrice(trades) {
