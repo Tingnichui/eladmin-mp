@@ -4,6 +4,7 @@ import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.invest.domain.BinanceSpotCorePosition;
 import me.zhengjie.invest.domain.BinanceSpotTradeMatchState;
 import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionAdjustRequest;
+import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionBatchLockRequest;
 import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionLockRequest;
 import me.zhengjie.invest.mapper.BinanceSpotCorePositionMapper;
 import me.zhengjie.invest.mapper.BinanceSpotTradeMatchStateMapper;
@@ -51,6 +52,34 @@ class BinanceSpotCorePositionServiceImplTest {
         assertThrows(BadRequestException.class, () -> service.lock(lockRequest("0.3")));
 
         verify(coreMapper, never()).insert(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void shouldLockEveryRemainingPositionOnceAndKeepExistingLocks() {
+        BinanceSpotCorePositionMapper coreMapper = mock(BinanceSpotCorePositionMapper.class);
+        BinanceSpotTradeMatchStateMapper stateMapper = mock(BinanceSpotTradeMatchStateMapper.class);
+        BinanceSpotCorePositionServiceImpl service = new BinanceSpotCorePositionServiceImpl(coreMapper, stateMapper);
+        BinanceSpotTradeMatchState firstState = state("0.8");
+        BinanceSpotTradeMatchState secondState = state("0.4");
+        secondState.setTradeId(12L);
+        BinanceSpotCorePosition existing = position(6L, 12L);
+        when(stateMapper.findBuyStateForUpdate(7, "BTCUSDT", 11L)).thenReturn(firstState);
+        when(stateMapper.findBuyStateForUpdate(7, "BTCUSDT", 12L)).thenReturn(secondState);
+        when(coreMapper.findActiveByTradeForUpdate(7, "BTCUSDT", 12L)).thenReturn(existing);
+        BinanceSpotCorePositionBatchLockRequest request = new BinanceSpotCorePositionBatchLockRequest();
+        request.setUid(7);
+        request.setSymbol("BTCUSDT");
+        request.setTradeIds(Arrays.asList(11L, 12L, 11L));
+
+        List<BinanceSpotCorePosition> results = service.lockAll(request);
+
+        ArgumentCaptor<BinanceSpotCorePosition> captor = ArgumentCaptor.forClass(BinanceSpotCorePosition.class);
+        verify(coreMapper).insert(captor.capture());
+        assertEquals(new BigDecimal("0.8"), captor.getValue().getCoreQty());
+        assertEquals(11L, captor.getValue().getTradeId());
+        assertEquals(2, results.size());
+        assertEquals(existing, results.get(1));
+        verify(stateMapper).initializeFromTrades(7, "BTCUSDT");
     }
 
     @Test

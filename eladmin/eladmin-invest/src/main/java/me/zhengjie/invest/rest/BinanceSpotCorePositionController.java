@@ -20,6 +20,7 @@ import me.zhengjie.invest.domain.BinanceSpotCorePosition;
 import me.zhengjie.invest.service.BinanceSpotCorePositionService;
 import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionAdjustRequest;
+import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionBatchLockRequest;
 import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionCandidate;
 import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionLockRequest;
 import lombok.RequiredArgsConstructor;
@@ -69,6 +70,15 @@ public class BinanceSpotCorePositionController {
     public ResponseEntity<BinanceSpotCorePosition> createBinanceSpotCorePosition(
             @Validated @RequestBody BinanceSpotCorePositionLockRequest resources){
         return new ResponseEntity<>(binanceSpotCorePositionService.lock(resources), HttpStatus.CREATED);
+    }
+
+    @PostMapping("/batch-lock")
+    @Log("批量设置现货底仓")
+    @ApiOperation("将多笔现货持仓的全部剩余数量批量设置为底仓")
+    @PreAuthorize("@el.check('binanceSpotCorePosition:add')")
+    public ResponseEntity<List<BinanceSpotCorePosition>> lockBinanceSpotCorePositions(
+            @Validated @RequestBody BinanceSpotCorePositionBatchLockRequest resources) {
+        return new ResponseEntity<>(binanceSpotCorePositionService.lockAll(resources), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")

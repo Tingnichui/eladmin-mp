@@ -19,6 +19,7 @@ import me.zhengjie.invest.domain.BinanceSpotCorePosition;
 import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionAdjustRequest;
 import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionCandidate;
+import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionBatchLockRequest;
 import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionLockRequest;
 import java.util.List;
 import java.io.IOException;
@@ -61,6 +62,8 @@ public interface BinanceSpotCorePositionService extends IService<BinanceSpotCore
     void deleteAll(List<Long> ids);
 
     BinanceSpotCorePosition lock(BinanceSpotCorePositionLockRequest request);
+
+    List<BinanceSpotCorePosition> lockAll(BinanceSpotCorePositionBatchLockRequest request);
 
     BinanceSpotCorePosition adjust(Long id, BinanceSpotCorePositionAdjustRequest request);
 

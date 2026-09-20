@@ -1,7 +1,7 @@
 /* eslint-env jest */
 import crudBinanceTradeInfo from '@/api/binanceTradeInfo'
 import { listAllAccount } from '@/api/binanceAccountInfo'
-import { release as releaseCorePositionApi, releaseAll as releaseAllCorePositionsApi } from '@/api/binanceSpotCorePosition'
+import { lockAll as lockAllCorePositionsApi, release as releaseCorePositionApi, releaseAll as releaseAllCorePositionsApi } from '@/api/binanceSpotCorePosition'
 import Stats from '@/views/invest/binance/tradeInfo/stats.vue'
 
 jest.mock('@/api/binanceTradeInfo', () => ({
@@ -22,6 +22,7 @@ jest.mock('@/api/binanceSpotCorePosition', () => ({
   add: jest.fn(),
   edit: jest.fn(),
   getCandidates: jest.fn(),
+  lockAll: jest.fn(),
   release: jest.fn(),
   releaseAll: jest.fn()
 }))
@@ -287,6 +288,38 @@ describe('trade stats request lifecycle', () => {
     expect(vm.handleCorePositionMutation).toHaveBeenNthCalledWith(2, coreRows[1], null, 'release')
     expect(vm.$message.success).toHaveBeenCalledWith('已解除 2 笔底仓')
     expect(vm.batchReleaseLoading).toBe(false)
+  })
+
+  it('locks every unlocked trade in the selected price bucket at once', async() => {
+    const rows = [
+      { tradeId: '11', remainingQty: 0.0014 },
+      { tradeId: '12', remainingQty: 0.002 }
+    ]
+    const resources = [
+      { id: '101', tradeId: '11', coreQty: 0.0014 },
+      { id: '102', tradeId: '12', coreQty: 0.002 }
+    ]
+    lockAllCorePositionsApi.mockResolvedValue(resources)
+    const vm = {
+      query: { uid: 7, symbol: 'BTCUSDT' },
+      coreActionUnlockedRows: rows,
+      batchLockLoading: false,
+      handleCorePositionMutation: jest.fn().mockResolvedValue(),
+      $message: { success: jest.fn() }
+    }
+
+    await Stats.methods.lockAllCorePositions.call(vm)
+
+    expect(lockAllCorePositionsApi).toHaveBeenCalledWith({
+      uid: 7,
+      symbol: 'BTCUSDT',
+      tradeIds: ['11', '12']
+    })
+    expect(vm.handleCorePositionMutation).toHaveBeenCalledTimes(2)
+    expect(vm.handleCorePositionMutation).toHaveBeenNthCalledWith(1, rows[0], resources[0], 'lock')
+    expect(vm.handleCorePositionMutation).toHaveBeenNthCalledWith(2, rows[1], resources[1], 'lock')
+    expect(vm.$message.success).toHaveBeenCalledWith('已设置 2 笔底仓')
+    expect(vm.batchLockLoading).toBe(false)
   })
 
   it('syncs only the selected account and symbol before refreshing stats', async() => {

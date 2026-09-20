@@ -19,6 +19,7 @@ import me.zhengjie.invest.domain.BinanceSpotCorePosition;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.invest.domain.BinanceSpotTradeMatchState;
 import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionAdjustRequest;
+import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionBatchLockRequest;
 import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionCandidate;
 import me.zhengjie.invest.domain.dto.BinanceSpotCorePositionLockRequest;
 import me.zhengjie.invest.mapper.BinanceSpotTradeMatchStateMapper;
@@ -107,14 +108,47 @@ public class BinanceSpotCorePositionServiceImpl extends ServiceImpl<BinanceSpotC
         }
         validateNotExceedRemaining(request.getCoreQty(), state.getRemainingQty());
 
+        return createPosition(request.getUid(), request.getSymbol(), request.getTradeId(),
+                request.getCoreQty(), request.getRemark());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public List<BinanceSpotCorePosition> lockAll(BinanceSpotCorePositionBatchLockRequest request) {
+        validateScope(request.getUid(), request.getSymbol());
+        if (request.getTradeIds() == null || request.getTradeIds().isEmpty()) {
+            throw new BadRequestException("请选择需要设置底仓的买入成交");
+        }
+        binanceSpotTradeMatchStateMapper.initializeFromTrades(request.getUid(), request.getSymbol());
+        List<BinanceSpotCorePosition> positions = new ArrayList<>();
+        for (Long tradeId : new LinkedHashSet<>(request.getTradeIds())) {
+            if (tradeId == null) {
+                throw new BadRequestException("成交 ID 不能为空");
+            }
+            BinanceSpotTradeMatchState state = requireBuyState(request.getUid(), request.getSymbol(), tradeId);
+            BinanceSpotCorePosition active = binanceSpotCorePositionMapper.findActiveByTradeForUpdate(
+                    request.getUid(), request.getSymbol(), tradeId);
+            if (active != null) {
+                positions.add(active);
+                continue;
+            }
+            positions.add(createPosition(request.getUid(), request.getSymbol(), tradeId,
+                    state.getRemainingQty(), null));
+        }
+        return positions;
+    }
+
+    private BinanceSpotCorePosition createPosition(Integer uid, String symbol, Long tradeId,
+                                                    BigDecimal coreQty, String remark) {
+
         Timestamp now = new Timestamp(System.currentTimeMillis());
         BinanceSpotCorePosition position = new BinanceSpotCorePosition();
-        position.setUid(request.getUid());
-        position.setSymbol(request.getSymbol());
-        position.setTradeId(request.getTradeId());
-        position.setCoreQty(request.getCoreQty());
+        position.setUid(uid);
+        position.setSymbol(symbol);
+        position.setTradeId(tradeId);
+        position.setCoreQty(coreQty);
         position.setLockedAt(now);
-        position.setRemark(request.getRemark());
+        position.setRemark(remark);
         position.setCreateTime(now);
         position.setUpdateTime(now);
         binanceSpotCorePositionMapper.insert(position);

@@ -172,10 +172,31 @@
           <el-tag>底仓 {{ decimalValue(selectedCoreRange.coreQty || 0, 8) }} BTC</el-tag>
           <el-tag type="success">可撮合 {{ decimalValue(selectedCoreRange.availableQty || 0, 8) }} BTC</el-tag>
           <el-popconfirm
+            v-if="checkPer(['admin', 'binanceSpotCorePosition:add'])"
+            title="确定将当前区间内所有未设置底仓的持仓数量全部设为底仓吗？"
+            placement="bottom-end"
+            :width="340"
+            :disabled="coreActionUnlockedRows.length === 0 || batchLockLoading || batchReleaseLoading"
+            confirm-button-text="全部设置"
+            cancel-button-text="取消"
+            icon="el-icon-warning"
+            icon-color="#409eff"
+            @confirm="lockAllCorePositions"
+          >
+            <el-button
+              slot="reference"
+              type="primary"
+              size="mini"
+              plain
+              :disabled="coreActionUnlockedRows.length === 0 || batchReleaseLoading"
+              :loading="batchLockLoading"
+            >一键设置底仓</el-button>
+          </el-popconfirm>
+          <el-popconfirm
             title="确定解除当前区间内的全部底仓吗？解除后将重新参与后续 FIFO 撮合。"
             placement="bottom-end"
             :width="320"
-            :disabled="coreActionCoreRows.length === 0 || batchReleaseLoading"
+            :disabled="coreActionCoreRows.length === 0 || batchReleaseLoading || batchLockLoading"
             confirm-button-text="全部解除"
             cancel-button-text="取消"
             icon="el-icon-warning"
@@ -187,7 +208,7 @@
               type="warning"
               size="mini"
               plain
-              :disabled="coreActionCoreRows.length === 0"
+              :disabled="coreActionCoreRows.length === 0 || batchLockLoading"
               :loading="batchReleaseLoading"
             >一键解除</el-button>
           </el-popconfirm>
@@ -287,7 +308,7 @@ import { listAllAccount } from '@/api/binanceAccountInfo'
 import TradePositionDistributionBar from '@/views/invest/binance/tradeInfo/TradePositionDistributionBar.vue'
 import CRUD from '@crud/crud'
 import * as numberUtil from '@/utils/numberUtil'
-import { add as addCorePosition, edit as editCorePosition, getCandidates, release as releaseCorePositionApi, releaseAll as releaseAllCorePositionsApi } from '@/api/binanceSpotCorePosition'
+import { add as addCorePosition, edit as editCorePosition, getCandidates, lockAll as lockAllCorePositionsApi, release as releaseCorePositionApi, releaseAll as releaseAllCorePositionsApi } from '@/api/binanceSpotCorePosition'
 
 const ACCOUNT_STORAGE_KEY = 'binanceTradeInfoStats.uid'
 
@@ -314,6 +335,7 @@ export default {
       coreActionRows: [],
       selectedCoreRange: null,
       coreActionsDirty: false,
+      batchLockLoading: false,
       batchReleaseLoading: false,
       query: {
         symbol: 'BTCUSDT',
@@ -333,6 +355,9 @@ export default {
     },
     coreActionCoreRows() {
       return this.coreActionRows.filter(row => this.hasCorePosition(row))
+    },
+    coreActionUnlockedRows() {
+      return this.coreActionRows.filter(row => !this.hasCorePosition(row) && this.coreAvailableQty(row) > 0)
     },
     realtimeWarningText() {
       const warnings = ((this.statsInfo && this.statsInfo.warnings) || [])
@@ -590,6 +615,25 @@ export default {
         this.$message.success('底仓已解除')
         return this.handleCorePositionMutation(row, resource, 'release')
       }).catch(() => {})
+    },
+    lockAllCorePositions() {
+      const rows = this.coreActionUnlockedRows.slice()
+      if (rows.length === 0) return Promise.resolve()
+      this.batchLockLoading = true
+      return lockAllCorePositionsApi({
+        uid: this.query.uid,
+        symbol: this.query.symbol,
+        tradeIds: rows.map(row => row.tradeId)
+      }).then(resources => {
+        const resourcesByTradeId = new Map((resources || []).map(resource => [String(resource.tradeId), resource]))
+        rows.forEach(row => {
+          const resource = resourcesByTradeId.get(String(row.tradeId))
+          if (resource) this.handleCorePositionMutation(row, resource, 'lock')
+        })
+        this.$message.success(`已设置 ${rows.length} 笔底仓`)
+      }).catch(() => {}).finally(() => {
+        this.batchLockLoading = false
+      })
     },
     releaseAllCorePositions() {
       const rows = this.coreActionCoreRows.slice()

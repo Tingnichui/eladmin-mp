@@ -48,6 +48,18 @@ export function releaseAll(ids) {
   })
 }
 
+export function lockAll(data) {
+  return request({
+    url: 'api/binanceSpotCorePosition/batch-lock',
+    method: 'post',
+    data: {
+      uid: data.uid,
+      symbol: data.symbol,
+      tradeIds: data.tradeIds
+    }
+  })
+}
+
 export function getCandidates(params) {
   return request({
     url: 'api/binanceSpotCorePosition/candidates',
@@ -56,4 +68,4 @@ export function getCandidates(params) {
   })
 }
 
-export default { add, edit, del, release, releaseAll, getCandidates }
+export default { add, edit, del, release, releaseAll, lockAll, getCandidates }
