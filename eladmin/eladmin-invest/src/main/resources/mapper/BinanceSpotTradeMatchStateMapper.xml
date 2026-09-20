@@ -145,18 +145,7 @@
                s.trade_time,
                s.original_qty,
                s.matched_qty,
-               GREATEST(
-                   s.remaining_qty
-                   - COALESCE((
-                       SELECT SUM(c.core_qty)
-                       FROM binance_spot_core_position c
-                       WHERE c.uid = s.uid
-                         AND c.symbol = s.symbol
-                         AND c.trade_id = s.trade_id
-                         AND c.released_at IS NULL
-                   ), 0),
-                   0
-               ) AS remaining_qty,
+               s.remaining_qty,
                s.match_status,
                s.create_time,
                s.update_time,
