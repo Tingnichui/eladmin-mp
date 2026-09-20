@@ -2,6 +2,11 @@
 import Chart from '@/views/invest/binance/tradeInfo/TradePositionDistributionBar.vue'
 
 describe('trade position distribution core position aggregation', () => {
+  it('defaults to price bucket aggregation', () => {
+    expect(Chart.data().viewMode).toBe('buckets')
+    expect(Chart.data().priceInterval).toBe(2500)
+  })
+
   it('aggregates core and available quantities inside each price bucket', () => {
     const vm = {
       priceInterval: 2500,

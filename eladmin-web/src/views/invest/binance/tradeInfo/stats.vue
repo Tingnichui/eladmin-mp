@@ -80,7 +80,6 @@
         :current-price="spotStats.currentSpotPrice"
         :average-price="spotStats.posAvgPrice"
         height="100%"
-        @show-details="openTradeDetails"
         @select-trade="openTradeCoreActions"
         @select-bucket="openBucketCoreActions"
       />
@@ -97,9 +96,6 @@
       <section class="panel trade-summary-panel">
         <div class="panel-title-row">
           <h3>交易汇总</h3>
-          <el-button type="text" @click="openTradeDetails()">
-            持仓订单 {{ tradeCount }} 笔<i class="el-icon-arrow-right" />
-          </el-button>
         </div>
         <div class="summary-grid">
           <div v-for="item in tradeSummaryItems" :key="item.label" class="summary-item">
@@ -113,71 +109,6 @@
         </div>
       </section>
     </div>
-
-    <el-dialog title="持仓订单详情" :visible.sync="showOpenTrades" width="88%">
-      <el-form inline :model="filterForm" class="trade-filter-form">
-        <el-form-item label="方向">
-          <el-select v-model="filterForm.side" clearable>
-            <el-option label="全部" :value="null" />
-            <el-option label="做多" :value="true" />
-            <el-option label="做空" :value="false" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="开仓价格">
-          <el-input v-model="filterForm.openPrice" clearable />
-        </el-form-item>
-        <el-form-item label="价格范围">
-          <el-input-number v-model="filterForm.priceRange" :step="100" :min="1" />
-        </el-form-item>
-      </el-form>
-      <el-table :data="filteredTrades" border stripe>
-        <el-table-column
-          v-for="(col, index) in tableColumns"
-          :key="index"
-          :prop="col.prop"
-          :formatter="col.formatter"
-          :label="col.label"
-          :min-width="col.width || 110"
-        />
-        <el-table-column label="底仓状态" min-width="105" fixed="right">
-          <template slot-scope="scope">
-            <el-tag :type="hasCorePosition(scope.row) ? '' : 'info'" size="mini">
-              {{ hasCorePosition(scope.row) ? '已设置' : '未设置' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="底仓数量" min-width="125" fixed="right">
-          <template slot-scope="scope">{{ decimalValue(scope.row.coreQty || 0, 8) }}</template>
-        </el-table-column>
-        <el-table-column label="可撮合数量" min-width="125" fixed="right">
-          <template slot-scope="scope">{{ decimalValue(coreAvailableQty(scope.row), 8) }}</template>
-        </el-table-column>
-        <el-table-column label="底仓操作" min-width="190" fixed="right">
-          <template slot-scope="scope">
-            <el-button
-              v-if="!hasCorePosition(scope.row) && checkPer(['admin', 'binanceSpotCorePosition:add'])"
-              type="primary"
-              size="mini"
-              @click="lockCorePosition(toCoreActionRow(scope.row))"
-            >设为底仓</el-button>
-            <template v-else-if="hasCorePosition(scope.row)">
-              <el-button
-                v-if="checkPer(['admin', 'binanceSpotCorePosition:edit'])"
-                type="primary"
-                size="mini"
-                @click="adjustCorePosition(toCoreActionRow(scope.row))"
-              >调整</el-button>
-              <el-button
-                v-if="checkPer(['admin', 'binanceSpotCorePosition:edit'])"
-                type="warning"
-                size="mini"
-                @click="releaseCorePosition(toCoreActionRow(scope.row))"
-              >解除</el-button>
-            </template>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-dialog>
 
     <el-dialog title="现货底仓管理" :visible.sync="showCorePositions" width="88%">
       <el-alert
@@ -226,13 +157,14 @@
       :title="coreActionTitle"
       :visible.sync="showCoreActions"
       direction="rtl"
-      size="900px"
+      size="1050px"
       custom-class="core-action-drawer"
       @closed="handleCoreActionDrawerClosed"
     >
       <div class="core-action-content">
         <div v-if="selectedCoreRange" class="core-range-summary">
           <el-tag type="info">共 {{ coreActionRows.length }} 笔</el-tag>
+          <el-tag type="primary">当前价 {{ moneyValue(spotStats.currentSpotPrice) }}</el-tag>
           <el-tag>底仓 {{ selectedCoreRange.coreCount || 0 }} 笔</el-tag>
           <el-tag>底仓 {{ decimalValue(selectedCoreRange.coreQty || 0, 8) }} BTC</el-tag>
           <el-tag type="success">可撮合 {{ decimalValue(selectedCoreRange.availableQty || 0, 8) }} BTC</el-tag>
@@ -265,24 +197,44 @@
           class="core-action-tip"
         />
         <el-table :data="coreActionRows" border stripe class="core-action-table">
-          <el-table-column prop="tradeTime" label="买入时间" width="160" />
-          <el-table-column label="买入价格" width="110">
-            <template slot-scope="scope">{{ decimalValue(scope.row.price, 2) }}</template>
+          <el-table-column label="买入时间" width="165">
+            <template slot-scope="scope">
+              <div class="core-cell-primary">{{ scope.row.tradeTime || '--' }}</div>
+              <small v-if="scope.row.tradeId" class="core-cell-meta" :title="String(scope.row.tradeId)">
+                成交 ID {{ scope.row.tradeId }}
+              </small>
+            </template>
           </el-table-column>
-          <el-table-column label="剩余数量" width="125">
+          <el-table-column label="买入价格" width="135">
+            <template slot-scope="scope">
+              <div class="core-cell-primary">{{ decimalValue(scope.row.price, 2) }}</div>
+              <small class="core-cell-meta">金额 {{ moneyValue(scope.row.openAmount) }}</small>
+            </template>
+          </el-table-column>
+          <el-table-column label="持仓数量" width="125">
             <template slot-scope="scope">{{ decimalValue(scope.row.remainingQty, 8) }}</template>
           </el-table-column>
-          <el-table-column label="底仓状态" width="100" align="center">
+          <el-table-column label="可撮合数量" width="125">
+            <template slot-scope="scope">{{ decimalValue(coreAvailableQty(scope.row), 8) }}</template>
+          </el-table-column>
+          <el-table-column label="当前盈亏" width="145">
+            <template slot-scope="scope">
+              <strong :class="['core-cell-pnl', valueTone(scope.row.netPnl)]">
+                {{ signedMoneyValue(scope.row.netPnl) }}
+              </strong>
+              <small class="core-cell-meta">收益率 {{ signedPercentValue(scope.row.roi) }}</small>
+              <small class="core-cell-meta">保本价 {{ decimalValue(scope.row.breakEvenPrice, 2) }}</small>
+            </template>
+          </el-table-column>
+          <el-table-column label="底仓" width="125" align="center">
             <template slot-scope="scope">
               <el-tag :type="hasCorePosition(scope.row) ? '' : 'info'" size="mini">
                 {{ hasCorePosition(scope.row) ? '已设置' : '未设置' }}
               </el-tag>
+              <small class="core-cell-meta">数量 {{ decimalValue(scope.row.coreQty || 0, 8) }}</small>
             </template>
           </el-table-column>
-          <el-table-column label="底仓数量" width="125">
-            <template slot-scope="scope">{{ decimalValue(scope.row.coreQty || 0, 8) }}</template>
-          </el-table-column>
-          <el-table-column label="操作" min-width="170" align="center">
+          <el-table-column label="操作" min-width="170" align="center" fixed="right">
             <template slot-scope="scope">
               <div class="core-action-buttons">
                 <el-button
@@ -352,7 +304,6 @@ export default {
       syncLoading: false,
       statsDebounceTimer: null,
       statsRequestId: 0,
-      showOpenTrades: false,
       showCorePositions: false,
       showCoreActions: false,
       corePositionLoading: false,
@@ -361,27 +312,9 @@ export default {
       selectedCoreRange: null,
       coreActionsDirty: false,
       batchReleaseLoading: false,
-      tradeList: [],
       query: {
         symbol: 'BTCUSDT',
         uid: null
-      },
-      tableColumns: [
-        { prop: 'side', label: '方向', formatter: row => row.side ? '做多' : '做空' },
-        { prop: 'openTime', label: '买入时间', width: 165 },
-        { prop: 'qty', label: '成交数量' },
-        { prop: 'openPrice', label: '开仓价' },
-        { prop: 'closePrice', label: '当前价' },
-        { prop: 'breakEvenPrice', label: '盈亏平衡价' },
-        { prop: 'pnl', label: '盈亏' },
-        { prop: 'fee', label: '手续费' },
-        { prop: 'netPnl', label: '净盈亏' },
-        { prop: 'roi', label: '回报率', formatter: row => numberUtil.formatByType(row.roi, 'percent') }
-      ],
-      filterForm: {
-        side: null,
-        openPrice: null,
-        priceRange: 500
       }
     }
   },
@@ -391,9 +324,6 @@ export default {
     },
     accountStats() {
       return (this.statsInfo && this.statsInfo.accountInfo) || {}
-    },
-    tradeCount() {
-      return (this.spotStats.tradeList || []).length
     },
     coreActionTitle() {
       return this.selectedCoreRange ? `${this.selectedCoreRange.range} 区间持仓` : '底仓操作'
@@ -450,19 +380,6 @@ export default {
     netPnlDelta() {
       if (this.spotStats.netPnl == null || this.spotStats.lastNetPnl == null) return null
       return numberUtil.subAmount(this.spotStats.netPnl, this.spotStats.lastNetPnl, 2)
-    },
-    filteredTrades() {
-      return this.tradeList.filter(item => {
-        if (this.filterForm.side != null && item.side !== this.filterForm.side) return false
-        const base = Number(this.filterForm.openPrice)
-        const range = Number(this.filterForm.priceRange) || 500
-        if (!Number.isNaN(base) && this.filterForm.openPrice) {
-          const min = item.side === true ? base : base - range
-          const max = item.side === true ? base + range : base
-          if (!(item.openPrice >= min && item.openPrice <= max)) return false
-        }
-        return true
-      })
     }
   },
   mounted() {
@@ -540,13 +457,6 @@ export default {
       }).catch(() => {
         this.syncLoading = false
       })
-    },
-    openTradeDetails(selectedTrade) {
-      this.tradeList = this.spotStats.tradeList || []
-      this.filterForm.side = null
-      this.filterForm.openPrice = selectedTrade ? String(selectedTrade.openPrice) : null
-      this.filterForm.priceRange = selectedTrade ? 1 : 500
-      this.showOpenTrades = true
     },
     openTradeCoreActions(trade) {
       this.selectedCoreRange = null
@@ -783,11 +693,13 @@ export default {
 .summary-icon { display: flex; align-items: center; justify-content: center; flex: 0 0 34px; height: 34px; margin-right: 10px; color: #409eff; background: #ecf5ff; border-radius: 50%; }
 .summary-value { display: block; color: #17233d; font-size: 16px; white-space: nowrap; }
 .summary-item small { display: block; margin-top: 3px; color: #8492a6; white-space: nowrap; }
-.trade-filter-form { margin-bottom: 8px; }
 .core-action-content { padding: 0 20px 24px; }
 .core-range-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
 .core-action-tip { margin-bottom: 14px; }
 .core-action-table { width: 100%; }
+.core-cell-primary { color: #303133; white-space: nowrap; }
+.core-cell-meta { display: block; overflow: hidden; margin-top: 4px; color: #909399; font-size: 12px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+.core-cell-pnl { display: block; white-space: nowrap; }
 .core-action-buttons { display: flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; }
 .core-action-buttons .el-button + .el-button { margin-left: 0; }
 @media (max-width: 1200px) {
@@ -798,6 +710,7 @@ export default {
   .summary-grid { grid-template-columns: repeat(3, 1fr); }
   .summary-item:nth-child(5n) { border-right: 1px solid #ebeef5; }
   .summary-item:nth-child(3n) { border-right: 0; }
+  ::v-deep .core-action-drawer { width: 94% !important; }
 }
 @media (max-height: 760px) {
   .stats-page { height: auto; min-height: calc(100vh - 117px); overflow: visible; }

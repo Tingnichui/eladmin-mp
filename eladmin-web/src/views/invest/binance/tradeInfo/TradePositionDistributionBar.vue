@@ -18,9 +18,6 @@
       <span v-if="coreTradeCount" class="core-legend">
         <i class="el-icon-lock" />底仓持仓 {{ coreTradeCount }} 笔
       </span>
-      <el-button type="text" class="detail-button" @click="$emit('show-details')">
-        查看持仓明细 {{ tradeCounts.all }} 笔<i class="el-icon-arrow-right" />
-      </el-button>
     </div>
     <div ref="chartContainer" :class="className" :style="{ height: height, width: width }" />
   </div>
@@ -45,7 +42,7 @@ export default {
   data() {
     return {
       chart: null,
-      viewMode: 'trades',
+      viewMode: 'buckets',
       profitFilter: 'all',
       priceInterval: 2500
     }
@@ -472,6 +469,4 @@ export default {
 .profit-filter { margin-left: 4px; }
 .core-legend { color: #409eff; font-size: 13px; white-space: nowrap; }
 .core-legend i { margin-right: 4px; }
-.detail-button { margin-left: auto; font-weight: 500; }
-@media (max-width: 1200px) { .detail-button { margin-left: 0; } }
 </style>

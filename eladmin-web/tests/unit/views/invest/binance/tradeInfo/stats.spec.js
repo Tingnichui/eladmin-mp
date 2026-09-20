@@ -123,32 +123,13 @@ describe('trade stats request lifecycle', () => {
     expect(text).toBe('现货数据延迟')
   })
 
-  it('initializes the reactive open price filter', () => {
+  it('does not keep the removed standalone trade details state', () => {
     const state = Stats.data()
 
-    expect(state.filterForm).toEqual({
-      side: null,
-      openPrice: null,
-      priceRange: 500
-    })
-    expect(state.filterForm).not.toHaveProperty('minPrice')
-  })
-
-  it('filters open trades by direction and open price range', () => {
-    const filteredTrades = Stats.computed.filteredTrades.call({
-      tradeList: [
-        { id: 1, side: true, openPrice: 110 },
-        { id: 2, side: true, openPrice: 90 },
-        { id: 3, side: false, openPrice: 90 }
-      ],
-      filterForm: {
-        side: true,
-        openPrice: '100',
-        priceRange: 20
-      }
-    })
-
-    expect(filteredTrades.map(item => item.id)).toEqual([1])
+    expect(state).not.toHaveProperty('showOpenTrades')
+    expect(state).not.toHaveProperty('tradeList')
+    expect(state).not.toHaveProperty('filterForm')
+    expect(state).not.toHaveProperty('tableColumns')
   })
 
   it('normalizes a statistics trade for core position actions', () => {
@@ -159,7 +140,11 @@ describe('trade stats request lifecycle', () => {
       openTime: '2026-02-08 16:28:00',
       openPrice: 78200,
       qty: 0.0014,
-      coreQty: 0.0004
+      coreQty: 0.0004,
+      openAmount: 109.48,
+      breakEvenPrice: 78278.2,
+      netPnl: 3.12,
+      roi: 0.0285
     })
 
     expect(row).toEqual(expect.objectContaining({
@@ -169,7 +154,11 @@ describe('trade stats request lifecycle', () => {
       price: 78200,
       remainingQty: 0.0014,
       coreQty: 0.0004,
-      availableQty: 0.001
+      availableQty: 0.001,
+      openAmount: 109.48,
+      breakEvenPrice: 78278.2,
+      netPnl: 3.12,
+      roi: 0.0285
     }))
   })
 
