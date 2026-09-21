@@ -253,15 +253,50 @@
               <small class="core-cell-meta">数量 {{ decimalValue(scope.row.coreQty || 0, 8) }}</small>
             </template>
           </el-table-column>
-          <el-table-column label="操作" min-width="170" align="center" fixed="right">
+          <el-table-column label="操作" min-width="180" align="center" fixed="right">
             <template slot-scope="scope">
-              <el-button
-                v-if="scope.row._rowType === 'order'"
-                type="primary"
-                plain
-                size="mini"
-                @click="toggleCoreOrder(scope.row)"
-              >{{ isCoreOrderExpanded(scope.row) ? '收起明细' : '展开明细' }}</el-button>
+              <div v-if="scope.row._rowType === 'order'" class="core-action-buttons">
+                <el-popconfirm
+                  v-if="coreOrderUnlockedRows(scope.row).length && checkPer(['admin', 'binanceSpotCorePosition:add'])"
+                  title="确定将该订单内尚未设置底仓的持仓数量全部设为底仓吗？"
+                  placement="top-end"
+                  :width="340"
+                  confirm-button-text="全部设置"
+                  cancel-button-text="取消"
+                  icon="el-icon-warning"
+                  icon-color="#409eff"
+                  @confirm="lockCoreOrder(scope.row)"
+                >
+                  <el-button
+                    slot="reference"
+                    type="primary"
+                    plain
+                    size="mini"
+                    :disabled="batchLockLoading || batchReleaseLoading"
+                    :loading="batchLockLoading"
+                  >一键设置</el-button>
+                </el-popconfirm>
+                <el-popconfirm
+                  v-if="coreOrderCoreRows(scope.row).length && checkPer(['admin', 'binanceSpotCorePosition:edit'])"
+                  title="确定解除该订单内的全部底仓吗？解除后将重新参与后续 FIFO 撮合。"
+                  placement="top-end"
+                  :width="320"
+                  confirm-button-text="全部解除"
+                  cancel-button-text="取消"
+                  icon="el-icon-warning"
+                  icon-color="#e6a23c"
+                  @confirm="releaseCoreOrder(scope.row)"
+                >
+                  <el-button
+                    slot="reference"
+                    type="warning"
+                    plain
+                    size="mini"
+                    :disabled="batchLockLoading || batchReleaseLoading"
+                    :loading="batchReleaseLoading"
+                  >一键解除</el-button>
+                </el-popconfirm>
+              </div>
               <div v-else class="core-action-buttons">
                 <el-button
                   v-if="!hasCorePosition(scope.row) && checkPer(['admin', 'binanceSpotCorePosition:add'])"
@@ -626,6 +661,12 @@ export default {
       if (row.availableQty != null) return row.availableQty
       return Math.max((Number(row.qty || row.remainingQty) || 0) - (Number(row.coreQty) || 0), 0)
     },
+    coreOrderCoreRows(order) {
+      return (order.trades || []).filter(row => this.hasCorePosition(row))
+    },
+    coreOrderUnlockedRows(order) {
+      return (order.trades || []).filter(row => !this.hasCorePosition(row) && this.coreAvailableQty(row) > 0)
+    },
     decimalValue(value, digits) {
       if (value === null || value === undefined || value === '') return '--'
       const number = Number(value)
@@ -699,7 +740,14 @@ export default {
     },
     lockAllCorePositions() {
       const rows = this.coreActionUnlockedRows.slice()
-      if (rows.length === 0) return Promise.resolve()
+      return this.lockCoreRows(rows, `已设置 ${rows.length} 笔底仓`)
+    },
+    lockCoreOrder(order) {
+      const rows = this.coreOrderUnlockedRows(order)
+      return this.lockCoreRows(rows, `该订单已设置 ${rows.length} 笔底仓`)
+    },
+    lockCoreRows(rows, successMessage) {
+      if (!rows.length) return Promise.resolve()
       this.batchLockLoading = true
       return lockAllCorePositionsApi({
         uid: this.query.uid,
@@ -711,18 +759,25 @@ export default {
           const resource = resourcesByTradeId.get(String(row.tradeId))
           if (resource) this.handleCorePositionMutation(row, resource, 'lock')
         })
-        this.$message.success(`已设置 ${rows.length} 笔底仓`)
+        this.$message.success(successMessage)
       }).catch(() => {}).finally(() => {
         this.batchLockLoading = false
       })
     },
     releaseAllCorePositions() {
       const rows = this.coreActionCoreRows.slice()
-      if (rows.length === 0) return Promise.resolve()
+      return this.releaseCoreRows(rows, `已解除 ${rows.length} 笔底仓`)
+    },
+    releaseCoreOrder(order) {
+      const rows = this.coreOrderCoreRows(order)
+      return this.releaseCoreRows(rows, `该订单已解除 ${rows.length} 笔底仓`)
+    },
+    releaseCoreRows(rows, successMessage) {
+      if (!rows.length) return Promise.resolve()
       this.batchReleaseLoading = true
       return releaseAllCorePositionsApi(rows.map(row => row.corePositionId)).then(() => {
         rows.forEach(row => this.handleCorePositionMutation(row, null, 'release'))
-        this.$message.success(`已解除 ${rows.length} 笔底仓`)
+        this.$message.success(successMessage)
       }).catch(() => {}).finally(() => {
         this.batchReleaseLoading = false
       })
