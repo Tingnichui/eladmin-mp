@@ -15,6 +15,10 @@ jest.mock('@/api/binanceTradeInfo', () => ({
 jest.mock('@/api/binanceAccountInfo', () => ({
   listAllAccount: jest.fn()
 }))
+jest.mock('@/api/binanceC2cOrder', () => ({
+  getAccountAssets: jest.fn(),
+  sync: jest.fn()
+}))
 jest.mock('@/views/invest/binance/tradeInfo/TradePositionDistributionBar.vue', () => ({
   name: 'TradePositionDistributionBar'
 }))
@@ -154,6 +158,28 @@ describe('trade stats request lifecycle', () => {
     expect(state).not.toHaveProperty('corePositionCandidates')
   })
 
+  it('polls open orders only while a related panel is visible', () => {
+    jest.useFakeTimers()
+    const vm = {
+      showCoreActions: true,
+      showSpotOpenOrdersDialog: false,
+      spotOpenOrdersPollingTimer: null,
+      hasVisibleSpotOpenOrdersPanel: Stats.methods.hasVisibleSpotOpenOrdersPanel,
+      refreshSpotOpenOrdersIfVisible: jest.fn(),
+      stopSpotOpenOrdersPolling: Stats.methods.stopSpotOpenOrdersPolling
+    }
+
+    Stats.methods.updateSpotOpenOrdersPolling.call(vm)
+    jest.advanceTimersByTime(15000)
+    expect(vm.refreshSpotOpenOrdersIfVisible).toHaveBeenCalledTimes(1)
+
+    vm.showCoreActions = false
+    Stats.methods.updateSpotOpenOrdersPolling.call(vm)
+    jest.advanceTimersByTime(15000)
+    expect(vm.refreshSpotOpenOrdersIfVisible).toHaveBeenCalledTimes(1)
+    expect(vm.spotOpenOrdersPollingTimer).toBeNull()
+  })
+
   it('normalizes a statistics trade for core position actions', () => {
     const vm = { query: { uid: 7, symbol: 'BTCUSDT' }}
 
@@ -190,7 +216,8 @@ describe('trade stats request lifecycle', () => {
       selectedCoreRange: null,
       coreActionRows: [],
       showCoreActions: false,
-      toCoreActionRow: Stats.methods.toCoreActionRow
+      toCoreActionRow: Stats.methods.toCoreActionRow,
+      loadSpotOpenOrders: jest.fn()
     }
     const bucket = {
       range: '77500-80000',
@@ -210,6 +237,7 @@ describe('trade stats request lifecycle', () => {
   it('aggregates fills from the same order without changing actionable trades', () => {
     const vm = {
       coreAvailableQty: Stats.methods.coreAvailableQty,
+      coreRawAvailableQty: Stats.methods.coreRawAvailableQty,
       hasCorePosition: Stats.methods.hasCorePosition
     }
     const rows = [
@@ -280,7 +308,7 @@ describe('trade stats request lifecycle', () => {
         coreQty: 0.0014,
         availableQty: 0
       },
-      coreAvailableQty: Stats.methods.coreAvailableQty,
+      coreAvailableQty: Stats.methods.coreRawAvailableQty,
       refreshSelectedCoreRangeSummary: Stats.methods.refreshSelectedCoreRangeSummary,
       doStats: jest.fn()
     }
@@ -332,6 +360,7 @@ describe('trade stats request lifecycle', () => {
     const vm = {
       coreActionCoreRows: coreRows,
       batchReleaseLoading: false,
+      releaseCoreRows: Stats.methods.releaseCoreRows,
       handleCorePositionMutation: jest.fn().mockResolvedValue(),
       $message: { success: jest.fn() }
     }
@@ -360,6 +389,7 @@ describe('trade stats request lifecycle', () => {
       query: { uid: 7, symbol: 'BTCUSDT' },
       coreActionUnlockedRows: rows,
       batchLockLoading: false,
+      lockCoreRows: Stats.methods.lockCoreRows,
       handleCorePositionMutation: jest.fn().mockResolvedValue(),
       $message: { success: jest.fn() }
     }
@@ -388,6 +418,7 @@ describe('trade stats request lifecycle', () => {
       query: { uid: 7, symbol: 'BTCUSDT' },
       syncLoading: false,
       doStats: jest.fn(),
+      refreshSpotOpenOrdersIfVisible: jest.fn(),
       $notify: jest.fn()
     }
 

@@ -704,6 +704,7 @@ export default {
       showSpotOpenOrdersDialog: false,
       spotOpenOrdersLoading: false,
       spotOpenOrders: [],
+      spotOpenOrdersPollingTimer: null,
       spotOrderCancellingIds: [],
       spotOrderStep: 'form',
       spotOrderSubmitting: false,
@@ -851,11 +852,24 @@ export default {
       return numberUtil.subAmount(this.spotStats.netPnl, this.spotStats.lastNetPnl, 2)
     }
   },
+  watch: {
+    showCoreActions() {
+      this.updateSpotOpenOrdersPolling()
+    },
+    showSpotOpenOrdersDialog() {
+      this.updateSpotOpenOrdersPolling()
+    }
+  },
   mounted() {
+    window.addEventListener('focus', this.handleSpotOpenOrdersPageActive)
+    document.addEventListener('visibilitychange', this.handleSpotOpenOrdersPageActive)
     this.refreshAccountList()
   },
   beforeDestroy() {
     this.clearStatsDebounce()
+    this.stopSpotOpenOrdersPolling()
+    window.removeEventListener('focus', this.handleSpotOpenOrdersPageActive)
+    document.removeEventListener('visibilitychange', this.handleSpotOpenOrdersPageActive)
     this.statsRequestId++
   },
   methods: {
@@ -920,6 +934,7 @@ export default {
       this.syncLoading = true
       return crudBinanceTradeInfo.syncSelected({ uid: this.query.uid, symbol: this.query.symbol }).then(res => {
         this.doStats()
+        this.refreshSpotOpenOrdersIfVisible()
         if (showSuccess !== false) {
           this.$notify({
             title: `同步成功：现货 ${res.spotCount || 0} 条`,
@@ -962,6 +977,28 @@ export default {
       }).then(() => {
         this.spotOpenOrdersLoading = false
       })
+    },
+    hasVisibleSpotOpenOrdersPanel() {
+      return this.showCoreActions || this.showSpotOpenOrdersDialog
+    },
+    refreshSpotOpenOrdersIfVisible() {
+      if (!this.hasVisibleSpotOpenOrdersPanel() || document.hidden) return
+      this.loadSpotOpenOrders()
+    },
+    updateSpotOpenOrdersPolling() {
+      this.stopSpotOpenOrdersPolling()
+      if (!this.hasVisibleSpotOpenOrdersPanel()) return
+      this.spotOpenOrdersPollingTimer = window.setInterval(() => {
+        this.refreshSpotOpenOrdersIfVisible()
+      }, 15000)
+    },
+    stopSpotOpenOrdersPolling() {
+      if (this.spotOpenOrdersPollingTimer == null) return
+      window.clearInterval(this.spotOpenOrdersPollingTimer)
+      this.spotOpenOrdersPollingTimer = null
+    },
+    handleSpotOpenOrdersPageActive() {
+      this.refreshSpotOpenOrdersIfVisible()
     },
     spotOpenOrderTypeLabel(type) {
       if (type === 'STOP_LOSS_LIMIT') return '限价止损'

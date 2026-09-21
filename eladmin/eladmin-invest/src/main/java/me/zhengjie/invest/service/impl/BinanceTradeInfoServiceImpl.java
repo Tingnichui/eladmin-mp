@@ -450,6 +450,12 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                 () -> result.set(binanceSpotUtil.listOpenOrders(symbol.name())));
         List<BinanceSpotOpenOrderDto> openOrders = result.get() == null
                 ? Collections.emptyList() : result.get();
+        try {
+            reconcileSpotSellSources(uid, symbol.name(), accountInfo, openOrders);
+        } catch (Exception e) {
+            log.warn("币安现货当前挂单查询成功，但来源关联对账失败: uid={}, symbol={}, error={}",
+                    uid, symbol.name(), e.getClass().getSimpleName());
+        }
         openOrders.forEach(order -> enrichSpotSellSource(uid, symbol.name(), order));
         return openOrders;
     }
@@ -483,9 +489,14 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                 () -> result.set(binanceSpotUtil.listOpenOrders(symbol.name())));
         List<BinanceSpotOpenOrderDto> openOrders = result.get() == null
                 ? Collections.emptyList() : result.get();
+        return reconcileSpotSellSources(uid, symbol.name(), accountInfo, openOrders);
+    }
 
-        ensureSpotSellSourceIndex(uid, symbol.name());
-        Set<Long> indexedOrderIds = spotSellSourceOrderIds(uid, symbol.name());
+    private BinanceSpotSellSourceReconcileResult reconcileSpotSellSources(
+            Integer uid, String symbol, BinanceAccountInfo accountInfo,
+            List<BinanceSpotOpenOrderDto> openOrders) {
+        ensureSpotSellSourceIndex(uid, symbol);
+        Set<Long> indexedOrderIds = spotSellSourceOrderIds(uid, symbol);
         Set<Long> openOrderIds = openOrders.stream()
                 .map(BinanceSpotOpenOrderDto::getOrderId)
                 .filter(Objects::nonNull)
@@ -495,7 +506,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
         for (BinanceSpotOpenOrderDto openOrder : openOrders) {
             if (openOrder.getOrderId() != null && indexedOrderIds.contains(openOrder.getOrderId())) {
-                updateSpotSellSourceStatus(uid, symbol.name(), openOrder);
+                updateSpotSellSourceStatus(uid, symbol, openOrder);
             }
         }
         for (Long orderId : indexedOrderIds) {
@@ -506,13 +517,13 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             try {
                 AtomicReference<BinanceSpotOpenOrderDto> orderResult = new AtomicReference<>();
                 BinanceAccountContextHolder.runWith(accountInfo,
-                        () -> orderResult.set(binanceSpotUtil.queryOrder(symbol.name(), orderId)));
-                reconcileMissingSpotSellSource(uid, symbol.name(), orderId,
+                        () -> orderResult.set(binanceSpotUtil.queryOrder(symbol, orderId)));
+                reconcileMissingSpotSellSource(uid, symbol, orderId,
                         orderResult.get(), reconcileResult);
             } catch (Exception e) {
                 reconcileResult.setFailedCount(reconcileResult.getFailedCount() + 1);
                 log.warn("查询币安现货卖出订单状态失败，保留来源关联: uid={}, symbol={}, orderId={}, error={}",
-                        uid, symbol.name(), orderId, e.getClass().getSimpleName());
+                        uid, symbol, orderId, e.getClass().getSimpleName());
             }
         }
         return reconcileResult;

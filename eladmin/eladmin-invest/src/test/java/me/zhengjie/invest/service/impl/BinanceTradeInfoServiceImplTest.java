@@ -40,6 +40,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -189,6 +190,24 @@ class BinanceTradeInfoServiceImplTest {
 
         verify(spotUtil).listOpenOrders("BTCUSDT");
         assertNull(BinanceAccountContextHolder.get());
+    }
+
+    @Test
+    void shouldReconcileSellSourcesWhenListingOpenOrdersWithoutDuplicateOpenOrderRequest() {
+        BinanceAccountInfo account = validAccount();
+        BinanceSpotOpenOrderDto canceledOrder = spotOrder(789L, "CANCELED", "0");
+        when(accountService.getAccountByUid(7)).thenReturn(account);
+        when(spotUtil.listOpenOrders("BTCUSDT")).thenReturn(Collections.emptyList());
+        when(redisUtils.hasKey("BINANCE:SPOT:SELL_SOURCE:INDEXED:7:BTCUSDT")).thenReturn(true);
+        when(redisUtils.sGet("BINANCE:SPOT:SELL_SOURCE:INDEX:7:BTCUSDT"))
+                .thenReturn(Collections.singleton((Object) 789L));
+        when(spotUtil.queryOrder("BTCUSDT", 789L)).thenReturn(canceledOrder);
+
+        assertEquals(Collections.emptyList(), service.listSpotOpenOrders(7, "BTCUSDT"));
+
+        verify(spotUtil, times(1)).listOpenOrders("BTCUSDT");
+        verify(spotUtil).queryOrder("BTCUSDT", 789L);
+        verify(redisUtils).del("BINANCE:SPOT:SELL_SOURCE:7:BTCUSDT:789");
     }
 
     @Test
