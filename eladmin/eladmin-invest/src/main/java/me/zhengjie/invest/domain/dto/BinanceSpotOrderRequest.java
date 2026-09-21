@@ -51,4 +51,13 @@ public class BinanceSpotOrderRequest implements Serializable {
     @DecimalMin(value = "0", inclusive = false, message = "委托价必须大于 0")
     @ApiModelProperty(value = "固定委托价；priceMode=FIXED 时必填")
     private BigDecimal price;
+
+    @ApiModelProperty("快捷卖出来源类型：ORDER、TRADE；普通下单不传")
+    private BinanceSpotSellSourceDto.SourceType sourceType;
+
+    @ApiModelProperty("发起快捷卖出的原买入订单 ID")
+    private Long sourceOrderId;
+
+    @ApiModelProperty("发起快捷卖出的原买入成交 ID；sourceType=TRADE 时必填")
+    private Long sourceTradeId;
 }

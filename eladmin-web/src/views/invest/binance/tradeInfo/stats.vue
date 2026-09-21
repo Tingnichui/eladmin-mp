@@ -297,7 +297,7 @@
     <el-dialog
       title="当前挂单"
       :visible.sync="showSpotOpenOrdersDialog"
-      width="980px"
+      width="1120px"
       custom-class="spot-open-orders-dialog"
     >
       <div class="spot-open-orders-header">
@@ -339,6 +339,9 @@
         </el-table-column>
         <el-table-column label="委托价格" min-width="145" align="right">
           <template slot-scope="scope">{{ spotOpenOrderPriceLabel(scope.row) }}</template>
+        </el-table-column>
+        <el-table-column label="卖出来源" min-width="180">
+          <template slot-scope="scope">{{ spotOpenOrderSourceLabel(scope.row) }}</template>
         </el-table-column>
         <el-table-column label="状态" width="110" align="center">
           <template slot-scope="scope">
@@ -926,6 +929,11 @@ export default {
       if (status === 'PARTIALLY_FILLED') return '部分成交'
       return status || '--'
     },
+    spotOpenOrderSourceLabel(order) {
+      if (order.sourceType === 'ORDER') return `买入订单 ${order.sourceOrderId || '--'}`
+      if (order.sourceType === 'TRADE') return `买入成交 ${order.sourceTradeId || '--'}`
+      return '--'
+    },
     spotOpenOrderPriceLabel(order) {
       if (order.pegPriceType === 'MARKET_PEG') {
         const peggedPrice = Number(order.peggedPrice)
@@ -1021,6 +1029,11 @@ export default {
         priceMode: this.spotOrderForm.priceMode
       }
       if (this.spotOrderForm.priceMode === 'FIXED') payload.price = this.spotOrderForm.price
+      if (this.spotOrderSource) {
+        payload.sourceType = this.spotOrderSource.rowType === 'order' ? 'ORDER' : 'TRADE'
+        payload.sourceOrderId = this.spotOrderSource.orderId
+        payload.sourceTradeId = this.spotOrderSource.tradeId
+      }
       this.spotOrderSubmitting = true
       crudBinanceTradeInfo.createSpotOrder(payload).then(res => {
         this.showSpotOrderDialog = false

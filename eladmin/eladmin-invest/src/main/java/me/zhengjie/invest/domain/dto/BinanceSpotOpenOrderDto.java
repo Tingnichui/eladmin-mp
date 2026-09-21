@@ -28,4 +28,7 @@ public class BinanceSpotOpenOrderDto {
     private String pegOffsetType;
     private Integer pegOffsetValue;
     private BigDecimal peggedPrice;
+    private BinanceSpotSellSourceDto.SourceType sourceType;
+    private Long sourceOrderId;
+    private Long sourceTradeId;
 }

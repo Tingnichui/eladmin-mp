@@ -7,6 +7,7 @@ import me.zhengjie.invest.domain.BinanceSpotTradeMatchState;
 import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
 import me.zhengjie.invest.domain.dto.BinanceSpotOrderRequest;
 import me.zhengjie.invest.domain.dto.BinanceSpotOpenOrderDto;
+import me.zhengjie.invest.domain.dto.BinanceSpotSellSourceDto;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeStatsAggregate;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
@@ -27,6 +28,8 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -88,6 +91,29 @@ class BinanceTradeInfoServiceImplTest {
     }
 
     @Test
+    void shouldRecordOrderSourceAfterQuickSellSucceeds() {
+        BinanceAccountInfo account = validAccount();
+        BinanceSpotOrderRequest request = spotOrderRequest();
+        request.setPriceMode(BinanceEnum.PRICE_MODE.OPPONENT_FIRST);
+        request.setSourceType(BinanceSpotSellSourceDto.SourceType.ORDER);
+        request.setSourceOrderId(456L);
+        when(accountService.getAccountByUid(7)).thenReturn(account);
+        when(spotUtil.order(any(BinanceOrderApiDto.class))).thenReturn(123L);
+        when(redisUtils.set(eq("BINANCE:SPOT:SELL_SOURCE:7:BTCUSDT:123"),
+                any(BinanceSpotSellSourceDto.class), eq(365L), eq(TimeUnit.DAYS))).thenReturn(true);
+
+        assertEquals(123L, service.createSpotOrder(request));
+
+        ArgumentCaptor<BinanceSpotSellSourceDto> captor =
+                ArgumentCaptor.forClass(BinanceSpotSellSourceDto.class);
+        verify(redisUtils).set(eq("BINANCE:SPOT:SELL_SOURCE:7:BTCUSDT:123"),
+                captor.capture(), eq(365L), eq(TimeUnit.DAYS));
+        assertEquals(BinanceSpotSellSourceDto.SourceType.ORDER, captor.getValue().getSourceType());
+        assertEquals(Long.valueOf(456L), captor.getValue().getSourceOrderId());
+        assertEquals(new BigDecimal("0.001"), captor.getValue().getQuantity());
+    }
+
+    @Test
     void shouldCreateFixedPriceTakeProfitLimitOrder() {
         BinanceAccountInfo account = validAccount();
         BinanceSpotOrderRequest request = spotOrderRequest();
@@ -129,6 +155,28 @@ class BinanceTradeInfoServiceImplTest {
 
         verify(spotUtil).listOpenOrders("BTCUSDT");
         assertNull(BinanceAccountContextHolder.get());
+    }
+
+    @Test
+    void shouldEnrichOpenOrderWithTradeSource() {
+        BinanceAccountInfo account = validAccount();
+        BinanceSpotOpenOrderDto openOrder = new BinanceSpotOpenOrderDto();
+        openOrder.setOrderId(789L);
+        BinanceSpotSellSourceDto source = new BinanceSpotSellSourceDto();
+        source.setSourceType(BinanceSpotSellSourceDto.SourceType.TRADE);
+        source.setSourceOrderId(456L);
+        source.setSourceTradeId(654L);
+        when(accountService.getAccountByUid(7)).thenReturn(account);
+        when(spotUtil.listOpenOrders("BTCUSDT")).thenReturn(Collections.singletonList(openOrder));
+        when(redisUtils.get("BINANCE:SPOT:SELL_SOURCE:7:BTCUSDT:789", BinanceSpotSellSourceDto.class))
+                .thenReturn(source);
+
+        List<BinanceSpotOpenOrderDto> result = service.listSpotOpenOrders(7, "BTCUSDT");
+
+        assertEquals(BinanceSpotSellSourceDto.SourceType.TRADE, result.get(0).getSourceType());
+        assertEquals(Long.valueOf(456L), result.get(0).getSourceOrderId());
+        assertEquals(Long.valueOf(654L), result.get(0).getSourceTradeId());
+        verify(redisUtils).expire("BINANCE:SPOT:SELL_SOURCE:7:BTCUSDT:789", 365L, TimeUnit.DAYS);
     }
 
     private BinanceAccountInfo validAccount() {

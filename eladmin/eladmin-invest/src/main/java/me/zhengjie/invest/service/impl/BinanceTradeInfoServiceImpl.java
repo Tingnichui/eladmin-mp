@@ -33,6 +33,7 @@ import me.zhengjie.invest.domain.dto.BinanceSpotHedgedTradeStatsInfoVO;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeStatsAggregate;
 import me.zhengjie.invest.domain.dto.BinanceSpotOrderRequest;
 import me.zhengjie.invest.domain.dto.BinanceSpotOpenOrderDto;
+import me.zhengjie.invest.domain.dto.BinanceSpotSellSourceDto;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.mapper.BinanceTradeInfoMapper;
@@ -62,6 +63,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -75,6 +77,8 @@ import java.util.stream.Collectors;
 public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMapper, BinanceTradeInfo> implements BinanceTradeInfoService {
 
     private static final int SYNC_PAGE_SIZE = 1000;
+    private static final String SPOT_SELL_SOURCE_KEY_PREFIX = "BINANCE:SPOT:SELL_SOURCE:";
+    private static final long SPOT_SELL_SOURCE_TTL_DAYS = 365L;
 
     @Resource
     private BinanceTradeInfoMapper binanceTradeInfoMapper;
@@ -405,6 +409,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         if (request.getPriceMode() == BinanceEnum.PRICE_MODE.OPPONENT_FIRST && request.getPrice() != null) {
             throw new BadRequestException("对手价1模式不能填写固定委托价");
         }
+        validateSpotSellSource(request);
 
         BinanceAccountInfo accountInfo = requireAvailableAccount(request.getUid());
 
@@ -423,6 +428,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
         Long[] orderId = new Long[1];
         BinanceAccountContextHolder.runWith(accountInfo, () -> orderId[0] = binanceSpotUtil.order(apiDto));
+        recordSpotSellSource(request, symbol.name(), orderId[0]);
         return orderId[0];
     }
 
@@ -433,7 +439,76 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         AtomicReference<List<BinanceSpotOpenOrderDto>> result = new AtomicReference<>();
         BinanceAccountContextHolder.runWith(accountInfo,
                 () -> result.set(binanceSpotUtil.listOpenOrders(symbol.name())));
-        return result.get();
+        List<BinanceSpotOpenOrderDto> openOrders = result.get() == null
+                ? Collections.emptyList() : result.get();
+        openOrders.forEach(order -> enrichSpotSellSource(uid, symbol.name(), order));
+        return openOrders;
+    }
+
+    private void validateSpotSellSource(BinanceSpotOrderRequest request) {
+        boolean hasSourceId = request.getSourceOrderId() != null || request.getSourceTradeId() != null;
+        if (request.getSourceType() == null) {
+            if (hasSourceId) {
+                throw new BadRequestException("快捷卖出来源类型不能为空");
+            }
+            return;
+        }
+        if (request.getSide() != BinanceEnum.SIDE.SELL) {
+            throw new BadRequestException("只有卖出订单可以关联持仓来源");
+        }
+        if (request.getSourceType() == BinanceSpotSellSourceDto.SourceType.ORDER
+                && request.getSourceOrderId() == null) {
+            throw new BadRequestException("订单来源必须包含原买入订单 ID");
+        }
+        if (request.getSourceType() == BinanceSpotSellSourceDto.SourceType.TRADE
+                && request.getSourceTradeId() == null) {
+            throw new BadRequestException("成交来源必须包含原买入成交 ID");
+        }
+    }
+
+    private void recordSpotSellSource(BinanceSpotOrderRequest request, String symbol, Long sellOrderId) {
+        if (request.getSourceType() == null || sellOrderId == null) {
+            return;
+        }
+        BinanceSpotSellSourceDto source = new BinanceSpotSellSourceDto();
+        source.setUid(request.getUid());
+        source.setSymbol(symbol);
+        source.setSellOrderId(sellOrderId);
+        source.setSourceType(request.getSourceType());
+        source.setSourceOrderId(request.getSourceOrderId());
+        source.setSourceTradeId(request.getSourceTradeId());
+        source.setQuantity(request.getQuantity());
+        source.setCreatedAt(System.currentTimeMillis());
+        boolean recorded = redisUtils.set(spotSellSourceKey(request.getUid(), symbol, sellOrderId),
+                source, SPOT_SELL_SOURCE_TTL_DAYS, TimeUnit.DAYS);
+        if (!recorded) {
+            log.warn("币安现货卖出已下单，但来源关联记录失败: uid={}, symbol={}, sellOrderId={}",
+                    request.getUid(), symbol, sellOrderId);
+        }
+    }
+
+    private void enrichSpotSellSource(Integer uid, String symbol, BinanceSpotOpenOrderDto order) {
+        if (order == null || order.getOrderId() == null) {
+            return;
+        }
+        String key = spotSellSourceKey(uid, symbol, order.getOrderId());
+        try {
+            BinanceSpotSellSourceDto source = redisUtils.get(key, BinanceSpotSellSourceDto.class);
+            if (source == null) {
+                return;
+            }
+            order.setSourceType(source.getSourceType());
+            order.setSourceOrderId(source.getSourceOrderId());
+            order.setSourceTradeId(source.getSourceTradeId());
+            redisUtils.expire(key, SPOT_SELL_SOURCE_TTL_DAYS, TimeUnit.DAYS);
+        } catch (Exception e) {
+            log.warn("读取币安现货卖出来源关联失败: uid={}, symbol={}, sellOrderId={}, error={}",
+                    uid, symbol, order.getOrderId(), e.getClass().getSimpleName());
+        }
+    }
+
+    private String spotSellSourceKey(Integer uid, String symbol, Long sellOrderId) {
+        return SPOT_SELL_SOURCE_KEY_PREFIX + uid + ":" + symbol + ":" + sellOrderId;
     }
 
     private BinanceEnum.SYMBOL requireSpotSymbol(String symbolValue) {
