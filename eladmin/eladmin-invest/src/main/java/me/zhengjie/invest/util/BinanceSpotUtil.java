@@ -6,6 +6,7 @@ import cn.hutool.crypto.digest.HmacAlgorithm;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
+import cn.hutool.http.Method;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import me.zhengjie.invest.constants.BinanceEnum;
@@ -135,6 +136,19 @@ public class BinanceSpotUtil {
                 .toJavaList(BinanceSpotOpenOrderDto.class);
     }
 
+    public Long cancelOrder(String symbol, Long orderId) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("symbol", symbol);
+        params.put("orderId", orderId);
+        JSONObject resultJson = JSON.parseObject(
+                this.doRequest("/api/v3/order", params, true, Method.DELETE));
+        String canceledOrderId = resultJson.getString("orderId");
+        if (StringUtils.isBlank(canceledOrderId)) {
+            throw new RuntimeException("币安撤单未获取到交易订单号");
+        }
+        return Long.parseLong(canceledOrderId);
+    }
+
     public Long order(BinanceOrderApiDto apiDto, int maxRetries) {
         for (int i = 0; i < maxRetries ; i++) {
             try {
@@ -147,6 +161,10 @@ public class BinanceSpotUtil {
     }
 
     private String doRequest(String url, Map<String, Object> params, Boolean signFlag, Boolean getFlag) {
+        return doRequest(url, params, signFlag, getFlag ? Method.GET : Method.POST);
+    }
+
+    private String doRequest(String url, Map<String, Object> params, Boolean signFlag, Method method) {
         log.info("入参：{}", JSON.toJSONString(params));
 
         // 过滤空值
@@ -189,7 +207,7 @@ public class BinanceSpotUtil {
         String fullUrl = apiHost + url + "?" + finalQuery;
 
         // 发送请求
-        HttpRequest request = getFlag ? HttpUtil.createGet(fullUrl) : HttpUtil.createPost(fullUrl);
+        HttpRequest request = HttpUtil.createRequest(method, fullUrl);
         headerMap.forEach(request::header);
         request.setProxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort)));
         HttpResponse response = request.execute();

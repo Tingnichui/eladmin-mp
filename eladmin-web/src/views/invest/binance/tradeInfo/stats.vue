@@ -481,7 +481,12 @@
             <template slot-scope="scope">{{ decimalValue(scope.row.remainingQty, 8) }}</template>
           </el-table-column>
           <el-table-column label="可撮合数量" width="125">
-            <template slot-scope="scope">{{ decimalValue(coreAvailableQty(scope.row), 8) }}</template>
+            <template slot-scope="scope">
+              <div>{{ decimalValue(coreAvailableQty(scope.row), 8) }}</div>
+              <small v-if="spotPendingQty(scope.row) > 0" class="core-cell-meta negative">
+                已挂单 {{ decimalValue(spotPendingQty(scope.row), 8) }}
+              </small>
+            </template>
           </el-table-column>
           <el-table-column label="当前盈亏" width="145">
             <template slot-scope="scope">
@@ -503,7 +508,7 @@
               <small class="core-cell-meta">数量 {{ decimalValue(scope.row.coreQty || 0, 8) }}</small>
             </template>
           </el-table-column>
-          <el-table-column label="操作" min-width="245" align="center" fixed="right">
+          <el-table-column label="操作" min-width="320" align="center" fixed="right">
             <template slot-scope="scope">
               <div v-if="scope.row._rowType === 'order'" class="core-action-buttons">
                 <el-tooltip
@@ -522,6 +527,25 @@
                     >卖出</el-button>
                   </span>
                 </el-tooltip>
+                <el-popconfirm
+                  v-if="rowSpotOpenOrders(scope.row).length && checkPer(['admin', 'binanceTradeInfo:createPos'])"
+                  :title="`确定撤销该来源关联的 ${rowSpotOpenOrders(scope.row).length} 个币安卖出挂单吗？`"
+                  placement="top-end"
+                  :width="330"
+                  confirm-button-text="确认撤单"
+                  cancel-button-text="取消"
+                  icon="el-icon-warning"
+                  icon-color="#f56c6c"
+                  @confirm="cancelRowSpotOrders(scope.row)"
+                >
+                  <el-button
+                    slot="reference"
+                    type="warning"
+                    plain
+                    size="mini"
+                    :loading="isRowSpotOrderCancelling(scope.row)"
+                  >撤单</el-button>
+                </el-popconfirm>
                 <el-popconfirm
                   v-if="coreOrderUnlockedRows(scope.row).length && checkPer(['admin', 'binanceSpotCorePosition:add'])"
                   title="确定将该订单内尚未设置底仓的持仓数量全部设为底仓吗？"
@@ -580,6 +604,25 @@
                     >卖出</el-button>
                   </span>
                 </el-tooltip>
+                <el-popconfirm
+                  v-if="rowSpotOpenOrders(scope.row).length && checkPer(['admin', 'binanceTradeInfo:createPos'])"
+                  :title="`确定撤销该来源关联的 ${rowSpotOpenOrders(scope.row).length} 个币安卖出挂单吗？`"
+                  placement="top-end"
+                  :width="330"
+                  confirm-button-text="确认撤单"
+                  cancel-button-text="取消"
+                  icon="el-icon-warning"
+                  icon-color="#f56c6c"
+                  @confirm="cancelRowSpotOrders(scope.row)"
+                >
+                  <el-button
+                    slot="reference"
+                    type="warning"
+                    plain
+                    size="mini"
+                    :loading="isRowSpotOrderCancelling(scope.row)"
+                  >撤单</el-button>
+                </el-popconfirm>
                 <el-button
                   v-if="!hasCorePosition(scope.row) && checkPer(['admin', 'binanceSpotCorePosition:add'])"
                   type="primary"
@@ -661,6 +704,7 @@ export default {
       showSpotOpenOrdersDialog: false,
       spotOpenOrdersLoading: false,
       spotOpenOrders: [],
+      spotOrderCancellingIds: [],
       spotOrderStep: 'form',
       spotOrderSubmitting: false,
       spotOrderSource: null,
@@ -1043,6 +1087,7 @@ export default {
           type: CRUD.NOTIFICATION_TYPE.SUCCESS,
           duration: 3500
         })
+        this.loadSpotOpenOrders()
         this.syncSpotTradeInfo(false)
       }).catch(() => {
         // 请求错误由全局拦截器提示
@@ -1078,6 +1123,7 @@ export default {
       this.expandedCoreOrderKeys = []
       this.coreActionsDirty = false
       this.showCoreActions = true
+      this.loadSpotOpenOrders()
     },
     openBucketCoreActions(bucket) {
       this.selectedCoreRange = { ...bucket }
@@ -1086,6 +1132,7 @@ export default {
       this.expandedCoreOrderKeys = []
       this.coreActionsDirty = false
       this.showCoreActions = true
+      this.loadSpotOpenOrders()
     },
     toCoreActionRow(row) {
       const remainingQty = row.remainingQty == null ? row.qty : row.remainingQty
@@ -1121,7 +1168,7 @@ export default {
           : Number(row.openAmount) || 0
         const breakEvenAmount = numberUtil.mulAmount(row.breakEvenPrice || row.price, remainingQty)
         result.remainingQty = numberUtil.addAmount(result.remainingQty, remainingQty, 8)
-        result.availableQty = numberUtil.addAmount(result.availableQty, this.coreAvailableQty(row), 8)
+        result.availableQty = numberUtil.addAmount(result.availableQty, this.coreRawAvailableQty(row), 8)
         result.openAmount = numberUtil.addAmount(result.openAmount, openAmount, 8)
         result.netPnl = numberUtil.addAmount(result.netPnl, row.netPnl, 8)
         result.coreQty = numberUtil.addAmount(result.coreQty, row.coreQty, 8)
@@ -1188,8 +1235,60 @@ export default {
       return Boolean(row && row.corePositionId && Number(row.coreQty) > 0)
     },
     coreAvailableQty(row) {
-      if (row.availableQty != null) return row.availableQty
+      const rawAvailable = this.coreRawAvailableQty(row)
+      if (row._rowType !== 'order' && this.hasOrderLevelPending(row)) return 0
+      return Math.max(Number(numberUtil.subAmount(rawAvailable, this.spotPendingQty(row), 8)) || 0, 0)
+    },
+    coreRawAvailableQty(row) {
+      if (row.availableQty != null) return Number(row.availableQty) || 0
       return Math.max((Number(row.qty || row.remainingQty) || 0) - (Number(row.coreQty) || 0), 0)
+    },
+    rowSpotOpenOrders(row) {
+      if (!row) return []
+      if (row._rowType === 'order') {
+        return this.spotOpenOrders.filter(order => this.sameId(order.sourceOrderId, row.orderId))
+      }
+      return this.spotOpenOrders.filter(order =>
+        (order.sourceType === 'TRADE' && this.sameId(order.sourceTradeId, row.tradeId)) ||
+        (order.sourceType === 'ORDER' && this.sameId(order.sourceOrderId, row.orderId))
+      )
+    },
+    hasOrderLevelPending(row) {
+      return this.spotOpenOrders.some(order =>
+        order.sourceType === 'ORDER' && this.sameId(order.sourceOrderId, row.orderId)
+      )
+    },
+    spotPendingQty(row) {
+      return this.rowSpotOpenOrders(row).reduce((total, order) => {
+        const remaining = Math.max((Number(order.origQty) || 0) - (Number(order.executedQty) || 0), 0)
+        return Number(numberUtil.addAmount(total, remaining, 8)) || 0
+      }, 0)
+    },
+    sameId(left, right) {
+      return left != null && right != null && String(left) === String(right)
+    },
+    isRowSpotOrderCancelling(row) {
+      return this.rowSpotOpenOrders(row).some(order =>
+        this.spotOrderCancellingIds.some(orderId => this.sameId(orderId, order.orderId))
+      )
+    },
+    cancelRowSpotOrders(row) {
+      const orders = this.rowSpotOpenOrders(row)
+      if (!orders.length) return Promise.resolve()
+      this.spotOrderCancellingIds = orders.map(order => order.orderId)
+      return Promise.all(orders.map(order => crudBinanceTradeInfo.cancelSpotOrder({
+        uid: this.query.uid,
+        symbol: this.query.symbol,
+        orderId: order.orderId
+      }))).then(() => {
+        this.$message.success(`已撤销 ${orders.length} 个卖出挂单`)
+        return this.loadSpotOpenOrders()
+      }).catch(() => {
+        // 请求错误由全局拦截器提示；重新查询以反映可能已成功的部分撤单
+        return this.loadSpotOpenOrders()
+      }).then(() => {
+        this.spotOrderCancellingIds = []
+      })
     },
     coreOrderCoreRows(order) {
       return (order.trades || []).filter(row => this.hasCorePosition(row))

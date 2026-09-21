@@ -257,4 +257,14 @@ public class BinanceTradeInfoController {
         return ResponseEntity.ok(binanceTradeInfoService.listSpotOpenOrders(uid, symbol));
     }
 
+    @DeleteMapping("/spot/order")
+    @Log("撤销现货订单")
+    @ApiOperation("撤销币安现货订单")
+    @PreAuthorize("@el.check('binanceTradeInfo:createPos')")
+    public ResponseEntity<Map<String, Long>> cancelSpotOrder(
+            @RequestParam Integer uid, @RequestParam String symbol, @RequestParam Long orderId) {
+        Long canceledOrderId = binanceTradeInfoService.cancelSpotOrder(uid, symbol, orderId);
+        return ResponseEntity.ok(Collections.singletonMap("orderId", canceledOrderId));
+    }
+
 }

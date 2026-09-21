@@ -427,7 +427,10 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         }
 
         Long[] orderId = new Long[1];
-        BinanceAccountContextHolder.runWith(accountInfo, () -> orderId[0] = binanceSpotUtil.order(apiDto));
+        BinanceAccountContextHolder.runWith(accountInfo, () -> {
+            validateSpotSellCapacity(request, symbol.name());
+            orderId[0] = binanceSpotUtil.order(apiDto);
+        });
         recordSpotSellSource(request, symbol.name(), orderId[0]);
         return orderId[0];
     }
@@ -443,6 +446,91 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                 ? Collections.emptyList() : result.get();
         openOrders.forEach(order -> enrichSpotSellSource(uid, symbol.name(), order));
         return openOrders;
+    }
+
+    @Override
+    public Long cancelSpotOrder(Integer uid, String symbolValue, Long orderId) {
+        if (orderId == null) {
+            throw new BadRequestException("订单 ID 不能为空");
+        }
+        BinanceEnum.SYMBOL symbol = requireSpotSymbol(symbolValue);
+        BinanceAccountInfo accountInfo = requireAvailableAccount(uid);
+        Long[] canceledOrderId = new Long[1];
+        BinanceAccountContextHolder.runWith(accountInfo,
+                () -> canceledOrderId[0] = binanceSpotUtil.cancelOrder(symbol.name(), orderId));
+        try {
+            redisUtils.del(spotSellSourceKey(uid, symbol.name(), orderId));
+        } catch (Exception e) {
+            log.warn("币安现货撤单成功，但来源关联清理失败: uid={}, symbol={}, orderId={}, error={}",
+                    uid, symbol.name(), orderId, e.getClass().getSimpleName());
+        }
+        return canceledOrderId[0];
+    }
+
+    private void validateSpotSellCapacity(BinanceSpotOrderRequest request, String symbol) {
+        if (request.getSourceType() == null) {
+            return;
+        }
+        List<BinanceSpotTradeMatchState> positions =
+                binanceSpotTradeMatchStateMapper.findStatsOpenBuys(request.getUid(), symbol);
+        if (positions == null) {
+            positions = Collections.emptyList();
+        }
+        BigDecimal sourceAvailable = positions.stream()
+                .filter(position -> matchesSellSourcePosition(request, position))
+                .map(position -> zeroIfNull(position.getRemainingQty())
+                        .subtract(zeroIfNull(position.getActiveCoreQty())))
+                .filter(quantity -> quantity.compareTo(BigDecimal.ZERO) > 0)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (sourceAvailable.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException("该持仓没有可卖数量");
+        }
+
+        List<BinanceSpotOpenOrderDto> openOrders = binanceSpotUtil.listOpenOrders(symbol);
+        if (openOrders == null) {
+            openOrders = Collections.emptyList();
+        }
+        openOrders.forEach(order -> enrichSpotSellSource(request.getUid(), symbol, order));
+        if (request.getSourceType() == BinanceSpotSellSourceDto.SourceType.TRADE
+                && hasOrderLevelOpenSell(request.getSourceOrderId(), openOrders)) {
+            throw new BadRequestException("该买入订单已有订单级卖出挂单，请先撤单");
+        }
+        BigDecimal pendingQty = openOrders.stream()
+                .filter(order -> matchesSellSourceOrder(request, order))
+                .map(this::openOrderRemainingQty)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal remainingAvailable = sourceAvailable.subtract(pendingQty).max(BigDecimal.ZERO);
+        if (request.getQuantity().compareTo(remainingAvailable) > 0) {
+            throw new BadRequestException("卖出数量超过扣除当前挂单后的可卖数量 "
+                    + remainingAvailable.stripTrailingZeros().toPlainString());
+        }
+    }
+
+    private boolean matchesSellSourcePosition(BinanceSpotOrderRequest request,
+                                              BinanceSpotTradeMatchState position) {
+        if (request.getSourceType() == BinanceSpotSellSourceDto.SourceType.ORDER) {
+            return Objects.equals(request.getSourceOrderId(), position.getOrderId());
+        }
+        return Objects.equals(request.getSourceTradeId(), position.getTradeId());
+    }
+
+    private boolean matchesSellSourceOrder(BinanceSpotOrderRequest request,
+                                           BinanceSpotOpenOrderDto order) {
+        if (request.getSourceType() == BinanceSpotSellSourceDto.SourceType.ORDER) {
+            return Objects.equals(request.getSourceOrderId(), order.getSourceOrderId());
+        }
+        return order.getSourceType() == BinanceSpotSellSourceDto.SourceType.TRADE
+                && Objects.equals(request.getSourceTradeId(), order.getSourceTradeId());
+    }
+
+    private boolean hasOrderLevelOpenSell(Long sourceOrderId, List<BinanceSpotOpenOrderDto> openOrders) {
+        return sourceOrderId != null && openOrders.stream().anyMatch(order ->
+                order.getSourceType() == BinanceSpotSellSourceDto.SourceType.ORDER
+                        && Objects.equals(sourceOrderId, order.getSourceOrderId()));
+    }
+
+    private BigDecimal openOrderRemainingQty(BinanceSpotOpenOrderDto order) {
+        return zeroIfNull(order.getOrigQty()).subtract(zeroIfNull(order.getExecutedQty())).max(BigDecimal.ZERO);
     }
 
     private void validateSpotSellSource(BinanceSpotOrderRequest request) {

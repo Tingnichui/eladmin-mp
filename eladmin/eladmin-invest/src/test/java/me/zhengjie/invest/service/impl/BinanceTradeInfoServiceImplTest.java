@@ -97,7 +97,11 @@ class BinanceTradeInfoServiceImplTest {
         request.setPriceMode(BinanceEnum.PRICE_MODE.OPPONENT_FIRST);
         request.setSourceType(BinanceSpotSellSourceDto.SourceType.ORDER);
         request.setSourceOrderId(456L);
+        BinanceSpotTradeMatchState position = sourcePosition(654L, 456L, "0.006", "0");
         when(accountService.getAccountByUid(7)).thenReturn(account);
+        when(stateMapper.findStatsOpenBuys(7, "BTCUSDT"))
+                .thenReturn(Collections.singletonList(position));
+        when(spotUtil.listOpenOrders("BTCUSDT")).thenReturn(Collections.emptyList());
         when(spotUtil.order(any(BinanceOrderApiDto.class))).thenReturn(123L);
         when(redisUtils.set(eq("BINANCE:SPOT:SELL_SOURCE:7:BTCUSDT:123"),
                 any(BinanceSpotSellSourceDto.class), eq(365L), eq(TimeUnit.DAYS))).thenReturn(true);
@@ -111,6 +115,34 @@ class BinanceTradeInfoServiceImplTest {
         assertEquals(BinanceSpotSellSourceDto.SourceType.ORDER, captor.getValue().getSourceType());
         assertEquals(Long.valueOf(456L), captor.getValue().getSourceOrderId());
         assertEquals(new BigDecimal("0.001"), captor.getValue().getQuantity());
+    }
+
+    @Test
+    void shouldRejectQuickSellQuantityAlreadyOccupiedByOpenOrder() {
+        BinanceAccountInfo account = validAccount();
+        BinanceSpotOrderRequest request = spotOrderRequest();
+        request.setPriceMode(BinanceEnum.PRICE_MODE.OPPONENT_FIRST);
+        request.setQuantity(new BigDecimal("0.006"));
+        request.setSourceType(BinanceSpotSellSourceDto.SourceType.ORDER);
+        request.setSourceOrderId(456L);
+        BinanceSpotOpenOrderDto openOrder = new BinanceSpotOpenOrderDto();
+        openOrder.setOrderId(789L);
+        openOrder.setOrigQty(new BigDecimal("0.002"));
+        openOrder.setExecutedQty(BigDecimal.ZERO);
+        BinanceSpotSellSourceDto source = new BinanceSpotSellSourceDto();
+        source.setSourceType(BinanceSpotSellSourceDto.SourceType.ORDER);
+        source.setSourceOrderId(456L);
+        when(accountService.getAccountByUid(7)).thenReturn(account);
+        when(stateMapper.findStatsOpenBuys(7, "BTCUSDT"))
+                .thenReturn(Collections.singletonList(sourcePosition(654L, 456L, "0.006", "0")));
+        when(spotUtil.listOpenOrders("BTCUSDT")).thenReturn(Collections.singletonList(openOrder));
+        when(redisUtils.get("BINANCE:SPOT:SELL_SOURCE:7:BTCUSDT:789", BinanceSpotSellSourceDto.class))
+                .thenReturn(source);
+
+        assertThrows(BadRequestException.class, () -> service.createSpotOrder(request));
+
+        verify(spotUtil, never()).order(any(BinanceOrderApiDto.class));
+        assertNull(BinanceAccountContextHolder.get());
     }
 
     @Test
@@ -179,6 +211,19 @@ class BinanceTradeInfoServiceImplTest {
         verify(redisUtils).expire("BINANCE:SPOT:SELL_SOURCE:7:BTCUSDT:789", 365L, TimeUnit.DAYS);
     }
 
+    @Test
+    void shouldCancelSpotOrderAndRemoveSourceAssociation() {
+        BinanceAccountInfo account = validAccount();
+        when(accountService.getAccountByUid(7)).thenReturn(account);
+        when(spotUtil.cancelOrder("BTCUSDT", 789L)).thenReturn(789L);
+
+        assertEquals(789L, service.cancelSpotOrder(7, "BTCUSDT", 789L));
+
+        verify(spotUtil).cancelOrder("BTCUSDT", 789L);
+        verify(redisUtils).del("BINANCE:SPOT:SELL_SOURCE:7:BTCUSDT:789");
+        assertNull(BinanceAccountContextHolder.get());
+    }
+
     private BinanceAccountInfo validAccount() {
         BinanceAccountInfo account = new BinanceAccountInfo();
         account.setUid(7);
@@ -197,6 +242,16 @@ class BinanceTradeInfoServiceImplTest {
         request.setQuantity(new BigDecimal("0.001"));
         request.setStopPrice(new BigDecimal("80000"));
         return request;
+    }
+
+    private BinanceSpotTradeMatchState sourcePosition(Long tradeId, Long orderId,
+                                                      String remainingQty, String coreQty) {
+        BinanceSpotTradeMatchState position = new BinanceSpotTradeMatchState();
+        position.setTradeId(tradeId);
+        position.setOrderId(orderId);
+        position.setRemainingQty(new BigDecimal(remainingQty));
+        position.setActiveCoreQty(new BigDecimal(coreQty));
+        return position;
     }
 
     @Test

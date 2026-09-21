@@ -102,4 +102,6 @@ public interface BinanceTradeInfoService extends IService<BinanceTradeInfo> {
 
     List<BinanceSpotOpenOrderDto> listSpotOpenOrders(Integer uid, String symbol);
 
+    Long cancelSpotOrder(Integer uid, String symbol, Long orderId);
+
 }

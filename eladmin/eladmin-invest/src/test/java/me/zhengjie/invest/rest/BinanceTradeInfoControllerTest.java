@@ -167,4 +167,16 @@ class BinanceTradeInfoControllerTest {
         assertEquals(openOrders, response.getBody());
         verify(spotService).listSpotOpenOrders(7, "BTCUSDT");
     }
+
+    @Test
+    void shouldCancelSpotOrder() {
+        when(spotService.cancelSpotOrder(7, "BTCUSDT", 789L)).thenReturn(789L);
+
+        ResponseEntity<Map<String, Long>> response =
+                controller.cancelSpotOrder(7, "BTCUSDT", 789L);
+
+        assertEquals(200, response.getStatusCodeValue());
+        assertEquals(Long.valueOf(789L), response.getBody().get("orderId"));
+        verify(spotService).cancelSpotOrder(7, "BTCUSDT", 789L);
+    }
 }
