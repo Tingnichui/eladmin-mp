@@ -48,41 +48,18 @@
             @click="syncSpotTradeInfo"
           >同步数据</el-button>
         </div>
-        <el-popover placement="bottom-end" width="260" trigger="hover" :open-delay="150" :close-delay="200">
-          <div class="account-popover-content">
-            <div class="popover-heading">账户统计</div>
-            <div v-for="item in accountSummaryItems" :key="item.label" class="popover-stat-row">
-              <span>{{ item.label }}</span>
-              <strong>{{ item.value }}</strong>
+        <div class="toolbar-actions">
+          <el-popover placement="bottom-end" width="260" trigger="hover" :open-delay="150" :close-delay="200">
+            <div class="account-popover-content">
+              <div class="popover-heading">账户统计</div>
+              <div v-for="item in accountSummaryItems" :key="item.label" class="popover-stat-row">
+                <span>{{ item.label }}</span>
+                <strong>{{ item.value }}</strong>
+              </div>
             </div>
-          </div>
-          <el-button slot="reference" size="small" plain icon="el-icon-wallet">账户资产</el-button>
-        </el-popover>
-      </div>
-      <el-alert
-        v-if="realtimeWarningText"
-        :title="realtimeWarningText"
-        type="warning"
-        :closable="false"
-        show-icon
-        class="realtime-warning"
-      />
-    </section>
-
-    <section v-loading="statsLoading" class="panel position-panel">
-      <div class="panel-title-row">
-        <h3>{{ query.symbol || '现货' }} 持仓买入分布</h3>
-        <div class="headline-summary">
-          <div v-for="item in primaryTradeSummaryItems" :key="item.label" class="headline-summary-item">
-            <span>{{ item.label }}</span>
-            <div class="summary-value-row">
-              <strong :class="['headline-summary-value', item.tone]">{{ item.value }}</strong>
-              <el-tooltip v-if="item.delta" content="相对上次查询" placement="top">
-                <span :class="['summary-delta', item.deltaTone]">{{ item.delta }}</span>
-              </el-tooltip>
-            </div>
-          </div>
-          <el-popover placement="bottom-end" width="660" trigger="click">
+            <el-button slot="reference" size="small" plain icon="el-icon-wallet">账户资产</el-button>
+          </el-popover>
+          <el-popover placement="bottom-end" width="660" trigger="hover" :open-delay="150" :close-delay="200">
             <div class="trade-summary-popover">
               <div class="popover-heading">交易汇总</div>
               <div class="summary-grid">
@@ -97,10 +74,22 @@
                 </div>
               </div>
             </div>
-            <el-button slot="reference" size="mini" plain icon="el-icon-s-grid">全部汇总</el-button>
+            <el-button slot="reference" size="small" plain icon="el-icon-s-grid">全部汇总</el-button>
           </el-popover>
         </div>
       </div>
+      <el-alert
+        v-if="realtimeWarningText"
+        :title="realtimeWarningText"
+        type="warning"
+        :closable="false"
+        show-icon
+        class="realtime-warning"
+      />
+    </section>
+
+    <section v-loading="statsLoading" class="panel position-panel">
+      <h2 class="position-heading">{{ query.symbol || '现货' }} 持仓买入分布</h2>
       <div class="position-metrics">
         <div v-for="item in positionMetrics" :key="item.label" class="metric-item">
           <span class="metric-label">{{ item.label }}</span>
@@ -405,8 +394,7 @@ export default {
         { label: '当前价格', value: this.moneyValue(this.spotStats.currentSpotPrice), tone: 'primary' },
         { label: '持仓均价', value: this.moneyValue(this.spotStats.posAvgPrice), tone: 'warning' },
         { label: '持仓数量', value: this.quantityValue(this.spotStats.posQty), tone: '' },
-        { label: '持仓盈亏', value: this.signedMoneyValue(this.spotStats.holdingProfitLoss), tone: this.valueTone(this.spotStats.holdingProfitLoss) },
-        { label: '收益率', value: this.signedPercentValue(this.spotStats.roi), tone: this.valueTone(this.spotStats.roi) }
+        { label: '持仓盈亏', value: this.signedMoneyValue(this.spotStats.holdingProfitLoss), tone: this.valueTone(this.spotStats.holdingProfitLoss) }
       ]
     },
     accountSummaryItems() {
@@ -436,10 +424,6 @@ export default {
         { label: '持仓盈利', value: this.signedMoneyValue(this.spotStats.holdingProfit), tone: 'positive' },
         { label: '持仓亏损', value: this.signedMoneyValue(this.spotStats.holdingLoss), tone: 'negative' }
       ]
-    },
-    primaryTradeSummaryItems() {
-      const primaryLabels = ['净盈亏', '手续费']
-      return primaryLabels.map(label => this.tradeSummaryItems.find(item => item.label === label)).filter(Boolean)
     },
     netPnlDelta() {
       if (this.spotStats.netPnl == null || this.spotStats.lastNetPnl == null) return null
@@ -806,19 +790,16 @@ export default {
 .toolbar-panel { flex: 0 0 auto; padding: 12px 16px; }
 .toolbar-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .toolbar-main { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; min-width: 0; }
+.toolbar-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 10px; }
+.toolbar-actions .el-button + .el-button { margin-left: 0; }
 .field-label { color: #303133; font-weight: 500; }
 .account-select, .symbol-select { width: 210px; }
 .toolbar-main .el-button + .el-button { margin-left: 0; }
 .realtime-warning { margin-top: 12px; }
 .position-panel { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; padding: 12px 18px 6px; overflow: hidden; }
 .position-panel .position-chart { flex: 1 1 auto; min-height: 0; }
-.panel-title-row { display: flex; align-items: center; justify-content: space-between; }
-.panel-title-row h3 { margin: 0; color: #17233d; font-size: 18px; }
-.headline-summary { display: flex; align-items: center; gap: 20px; }
-.headline-summary-item { min-width: 92px; }
-.headline-summary-item > span { display: block; margin-bottom: 3px; color: #8492a6; font-size: 12px; }
-.headline-summary-value { color: #17233d; font-size: 15px; white-space: nowrap; }
-.position-metrics { display: grid; flex: 0 0 auto; grid-template-columns: repeat(5, minmax(150px, 1fr)); margin-top: 8px; }
+.position-heading { position: absolute; width: 1px; height: 1px; overflow: hidden; margin: -1px; padding: 0; border: 0; clip: rect(0 0 0 0); }
+.position-metrics { display: grid; flex: 0 0 auto; grid-template-columns: repeat(4, minmax(150px, 1fr)); }
 .metric-item { padding: 4px 20px; border-right: 1px solid #ebeef5; }
 .metric-item:first-child { padding-left: 0; }
 .metric-item:last-child { border-right: 0; }
@@ -860,8 +841,7 @@ export default {
 @media (max-width: 1200px) {
   .stats-page { height: auto; min-height: calc(100vh - 117px); overflow: visible; }
   .toolbar-row { align-items: flex-start; flex-direction: column; }
-  .panel-title-row { align-items: flex-start; flex-direction: column; gap: 10px; }
-  .headline-summary { align-self: stretch; justify-content: flex-end; }
+  .toolbar-actions { align-self: flex-end; }
   .position-panel .position-chart { min-height: 430px; }
   .position-metrics { grid-template-columns: repeat(3, 1fr); row-gap: 12px; }
   ::v-deep .core-action-drawer { width: 94% !important; }

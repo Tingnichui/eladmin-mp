@@ -131,18 +131,6 @@ describe('trade stats request lifecycle', () => {
     expect(netPnlItem).toEqual(expect.objectContaining({ delta: '+$12.34', deltaTone: 'positive' }))
   })
 
-  it('keeps only net profit and fee visible beside the chart title', () => {
-    const tradeSummaryItems = [
-      { label: '买入总额', value: '$100.00' },
-      { label: '手续费', value: '$1.00' },
-      { label: '净盈亏', value: '+$9.00', tone: 'positive' }
-    ]
-
-    const result = Stats.computed.primaryTradeSummaryItems.call({ tradeSummaryItems })
-
-    expect(result.map(item => item.label)).toEqual(['净盈亏', '手续费'])
-  })
-
   it('hides futures warnings from the spot page', () => {
     const text = Stats.computed.realtimeWarningText.call({
       statsInfo: {
