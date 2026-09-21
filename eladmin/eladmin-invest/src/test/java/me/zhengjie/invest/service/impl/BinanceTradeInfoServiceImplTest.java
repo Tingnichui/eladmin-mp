@@ -6,6 +6,7 @@ import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceSpotTradeMatchState;
 import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
 import me.zhengjie.invest.domain.dto.BinanceSpotOrderRequest;
+import me.zhengjie.invest.domain.dto.BinanceSpotOpenOrderDto;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeStatsAggregate;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
@@ -114,6 +115,20 @@ class BinanceTradeInfoServiceImplTest {
 
         verify(accountService, never()).getAccountByUid(7);
         verify(spotUtil, never()).order(any(BinanceOrderApiDto.class));
+    }
+
+    @Test
+    void shouldListOpenOrdersForSelectedSpotAccount() {
+        BinanceAccountInfo account = validAccount();
+        BinanceSpotOpenOrderDto openOrder = new BinanceSpotOpenOrderDto();
+        openOrder.setOrderId(789L);
+        when(accountService.getAccountByUid(7)).thenReturn(account);
+        when(spotUtil.listOpenOrders("BTCUSDT")).thenReturn(Collections.singletonList(openOrder));
+
+        assertEquals(Collections.singletonList(openOrder), service.listSpotOpenOrders(7, "btcusdt"));
+
+        verify(spotUtil).listOpenOrders("BTCUSDT");
+        assertNull(BinanceAccountContextHolder.get());
     }
 
     private BinanceAccountInfo validAccount() {

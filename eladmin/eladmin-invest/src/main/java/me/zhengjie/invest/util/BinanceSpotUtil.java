@@ -13,6 +13,7 @@ import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.domain.InvestKlinesRecord;
 import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
+import me.zhengjie.invest.domain.dto.BinanceSpotOpenOrderDto;
 import me.zhengjie.utils.DingdingUtil;
 import me.zhengjie.utils.StringUtils;
 import org.slf4j.Logger;
@@ -125,6 +126,13 @@ public class BinanceSpotUtil {
             throw new RuntimeException("币安下单未获取到交易订单号");
         }
         return Long.parseLong(orderIdStr);
+    }
+
+    public List<BinanceSpotOpenOrderDto> listOpenOrders(String symbol) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("symbol", symbol);
+        return JSON.parseArray(this.doRequest("/api/v3/openOrders", params, true, true))
+                .toJavaList(BinanceSpotOpenOrderDto.class);
     }
 
     public Long order(BinanceOrderApiDto apiDto, int maxRetries) {

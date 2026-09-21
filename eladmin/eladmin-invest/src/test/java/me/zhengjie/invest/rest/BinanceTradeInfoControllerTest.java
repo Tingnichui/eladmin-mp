@@ -4,6 +4,7 @@ import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeMatchResult;
 import me.zhengjie.invest.domain.dto.BinanceSpotOrderRequest;
+import me.zhengjie.invest.domain.dto.BinanceSpotOpenOrderDto;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
@@ -22,6 +23,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.util.Map;
+import java.util.Collections;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -148,5 +151,20 @@ class BinanceTradeInfoControllerTest {
         assertEquals(201, response.getStatusCodeValue());
         assertEquals(123L, response.getBody().get("orderId"));
         verify(spotService).createSpotOrder(request);
+    }
+
+    @Test
+    void shouldReturnSpotOpenOrders() {
+        BinanceSpotOpenOrderDto openOrder = new BinanceSpotOpenOrderDto();
+        openOrder.setOrderId(789L);
+        List<BinanceSpotOpenOrderDto> openOrders = Collections.singletonList(openOrder);
+        when(spotService.listSpotOpenOrders(7, "BTCUSDT")).thenReturn(openOrders);
+
+        ResponseEntity<List<BinanceSpotOpenOrderDto>> response =
+                controller.listSpotOpenOrders(7, "BTCUSDT");
+
+        assertEquals(200, response.getStatusCodeValue());
+        assertEquals(openOrders, response.getBody());
+        verify(spotService).listSpotOpenOrders(7, "BTCUSDT");
     }
 }

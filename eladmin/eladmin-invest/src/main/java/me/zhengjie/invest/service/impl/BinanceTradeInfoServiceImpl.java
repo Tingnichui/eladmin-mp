@@ -32,6 +32,7 @@ import me.zhengjie.invest.domain.dto.BinanceOrderVO;
 import me.zhengjie.invest.domain.dto.BinanceSpotHedgedTradeStatsInfoVO;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeStatsAggregate;
 import me.zhengjie.invest.domain.dto.BinanceSpotOrderRequest;
+import me.zhengjie.invest.domain.dto.BinanceSpotOpenOrderDto;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.mapper.BinanceTradeInfoMapper;
@@ -60,6 +61,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -392,15 +394,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
     @Override
     public Long createSpotOrder(BinanceSpotOrderRequest request) {
-        BinanceEnum.SYMBOL symbol;
-        try {
-            symbol = BinanceEnum.SYMBOL.valueOf(request.getSymbol().trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("不支持的交易对");
-        }
-        if (!Integer.valueOf(0).equals(symbol.getType())) {
-            throw new BadRequestException("请选择现货交易对");
-        }
+        BinanceEnum.SYMBOL symbol = requireSpotSymbol(request.getSymbol());
         if (request.getType() != BinanceEnum.TYPE.STOP_LOSS_LIMIT
                 && request.getType() != BinanceEnum.TYPE.TAKE_PROFIT_LIMIT) {
             throw new BadRequestException("仅支持限价止盈或限价止损订单");
@@ -412,10 +406,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             throw new BadRequestException("对手价1模式不能填写固定委托价");
         }
 
-        BinanceAccountInfo accountInfo = binanceAccountInfoService.getAccountByUid(request.getUid());
-        if (accountInfo == null || !Integer.valueOf(1).equals(accountInfo.getApiValidFlag())) {
-            throw new BadRequestException("账户API不可用");
-        }
+        BinanceAccountInfo accountInfo = requireAvailableAccount(request.getUid());
 
         BinanceOrderApiDto apiDto = new BinanceOrderApiDto();
         apiDto.setSymbol(symbol.name());
@@ -433,6 +424,37 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         Long[] orderId = new Long[1];
         BinanceAccountContextHolder.runWith(accountInfo, () -> orderId[0] = binanceSpotUtil.order(apiDto));
         return orderId[0];
+    }
+
+    @Override
+    public List<BinanceSpotOpenOrderDto> listSpotOpenOrders(Integer uid, String symbolValue) {
+        BinanceEnum.SYMBOL symbol = requireSpotSymbol(symbolValue);
+        BinanceAccountInfo accountInfo = requireAvailableAccount(uid);
+        AtomicReference<List<BinanceSpotOpenOrderDto>> result = new AtomicReference<>();
+        BinanceAccountContextHolder.runWith(accountInfo,
+                () -> result.set(binanceSpotUtil.listOpenOrders(symbol.name())));
+        return result.get();
+    }
+
+    private BinanceEnum.SYMBOL requireSpotSymbol(String symbolValue) {
+        BinanceEnum.SYMBOL symbol;
+        try {
+            symbol = BinanceEnum.SYMBOL.valueOf(symbolValue.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new BadRequestException("不支持的交易对");
+        }
+        if (!Integer.valueOf(0).equals(symbol.getType())) {
+            throw new BadRequestException("请选择现货交易对");
+        }
+        return symbol;
+    }
+
+    private BinanceAccountInfo requireAvailableAccount(Integer uid) {
+        BinanceAccountInfo accountInfo = binanceAccountInfoService.getAccountByUid(uid);
+        if (accountInfo == null || !Integer.valueOf(1).equals(accountInfo.getApiValidFlag())) {
+            throw new BadRequestException("账户API不可用");
+        }
+        return accountInfo;
     }
 
 }

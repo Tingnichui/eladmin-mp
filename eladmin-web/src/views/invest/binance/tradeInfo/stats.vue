@@ -55,6 +55,15 @@
             :disabled="query.uid == null || !query.symbol"
             @click="openSpotOrderDialog"
           >现货下单</el-button>
+          <el-button
+            v-if="checkPer(['admin', 'binanceTradeInfo:list'])"
+            size="small"
+            plain
+            type="primary"
+            icon="el-icon-tickets"
+            :disabled="query.uid == null || !query.symbol"
+            @click="openSpotOpenOrdersDialog"
+          >当前挂单</el-button>
         </div>
         <div class="toolbar-actions">
           <el-popover placement="bottom-end" width="260" trigger="hover" :open-delay="150" :close-delay="200">
@@ -282,6 +291,65 @@
             @click="submitSpotOrder"
           >确认{{ spotOrderSideLabel }}</el-button>
         </template>
+      </span>
+    </el-dialog>
+
+    <el-dialog
+      title="当前挂单"
+      :visible.sync="showSpotOpenOrdersDialog"
+      width="980px"
+      custom-class="spot-open-orders-dialog"
+    >
+      <div class="spot-open-orders-header">
+        <div class="spot-order-context">
+          <span>{{ selectedAccountName }}</span>
+          <el-divider direction="vertical" />
+          <strong>{{ query.symbol }}</strong>
+        </div>
+        <el-button
+          size="mini"
+          icon="el-icon-refresh"
+          :loading="spotOpenOrdersLoading"
+          @click="loadSpotOpenOrders"
+        >刷新</el-button>
+      </div>
+      <el-table v-loading="spotOpenOrdersLoading" :data="spotOpenOrders" border empty-text="当前交易对没有挂单">
+        <el-table-column label="订单 / 时间" min-width="185">
+          <template slot-scope="scope">
+            <div class="spot-open-order-main">{{ scope.row.orderId }}</div>
+            <div class="spot-open-order-secondary">{{ formatSpotOrderTime(scope.row.time) }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="方向" width="72" align="center">
+          <template slot-scope="scope">
+            <span :class="scope.row.side === 'BUY' ? 'positive' : 'negative'">{{ scope.row.side === 'BUY' ? '买入' : '卖出' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="类型" width="105" align="center">
+          <template slot-scope="scope">{{ spotOpenOrderTypeLabel(scope.row.type) }}</template>
+        </el-table-column>
+        <el-table-column label="数量 / 已成交" min-width="170" align="right">
+          <template slot-scope="scope">
+            <div class="spot-open-order-main">{{ decimalValue(scope.row.origQty, 8) }} {{ spotBaseAsset }}</div>
+            <div class="spot-open-order-secondary">已成交 {{ decimalValue(scope.row.executedQty, 8) }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="触发价" min-width="130" align="right">
+          <template slot-scope="scope">{{ decimalValue(scope.row.stopPrice, 8) }}</template>
+        </el-table-column>
+        <el-table-column label="委托价格" min-width="145" align="right">
+          <template slot-scope="scope">{{ spotOpenOrderPriceLabel(scope.row) }}</template>
+        </el-table-column>
+        <el-table-column label="状态" width="110" align="center">
+          <template slot-scope="scope">
+            <el-tag size="mini" :type="scope.row.status === 'PARTIALLY_FILLED' ? 'warning' : 'info'">
+              {{ spotOpenOrderStatusLabel(scope.row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+      <span slot="footer">
+        <el-button @click="showSpotOpenOrdersDialog = false">关闭</el-button>
       </span>
     </el-dialog>
 
@@ -587,6 +655,9 @@ export default {
       batchLockLoading: false,
       batchReleaseLoading: false,
       showSpotOrderDialog: false,
+      showSpotOpenOrdersDialog: false,
+      spotOpenOrdersLoading: false,
+      spotOpenOrders: [],
       spotOrderStep: 'form',
       spotOrderSubmitting: false,
       spotOrderSource: null,
@@ -824,6 +895,51 @@ export default {
         priceMode: 'OPPONENT_FIRST',
         price: null
       }, null)
+    },
+    openSpotOpenOrdersDialog() {
+      if (this.query.uid == null || !this.query.symbol) return
+      this.spotOpenOrders = []
+      this.showSpotOpenOrdersDialog = true
+      this.loadSpotOpenOrders()
+    },
+    loadSpotOpenOrders() {
+      if (this.query.uid == null || !this.query.symbol || this.spotOpenOrdersLoading) return
+      const query = { uid: this.query.uid, symbol: this.query.symbol }
+      this.spotOpenOrdersLoading = true
+      crudBinanceTradeInfo.listSpotOpenOrders(query).then(data => {
+        if (this.query.uid === query.uid && this.query.symbol === query.symbol) {
+          this.spotOpenOrders = data || []
+        }
+      }).catch(() => {
+        // 请求错误由全局拦截器提示
+      }).then(() => {
+        this.spotOpenOrdersLoading = false
+      })
+    },
+    spotOpenOrderTypeLabel(type) {
+      if (type === 'STOP_LOSS_LIMIT') return '限价止损'
+      if (type === 'TAKE_PROFIT_LIMIT') return '限价止盈'
+      return type || '--'
+    },
+    spotOpenOrderStatusLabel(status) {
+      if (status === 'NEW') return '等待触发/成交'
+      if (status === 'PARTIALLY_FILLED') return '部分成交'
+      return status || '--'
+    },
+    spotOpenOrderPriceLabel(order) {
+      if (order.pegPriceType === 'MARKET_PEG') {
+        const peggedPrice = Number(order.peggedPrice)
+        return peggedPrice > 0 ? `对手价1（${this.decimalValue(peggedPrice, 8)}）` : '对手价1'
+      }
+      if (order.pegPriceType === 'PRIMARY_PEG') return '本方价1'
+      return this.decimalValue(order.price, 8)
+    },
+    formatSpotOrderTime(timestamp) {
+      if (timestamp == null) return '--'
+      const date = new Date(Number(timestamp))
+      if (Number.isNaN(date.getTime())) return '--'
+      const pad = value => String(value).padStart(2, '0')
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
     },
     openPositionSellDialog(row) {
       const maxQuantity = this.coreAvailableQty(row)
@@ -1321,6 +1437,11 @@ export default {
 .spot-order-summary dd { margin: 0; color: #303133; font-weight: 500; text-align: right; }
 .spot-order-summary dd.positive { color: #13a76f; }
 .spot-order-summary dd.negative { color: #f56c6c; }
+.spot-open-orders-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.spot-open-orders-header .spot-order-context { margin-bottom: 0; }
+.spot-open-order-main { color: #303133; white-space: nowrap; }
+.spot-open-order-secondary { margin-top: 4px; color: #909399; font-size: 12px; white-space: nowrap; }
+::v-deep .spot-open-orders-dialog .el-dialog__body { padding-top: 12px; }
 @media (max-width: 1200px) {
   .stats-page { height: auto; min-height: calc(100vh - 117px); overflow: visible; }
   .toolbar-row { align-items: flex-start; flex-direction: column; }
@@ -1331,6 +1452,7 @@ export default {
 }
 @media (max-width: 700px) {
   ::v-deep .spot-order-dialog { width: 94% !important; }
+  ::v-deep .spot-open-orders-dialog { width: 96% !important; }
   .spot-order-form-grid, .position-sell-summary { grid-template-columns: 1fr; }
 }
 @media (max-height: 760px) {

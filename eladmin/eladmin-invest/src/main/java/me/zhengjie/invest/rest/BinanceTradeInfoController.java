@@ -30,6 +30,7 @@ import me.zhengjie.invest.domain.dto.BinanceFuturesTradeStatsInfoVO;
 import me.zhengjie.invest.domain.dto.BinanceOrderVO;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeMatchResult;
 import me.zhengjie.invest.domain.dto.BinanceSpotOrderRequest;
+import me.zhengjie.invest.domain.dto.BinanceSpotOpenOrderDto;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.service.*;
@@ -246,6 +247,14 @@ public class BinanceTradeInfoController {
             @Validated @RequestBody BinanceSpotOrderRequest request) {
         Long orderId = binanceTradeInfoService.createSpotOrder(request);
         return new ResponseEntity<>(Collections.singletonMap("orderId", orderId), HttpStatus.CREATED);
+    }
+
+    @GetMapping("/spot/open-orders")
+    @ApiOperation("查询币安现货当前挂单")
+    @PreAuthorize("@el.check('admin','binanceTradeInfo:list')")
+    public ResponseEntity<List<BinanceSpotOpenOrderDto>> listSpotOpenOrders(
+            @RequestParam Integer uid, @RequestParam String symbol) {
+        return ResponseEntity.ok(binanceTradeInfoService.listSpotOpenOrders(uid, symbol));
     }
 
 }
