@@ -1,7 +1,11 @@
 package me.zhengjie.invest.service.impl;
 
+import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.invest.constants.BinanceEnum;
+import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceSpotTradeMatchState;
+import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
+import me.zhengjie.invest.domain.dto.BinanceSpotOrderRequest;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeStatsAggregate;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
@@ -9,11 +13,14 @@ import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
 import me.zhengjie.invest.mapper.BinanceSpotTradeMatchMapper;
 import me.zhengjie.invest.mapper.BinanceSpotTradeMatchStateMapper;
 import me.zhengjie.invest.mapper.BinanceTradeInfoMapper;
+import me.zhengjie.invest.service.BinanceAccountInfoService;
+import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceSpotUtil;
 import me.zhengjie.utils.RedisUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -22,6 +29,7 @@ import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -36,6 +44,7 @@ class BinanceTradeInfoServiceImplTest {
     private final BinanceSpotTradeMatchMapper matchMapper = mock(BinanceSpotTradeMatchMapper.class);
     private final BinanceSpotTradeMatchStateMapper stateMapper = mock(BinanceSpotTradeMatchStateMapper.class);
     private final BinanceSpotUtil spotUtil = mock(BinanceSpotUtil.class);
+    private final BinanceAccountInfoService accountService = mock(BinanceAccountInfoService.class);
     private final RedisUtils redisUtils = mock(RedisUtils.class);
     private final BinanceTradeInfoServiceImpl service = new BinanceTradeInfoServiceImpl();
 
@@ -45,10 +54,86 @@ class BinanceTradeInfoServiceImplTest {
         ReflectionTestUtils.setField(service, "binanceSpotTradeMatchMapper", matchMapper);
         ReflectionTestUtils.setField(service, "binanceSpotTradeMatchStateMapper", stateMapper);
         ReflectionTestUtils.setField(service, "binanceSpotUtil", spotUtil);
+        ReflectionTestUtils.setField(service, "binanceAccountInfoService", accountService);
         ReflectionTestUtils.setField(service, "redisUtils", redisUtils);
         when(matchMapper.aggregateStats(any(), any())).thenReturn(new BinanceSpotTradeStatsAggregate());
         when(stateMapper.sumStatsUnmatchedSellQty(any(), any())).thenReturn(BigDecimal.ZERO);
         when(stateMapper.findStatsOpenBuys(any(), any())).thenReturn(Collections.emptyList());
+    }
+
+    @Test
+    void shouldCreateOpponentFirstStopLimitOrder() {
+        BinanceAccountInfo account = validAccount();
+        BinanceSpotOrderRequest request = spotOrderRequest();
+        request.setPriceMode(BinanceEnum.PRICE_MODE.OPPONENT_FIRST);
+        when(accountService.getAccountByUid(7)).thenReturn(account);
+        when(spotUtil.order(any(BinanceOrderApiDto.class))).thenReturn(123L);
+
+        Long orderId = service.createSpotOrder(request);
+
+        ArgumentCaptor<BinanceOrderApiDto> captor = ArgumentCaptor.forClass(BinanceOrderApiDto.class);
+        verify(spotUtil).order(captor.capture());
+        BinanceOrderApiDto apiDto = captor.getValue();
+        assertEquals(123L, orderId);
+        assertEquals("BTCUSDT", apiDto.getSymbol());
+        assertEquals(BinanceEnum.SIDE.SELL, apiDto.getSide());
+        assertEquals(BinanceEnum.TYPE.STOP_LOSS_LIMIT, apiDto.getType());
+        assertEquals(BinanceEnum.TIME_IN_FORCE.GTC, apiDto.getTimeInForce());
+        assertEquals(new BigDecimal("0.001"), apiDto.getQuantity());
+        assertEquals(new BigDecimal("80000"), apiDto.getStopPrice());
+        assertEquals(BinanceEnum.PEG_PRICE_TYPE.MARKET_PEG, apiDto.getPegPriceType());
+        assertNull(apiDto.getPrice());
+        assertNull(BinanceAccountContextHolder.get());
+    }
+
+    @Test
+    void shouldCreateFixedPriceTakeProfitLimitOrder() {
+        BinanceAccountInfo account = validAccount();
+        BinanceSpotOrderRequest request = spotOrderRequest();
+        request.setType(BinanceEnum.TYPE.TAKE_PROFIT_LIMIT);
+        request.setPriceMode(BinanceEnum.PRICE_MODE.FIXED);
+        request.setPrice(new BigDecimal("89990"));
+        when(accountService.getAccountByUid(7)).thenReturn(account);
+        when(spotUtil.order(any(BinanceOrderApiDto.class))).thenReturn(456L);
+
+        assertEquals(456L, service.createSpotOrder(request));
+
+        ArgumentCaptor<BinanceOrderApiDto> captor = ArgumentCaptor.forClass(BinanceOrderApiDto.class);
+        verify(spotUtil).order(captor.capture());
+        assertEquals(new BigDecimal("89990"), captor.getValue().getPrice());
+        assertNull(captor.getValue().getPegPriceType());
+    }
+
+    @Test
+    void shouldRejectUnsupportedSpotOrderBeforeLoadingAccount() {
+        BinanceSpotOrderRequest request = spotOrderRequest();
+        request.setType(BinanceEnum.TYPE.LIMIT);
+        request.setPriceMode(BinanceEnum.PRICE_MODE.OPPONENT_FIRST);
+
+        assertThrows(BadRequestException.class, () -> service.createSpotOrder(request));
+
+        verify(accountService, never()).getAccountByUid(7);
+        verify(spotUtil, never()).order(any(BinanceOrderApiDto.class));
+    }
+
+    private BinanceAccountInfo validAccount() {
+        BinanceAccountInfo account = new BinanceAccountInfo();
+        account.setUid(7);
+        account.setApiValidFlag(1);
+        account.setApiKey("api-key");
+        account.setApiSecret("api-secret");
+        return account;
+    }
+
+    private BinanceSpotOrderRequest spotOrderRequest() {
+        BinanceSpotOrderRequest request = new BinanceSpotOrderRequest();
+        request.setUid(7);
+        request.setSymbol("BTCUSDT");
+        request.setSide(BinanceEnum.SIDE.SELL);
+        request.setType(BinanceEnum.TYPE.STOP_LOSS_LIMIT);
+        request.setQuantity(new BigDecimal("0.001"));
+        request.setStopPrice(new BigDecimal("80000"));
+        return request;
     }
 
     @Test

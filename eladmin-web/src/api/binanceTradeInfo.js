@@ -54,4 +54,12 @@ export function stats(params) {
   })
 }
 
-export default { add, edit, del, syncSpotTradeInfo, syncSelected, stats, syncFuturesHedge }
+export function createSpotOrder(data) {
+  return request({
+    url: 'api/binanceTradeInfo/spot/order',
+    method: 'post',
+    data
+  })
+}
+
+export default { add, edit, del, syncSpotTradeInfo, syncSelected, stats, syncFuturesHedge, createSpotOrder }

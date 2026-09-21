@@ -20,6 +20,7 @@ import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.dto.BinanceOrderVO;
 import me.zhengjie.invest.domain.dto.BinanceSpotHedgedTradeStatsInfoVO;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
+import me.zhengjie.invest.domain.dto.BinanceSpotOrderRequest;
 
 import java.util.List;
 import java.io.IOException;
@@ -95,5 +96,7 @@ public interface BinanceTradeInfoService extends IService<BinanceTradeInfo> {
     BinanceSpotHedgedTradeStatsInfoVO hedgedStats(BinanceSpotHedgeContext hedgeContext);
 
     void createPos(BinanceOrderVO posInfo);
+
+    Long createSpotOrder(BinanceSpotOrderRequest request);
 
 }

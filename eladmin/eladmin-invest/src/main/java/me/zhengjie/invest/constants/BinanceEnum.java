@@ -62,6 +62,35 @@ public class BinanceEnum {
 
     @Getter
     @AllArgsConstructor
+    public enum PRICE_MODE {
+
+        FIXED("固定委托价"),
+        OPPONENT_FIRST("对手价1"),
+        ;
+        private final String desc;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public enum PEG_PRICE_TYPE {
+
+        PRIMARY_PEG("同方向最优价"),
+        MARKET_PEG("对手方向最优价"),
+        ;
+        private final String desc;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public enum PEG_OFFSET_TYPE {
+
+        PRICE_LEVEL("价格档位"),
+        ;
+        private final String desc;
+    }
+
+    @Getter
+    @AllArgsConstructor
     public enum NEW_ORDER_RESP_TYPE {
 
         ACK(""),

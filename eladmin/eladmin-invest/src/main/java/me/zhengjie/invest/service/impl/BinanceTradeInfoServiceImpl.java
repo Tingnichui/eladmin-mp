@@ -21,6 +21,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceSpotTradeMatchState;
@@ -30,6 +31,7 @@ import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
 import me.zhengjie.invest.domain.dto.BinanceOrderVO;
 import me.zhengjie.invest.domain.dto.BinanceSpotHedgedTradeStatsInfoVO;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeStatsAggregate;
+import me.zhengjie.invest.domain.dto.BinanceSpotOrderRequest;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.mapper.BinanceTradeInfoMapper;
@@ -386,6 +388,51 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             // 现货止损
 
         }
+    }
+
+    @Override
+    public Long createSpotOrder(BinanceSpotOrderRequest request) {
+        BinanceEnum.SYMBOL symbol;
+        try {
+            symbol = BinanceEnum.SYMBOL.valueOf(request.getSymbol().trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("不支持的交易对");
+        }
+        if (!Integer.valueOf(0).equals(symbol.getType())) {
+            throw new BadRequestException("请选择现货交易对");
+        }
+        if (request.getType() != BinanceEnum.TYPE.STOP_LOSS_LIMIT
+                && request.getType() != BinanceEnum.TYPE.TAKE_PROFIT_LIMIT) {
+            throw new BadRequestException("仅支持限价止盈或限价止损订单");
+        }
+        if (request.getPriceMode() == BinanceEnum.PRICE_MODE.FIXED && request.getPrice() == null) {
+            throw new BadRequestException("固定委托价模式必须填写委托价");
+        }
+        if (request.getPriceMode() == BinanceEnum.PRICE_MODE.OPPONENT_FIRST && request.getPrice() != null) {
+            throw new BadRequestException("对手价1模式不能填写固定委托价");
+        }
+
+        BinanceAccountInfo accountInfo = binanceAccountInfoService.getAccountByUid(request.getUid());
+        if (accountInfo == null || !Integer.valueOf(1).equals(accountInfo.getApiValidFlag())) {
+            throw new BadRequestException("账户API不可用");
+        }
+
+        BinanceOrderApiDto apiDto = new BinanceOrderApiDto();
+        apiDto.setSymbol(symbol.name());
+        apiDto.setSide(request.getSide());
+        apiDto.setType(request.getType());
+        apiDto.setTimeInForce(BinanceEnum.TIME_IN_FORCE.GTC);
+        apiDto.setQuantity(request.getQuantity());
+        apiDto.setStopPrice(request.getStopPrice());
+        if (request.getPriceMode() == BinanceEnum.PRICE_MODE.FIXED) {
+            apiDto.setPrice(request.getPrice());
+        } else {
+            apiDto.setPegPriceType(BinanceEnum.PEG_PRICE_TYPE.MARKET_PEG);
+        }
+
+        Long[] orderId = new Long[1];
+        BinanceAccountContextHolder.runWith(accountInfo, () -> orderId[0] = binanceSpotUtil.order(apiDto));
+        return orderId[0];
     }
 
 }

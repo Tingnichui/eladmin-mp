@@ -26,6 +26,9 @@ public class BinanceOrderApiDto {
     private BigDecimal icebergQty;// NO	仅有限价单(包括条件限价单与限价做事单)可以使用该参数，含义为创建冰山订单并指定冰山订单的数量。
     private BinanceEnum.NEW_ORDER_RESP_TYPE newOrderRespType;// NO	指定响应类型 ACK, RESULT, or FULL; MARKET 与 LIMIT 订单默认为FULL, 其他默认为ACK。
     private BinanceEnum.STP selfTradePreventionMode;// NO	允许的 ENUM 取决于交易对的配置。支持的值有：STP 模式。
+    private BinanceEnum.PEG_PRICE_TYPE pegPriceType;// NO 挂钩价格类型；MARKET_PEG 表示对手方向最优价。
+    private BinanceEnum.PEG_OFFSET_TYPE pegOffsetType;// NO 挂钩价格偏移类型，目前仅支持 PRICE_LEVEL。
+    private Integer pegOffsetValue;// NO 挂钩价格档位，最大 100；对手价1无需传入。
     private Long recvWindow;// NO
     private Long timestamp;// YES
 

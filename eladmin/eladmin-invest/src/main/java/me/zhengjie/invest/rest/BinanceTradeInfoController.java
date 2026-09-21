@@ -29,6 +29,7 @@ import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
 import me.zhengjie.invest.domain.dto.BinanceFuturesTradeStatsInfoVO;
 import me.zhengjie.invest.domain.dto.BinanceOrderVO;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeMatchResult;
+import me.zhengjie.invest.domain.dto.BinanceSpotOrderRequest;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.service.*;
@@ -47,6 +48,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -234,6 +236,16 @@ public class BinanceTradeInfoController {
     public ResponseEntity<Object> createPos(@Validated @RequestBody BinanceOrderVO posInfo){
         binanceTradeInfoService.createPos(posInfo);
         return new ResponseEntity<>(HttpStatus.CREATED);
+    }
+
+    @PostMapping("/spot/order")
+    @Log("现货限价止盈止损下单")
+    @ApiOperation("现货限价止盈止损下单")
+    @PreAuthorize("@el.check('binanceTradeInfo:createPos')")
+    public ResponseEntity<Map<String, Long>> createSpotOrder(
+            @Validated @RequestBody BinanceSpotOrderRequest request) {
+        Long orderId = binanceTradeInfoService.createSpotOrder(request);
+        return new ResponseEntity<>(Collections.singletonMap("orderId", orderId), HttpStatus.CREATED);
     }
 
 }

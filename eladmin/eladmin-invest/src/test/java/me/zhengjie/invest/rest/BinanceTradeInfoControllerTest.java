@@ -3,6 +3,7 @@ package me.zhengjie.invest.rest;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeMatchResult;
+import me.zhengjie.invest.domain.dto.BinanceSpotOrderRequest;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
@@ -135,5 +136,17 @@ class BinanceTradeInfoControllerTest {
                 () -> controller.matchSpotTradeInfo(7, "BTCUSD_PERP"));
 
         verifyNoInteractions(matcherService);
+    }
+
+    @Test
+    void shouldReturnCreatedSpotOrderId() {
+        BinanceSpotOrderRequest request = new BinanceSpotOrderRequest();
+        when(spotService.createSpotOrder(request)).thenReturn(123L);
+
+        ResponseEntity<Map<String, Long>> response = controller.createSpotOrder(request);
+
+        assertEquals(201, response.getStatusCodeValue());
+        assertEquals(123L, response.getBody().get("orderId"));
+        verify(spotService).createSpotOrder(request);
     }
 }
