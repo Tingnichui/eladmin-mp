@@ -141,10 +141,6 @@ public class BinanceUsdFuturesUtil {
     }
 
     public List<BinanceFuturesTradeInfo> userTradesFromId(BinanceEnum.SYMBOL symbol, Long fromId, int limit) {
-        return userTradesFromId(symbol.name(), fromId, limit);
-    }
-
-    public List<BinanceFuturesTradeInfo> userTradesFromId(String symbol, Long fromId, int limit) {
         Map<String, Object> params = new HashMap<>();
         params.put("symbol", symbol);
         params.put("fromId", fromId);
@@ -154,21 +150,12 @@ public class BinanceUsdFuturesUtil {
     }
 
     public JSONObject account() {
-        return JSON.parseObject(this.doRequest("/fapi/v3/account", new HashMap<>(), true, true));
-    }
+        Map<String, Object> parmasMap = new HashMap<>();
+        parmasMap.put("symbol", "symbol");
+        JSONObject resJson = JSON.parseObject(this.doRequest("/fapi/v2/account", parmasMap, true, true));
 
-    public List<JSONObject> positionRisk(String symbol) {
-        Map<String, Object> params = new HashMap<>();
-        params.put("symbol", symbol);
-        return JSON.parseArray(this.doRequest("/fapi/v3/positionRisk", params, true, true))
-                .stream().map(obj -> (JSONObject) obj).collect(Collectors.toList());
-    }
-
-    public JSONObject symbolConfig(String symbol) {
-        Map<String, Object> params = new HashMap<>();
-        params.put("symbol", symbol);
-        JSONArray configs = JSON.parseArray(this.doRequest("/fapi/v1/symbolConfig", params, true, true));
-        return configs.isEmpty() ? null : configs.getJSONObject(0);
+        List<JSONObject> positions = resJson.getJSONArray("positions").stream().map(obj -> (JSONObject) obj).collect(Collectors.toList());
+        return positions.stream().filter(v -> v.getString("symbol").equals("BTCUSDT") && v.getString("positionSide").equals("SHORT")).findFirst().orElse(null);
     }
 
     public BigDecimal price(BinanceEnum.SYMBOL symbol) {

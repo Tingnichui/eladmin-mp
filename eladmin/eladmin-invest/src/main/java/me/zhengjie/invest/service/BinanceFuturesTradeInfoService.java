@@ -18,7 +18,6 @@ package me.zhengjie.invest.service;
 import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.dto.BinanceFuturesTradeInfoQueryCriteria;
-import me.zhengjie.invest.domain.dto.BinanceUsdFuturesStatsInfoVO;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -82,10 +81,6 @@ public interface BinanceFuturesTradeInfoService extends IService<BinanceFuturesT
     void sync();
 
     int sync(BinanceAccountInfo accountInfo);
-
-    int sync(BinanceAccountInfo accountInfo, String symbol);
-
-    BinanceUsdFuturesStatsInfoVO queryStats(Integer uid, String symbol, String positionSide);
 
     Date getLastPosCloseTime(Integer uid);
 
