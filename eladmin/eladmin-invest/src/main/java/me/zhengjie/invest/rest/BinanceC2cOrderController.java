@@ -17,6 +17,7 @@ package me.zhengjie.invest.rest;
 
 import me.zhengjie.annotation.Log;
 import me.zhengjie.invest.domain.BinanceC2cOrder;
+import me.zhengjie.invest.domain.dto.BinanceC2cAccountAssetsVO;
 import me.zhengjie.invest.service.BinanceC2cOrderService;
 import me.zhengjie.invest.domain.dto.BinanceC2cOrderQueryCriteria;
 import lombok.RequiredArgsConstructor;
@@ -52,6 +53,13 @@ public class BinanceC2cOrderController {
     public ResponseEntity<Object> syncBinanceC2cOrder(@RequestParam Integer uid) {
         int count = binanceC2cOrderService.sync(uid);
         return ResponseEntity.ok(Collections.singletonMap("count", count));
+    }
+
+    @GetMapping("/accountAssets")
+    @ApiOperation("查询币安C2C账户资产")
+    @PreAuthorize("@el.check('binanceTradeInfo:list')")
+    public ResponseEntity<BinanceC2cAccountAssetsVO> getAccountAssets(@RequestParam Integer uid) {
+        return ResponseEntity.ok(binanceC2cOrderService.getAccountAssets(uid));
     }
 
     @ApiOperation("导出数据")

@@ -8,6 +8,14 @@ export function sync(uid) {
   })
 }
 
+export function getAccountAssets(uid) {
+  return request({
+    url: 'api/binanceC2cOrder/accountAssets',
+    method: 'get',
+    params: { uid }
+  })
+}
+
 export function add(data) {
   return request({
     url: 'api/binanceC2cOrder',
@@ -32,4 +40,4 @@ export function edit(data) {
   })
 }
 
-export default { add, edit, del, sync }
+export default { add, edit, del, sync, getAccountAssets }

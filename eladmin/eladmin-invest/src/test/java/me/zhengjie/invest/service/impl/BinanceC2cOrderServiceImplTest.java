@@ -1,9 +1,11 @@
 package me.zhengjie.invest.service.impl;
 
 import com.alibaba.fastjson2.JSONObject;
+import cn.hutool.core.date.DateUtil;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceC2cOrder;
+import me.zhengjie.invest.domain.dto.BinanceC2cAccountAssetsVO;
 import me.zhengjie.invest.mapper.BinanceC2cOrderMapper;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
@@ -13,8 +15,10 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.util.Collections;
 import java.util.List;
+import java.util.Date;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -91,6 +95,52 @@ class BinanceC2cOrderServiceImplTest {
         verify(binanceSpotUtil, never()).listUserOrderHistory(
                 anyLong(), anyLong(), anyInt(), anyInt());
         verify(mapper, never()).upsertBatch(anyList());
+    }
+
+    @Test
+    void syncStartsAtBeginningOfLatestOrderMonth() {
+        when(accountInfoService.getAccountByUid(7)).thenReturn(account(7, 1));
+        long latestOrderCreateTime = System.currentTimeMillis();
+        long expectedStartTime = DateUtil.beginOfMonth(new Date(latestOrderCreateTime)).getTime();
+        when(mapper.findLatestOrderCreateTime(7)).thenReturn(latestOrderCreateTime);
+        when(binanceSpotUtil.listUserOrderHistory(anyLong(), anyLong(), anyInt(), anyInt()))
+                .thenReturn(Collections.emptyList());
+
+        service.sync(7);
+
+        ArgumentCaptor<Long> startTimeCaptor = ArgumentCaptor.forClass(Long.class);
+        verify(binanceSpotUtil).listUserOrderHistory(
+                startTimeCaptor.capture(), anyLong(), anyInt(), anyInt());
+        assertEquals(expectedStartTime, startTimeCaptor.getValue().longValue());
+    }
+
+    @Test
+    void getAccountAssetsCalculatesAverageRateFromStoredOrders() {
+        BinanceC2cAccountAssetsVO storedAssets = new BinanceC2cAccountAssetsVO();
+        storedAssets.setOrderCount(2L);
+        storedAssets.setRmbAmount(new BigDecimal("149607.48"));
+        storedAssets.setUsdAmount(new BigDecimal("20871.85"));
+        storedAssets.setSyncTime(new Timestamp(1727740800000L));
+        when(mapper.findAccountAssets(7)).thenReturn(storedAssets);
+
+        BinanceC2cAccountAssetsVO assets = service.getAccountAssets(7);
+
+        assertEquals(Integer.valueOf(7), assets.getUid());
+        assertEquals(Long.valueOf(2), assets.getOrderCount());
+        assertEquals(new BigDecimal("7.1679"), assets.getRmbToUsdRate());
+        assertEquals(storedAssets.getSyncTime(), assets.getSyncTime());
+    }
+
+    @Test
+    void getAccountAssetsReturnsZeroRateWhenNoOrdersExist() {
+        when(mapper.findAccountAssets(8)).thenReturn(null);
+
+        BinanceC2cAccountAssetsVO assets = service.getAccountAssets(8);
+
+        assertEquals(Integer.valueOf(8), assets.getUid());
+        assertEquals(BigDecimal.ZERO, assets.getRmbAmount());
+        assertEquals(BigDecimal.ZERO, assets.getUsdAmount());
+        assertEquals(BigDecimal.ZERO, assets.getRmbToUsdRate());
     }
 
     private BinanceAccountInfo account(int uid, int apiValidFlag) {

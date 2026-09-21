@@ -68,6 +68,23 @@
             sync_time = VALUES(sync_time)
     </insert>
 
+    <select id="findAccountAssets" resultType="me.zhengjie.invest.domain.dto.BinanceC2cAccountAssetsVO">
+        SELECT COUNT(*) AS orderCount,
+               COALESCE(SUM(total_price), 0) AS rmbAmount,
+               COALESCE(SUM(taker_amount), 0) AS usdAmount,
+               MAX(sync_time) AS syncTime
+        FROM binance_c2c_order
+        WHERE uid = #{uid}
+          AND order_status = 'COMPLETED'
+          AND trade_type = 'BUY'
+    </select>
+
+    <select id="findLatestOrderCreateTime" resultType="java.lang.Long">
+        SELECT MAX(order_create_time)
+        FROM binance_c2c_order
+        WHERE uid = #{uid}
+    </select>
+
     <select id="findAll" resultMap="BaseResultMap">
         SELECT
         <include refid="Base_Column_List"/>

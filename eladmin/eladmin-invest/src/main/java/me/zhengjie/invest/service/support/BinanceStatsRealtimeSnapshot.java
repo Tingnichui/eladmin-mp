@@ -16,7 +16,6 @@ public class BinanceStatsRealtimeSnapshot {
     private BigDecimal usdFuturesPrice;
     private BigDecimal coinFuturesPrice;
     private BigDecimal coinFundingFee;
-    private Object accountInfo;
     private final Map<String, RealtimeStatus> statuses = new LinkedHashMap<>();
     private final List<String> warnings = new ArrayList<>();
 

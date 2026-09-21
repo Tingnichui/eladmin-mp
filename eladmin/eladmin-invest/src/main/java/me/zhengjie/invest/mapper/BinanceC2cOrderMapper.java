@@ -16,6 +16,7 @@
 package me.zhengjie.invest.mapper;
 
 import me.zhengjie.invest.domain.BinanceC2cOrder;
+import me.zhengjie.invest.domain.dto.BinanceC2cAccountAssetsVO;
 import me.zhengjie.invest.domain.dto.BinanceC2cOrderQueryCriteria;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Mapper;
@@ -34,4 +35,8 @@ public interface BinanceC2cOrderMapper extends BaseMapper<BinanceC2cOrder> {
     IPage<BinanceC2cOrder> findAll(@Param("criteria") BinanceC2cOrderQueryCriteria criteria, Page<Object> page);
 
     int upsertBatch(@Param("orders") List<BinanceC2cOrder> orders);
+
+    Long findLatestOrderCreateTime(@Param("uid") Integer uid);
+
+    BinanceC2cAccountAssetsVO findAccountAssets(@Param("uid") Integer uid);
 }

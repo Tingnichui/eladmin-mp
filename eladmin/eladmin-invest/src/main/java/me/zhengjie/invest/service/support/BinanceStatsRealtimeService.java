@@ -102,7 +102,7 @@ public class BinanceStatsRealtimeService {
             } catch (Exception e) {
                 log.warn("等待合并的现货统计实时请求失败: uid={}, symbol={}, error={}",
                         uid, symbol, e.getClass().getSimpleName());
-                return unavailableSnapshot("实时数据请求繁忙，请稍后重试", "currentSpotPrice", "accountInfo");
+                return unavailableSnapshot("实时数据请求繁忙，请稍后重试", "currentSpotPrice");
             }
         }
 
@@ -137,21 +137,14 @@ public class BinanceStatsRealtimeService {
                                 uid, BinanceEnum.SYMBOL.BTCUSD_PERP, coinPositionStartTime),
                 this::toBigDecimal
         );
-        PendingItem<Object> account = submit(
-                accountInfo, uid, "accountInfo", CACHE_PREFIX + "ACCOUNT:" + uid, "账户资产",
-                () -> binanceSpotUtil.usdStats(true), value -> value
-        );
-
         ItemResult<BigDecimal> usdResult = await(usdPrice, deadlineNanos);
         ItemResult<BigDecimal> coinResult = await(coinPrice, deadlineNanos);
         ItemResult<BigDecimal> fundingResult = await(fundingFee, deadlineNanos);
-        ItemResult<Object> accountResult = await(account, deadlineNanos);
 
         BinanceStatsRealtimeSnapshot snapshot = new BinanceStatsRealtimeSnapshot();
         snapshot.setUsdFuturesPrice(apply(snapshot, usdPrice.statusKey, usdResult));
         snapshot.setCoinFuturesPrice(apply(snapshot, coinPrice.statusKey, coinResult));
         snapshot.setCoinFundingFee(apply(snapshot, fundingFee.statusKey, fundingResult));
-        snapshot.setAccountInfo(apply(snapshot, account.statusKey, accountResult));
         return snapshot;
     }
 
@@ -162,17 +155,10 @@ public class BinanceStatsRealtimeService {
                 accountInfo, uid, "currentSpotPrice", CACHE_PREFIX + "PRICE:SPOT:" + symbol, "现货价格",
                 () -> binanceSpotUtil.getPrice(BinanceEnum.SYMBOL.valueOf(symbol)), this::toBigDecimal
         );
-        PendingItem<Object> account = submit(
-                accountInfo, uid, "accountInfo", CACHE_PREFIX + "ACCOUNT:" + uid, "账户资产",
-                () -> binanceSpotUtil.usdStats(true), value -> value
-        );
-
         ItemResult<BigDecimal> spotPriceResult = await(spotPrice, deadlineNanos);
-        ItemResult<Object> accountResult = await(account, deadlineNanos);
 
         BinanceStatsRealtimeSnapshot snapshot = new BinanceStatsRealtimeSnapshot();
         snapshot.setCurrentSpotPrice(apply(snapshot, spotPrice.statusKey, spotPriceResult));
-        snapshot.setAccountInfo(apply(snapshot, account.statusKey, accountResult));
         return snapshot;
     }
 
@@ -306,7 +292,7 @@ public class BinanceStatsRealtimeService {
 
     private BinanceStatsRealtimeSnapshot unavailableSnapshot(String message) {
         return unavailableSnapshot(message,
-                "usdFuturesPrice", "coinFuturesPrice", "coinFundingFee", "accountInfo");
+                "usdFuturesPrice", "coinFuturesPrice", "coinFundingFee");
     }
 
     private BinanceStatsRealtimeSnapshot unavailableSnapshot(String message, String... keys) {

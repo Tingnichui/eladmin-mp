@@ -13,7 +13,6 @@ import org.springframework.core.task.TaskRejectedException;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.math.BigDecimal;
-import java.util.Collections;
 import java.util.Date;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -54,8 +53,6 @@ class BinanceStatsRealtimeServiceTest {
         when(coinFuturesUtil.price(BinanceEnum.SYMBOL.BTCUSD_PERP)).thenReturn(new BigDecimal("62100"));
         when(coinFuturesService.calculatePositionFundingFee(1, BinanceEnum.SYMBOL.BTCUSD_PERP))
                 .thenReturn(new BigDecimal("0.001"));
-        when(spotUtil.usdStats(true)).thenReturn(Collections.singletonMap("usdAmount", new BigDecimal("100")));
-
         BinanceStatsRealtimeSnapshot snapshot = service.load(1);
 
         assertEquals(new BigDecimal("62000"), snapshot.getUsdFuturesPrice());
@@ -65,15 +62,13 @@ class BinanceStatsRealtimeServiceTest {
     }
 
     @Test
-    void shouldLoadOnlySpotPriceAndAccountForSpotStats() {
+    void shouldLoadOnlySpotPriceForSpotStats() {
         when(spotUtil.getPrice(BinanceEnum.SYMBOL.BTCUSDT)).thenReturn(new BigDecimal("63000"));
-        when(spotUtil.usdStats(true)).thenReturn(Collections.singletonMap("usdAmount", new BigDecimal("100")));
 
         BinanceStatsRealtimeSnapshot snapshot = service.loadSpot(1, BinanceEnum.SYMBOL.BTCUSDT.name());
 
         assertEquals(new BigDecimal("63000"), snapshot.getCurrentSpotPrice());
         assertEquals("LIVE", snapshot.getStatuses().get("currentSpotPrice").getStatus());
-        assertEquals("LIVE", snapshot.getStatuses().get("accountInfo").getStatus());
         verify(usdFuturesUtil, never()).price(any(BinanceEnum.SYMBOL.class));
         verify(coinFuturesUtil, never()).price(any(BinanceEnum.SYMBOL.class));
         verify(coinFuturesService, never()).calculatePositionFundingFee(
@@ -103,33 +98,27 @@ class BinanceStatsRealtimeServiceTest {
         when(coinFuturesUtil.price(BinanceEnum.SYMBOL.BTCUSD_PERP)).thenThrow(new RuntimeException("proxy unavailable"));
         when(coinFuturesService.calculatePositionFundingFee(1, BinanceEnum.SYMBOL.BTCUSD_PERP))
                 .thenThrow(new RuntimeException("proxy unavailable"));
-        when(spotUtil.usdStats(true)).thenThrow(new RuntimeException("proxy unavailable"));
-
         BinanceStatsRealtimeSnapshot snapshot = service.load(1);
 
         assertEquals(new BigDecimal("61000"), snapshot.getUsdFuturesPrice());
         assertEquals("CACHE", snapshot.getStatuses().get("usdFuturesPrice").getStatus());
         assertNull(snapshot.getCoinFuturesPrice());
         assertEquals("UNAVAILABLE", snapshot.getStatuses().get("coinFuturesPrice").getStatus());
-        assertEquals(4, snapshot.getWarnings().size());
+        assertEquals(3, snapshot.getWarnings().size());
     }
 
     @Test
     void shouldRunRealtimeRequestsInParallel() throws Exception {
-        CountDownLatch started = new CountDownLatch(4);
+        CountDownLatch started = new CountDownLatch(3);
         when(usdFuturesUtil.price(BinanceEnum.SYMBOL.BTCUSDT))
                 .thenAnswer(invocation -> awaitParallel(started, new BigDecimal("62000")));
         when(coinFuturesUtil.price(BinanceEnum.SYMBOL.BTCUSD_PERP))
                 .thenAnswer(invocation -> awaitParallel(started, new BigDecimal("62100")));
         when(coinFuturesService.calculatePositionFundingFee(1, BinanceEnum.SYMBOL.BTCUSD_PERP))
                 .thenAnswer(invocation -> awaitParallel(started, new BigDecimal("0.001")));
-        when(spotUtil.usdStats(true))
-                .thenAnswer(invocation -> awaitParallel(started, Collections.singletonMap("usdAmount", 100)));
-
         BinanceStatsRealtimeSnapshot snapshot = service.load(1);
 
         assertEquals(0L, started.getCount());
-        assertEquals("LIVE", snapshot.getStatuses().get("accountInfo").getStatus());
     }
 
     @Test
@@ -138,8 +127,6 @@ class BinanceStatsRealtimeServiceTest {
         when(coinFuturesUtil.price(BinanceEnum.SYMBOL.BTCUSD_PERP)).thenThrow(new RuntimeException("proxy unavailable"));
         when(coinFuturesService.calculatePositionFundingFee(1, BinanceEnum.SYMBOL.BTCUSD_PERP))
                 .thenThrow(new RuntimeException("proxy unavailable"));
-        when(spotUtil.usdStats(true)).thenThrow(new RuntimeException("proxy unavailable"));
-
         service.load(1);
         service.load(1);
         service.load(1);
@@ -172,15 +159,12 @@ class BinanceStatsRealtimeServiceTest {
         when(coinFuturesUtil.price(BinanceEnum.SYMBOL.BTCUSD_PERP)).thenAnswer(invocation -> slowValue(new BigDecimal("62100")));
         when(coinFuturesService.calculatePositionFundingFee(1, BinanceEnum.SYMBOL.BTCUSD_PERP))
                 .thenAnswer(invocation -> slowValue(new BigDecimal("0.001")));
-        when(spotUtil.usdStats(true)).thenAnswer(invocation -> slowValue(Collections.singletonMap("usdAmount", 100)));
-
         long start = System.currentTimeMillis();
         BinanceStatsRealtimeSnapshot snapshot = service.load(1);
         long elapsed = System.currentTimeMillis() - start;
 
         assertTrue(elapsed < 4_500L);
         assertEquals("UNAVAILABLE", snapshot.getStatuses().get("usdFuturesPrice").getStatus());
-        assertEquals("UNAVAILABLE", snapshot.getStatuses().get("accountInfo").getStatus());
     }
 
     @Test

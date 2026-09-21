@@ -22,6 +22,7 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import me.zhengjie.invest.domain.BinanceC2cOrder;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
+import me.zhengjie.invest.domain.dto.BinanceC2cAccountAssetsVO;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceSpotUtil;
@@ -46,6 +47,8 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Set;
 import java.sql.Timestamp;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import me.zhengjie.utils.PageResult;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -79,9 +82,32 @@ public class BinanceC2cOrderServiceImpl extends ServiceImpl<BinanceC2cOrderMappe
         return syncedCount[0];
     }
 
+    @Override
+    public BinanceC2cAccountAssetsVO getAccountAssets(Integer uid) {
+        BinanceC2cAccountAssetsVO assets = binanceC2cOrderMapper.findAccountAssets(uid);
+        if (assets == null) {
+            assets = new BinanceC2cAccountAssetsVO();
+            assets.setOrderCount(0L);
+            assets.setRmbAmount(BigDecimal.ZERO);
+            assets.setUsdAmount(BigDecimal.ZERO);
+        }
+        assets.setUid(uid);
+        BigDecimal rmbAmount = assets.getRmbAmount() == null ? BigDecimal.ZERO : assets.getRmbAmount();
+        BigDecimal usdAmount = assets.getUsdAmount() == null ? BigDecimal.ZERO : assets.getUsdAmount();
+        assets.setRmbAmount(rmbAmount);
+        assets.setUsdAmount(usdAmount);
+        assets.setRmbToUsdRate(usdAmount.signum() == 0
+                ? BigDecimal.ZERO
+                : rmbAmount.divide(usdAmount, 4, RoundingMode.HALF_UP));
+        return assets;
+    }
+
     private int syncCurrentAccount(Integer uid) {
         Date now = new Date();
-        DateTime cursor = DateUtil.parse(SYNC_START_DATE, DatePattern.NORM_DATE_PATTERN);
+        Long latestOrderCreateTime = binanceC2cOrderMapper.findLatestOrderCreateTime(uid);
+        DateTime cursor = latestOrderCreateTime == null
+                ? DateUtil.parse(SYNC_START_DATE, DatePattern.NORM_DATE_PATTERN)
+                : DateUtil.beginOfMonth(new Date(latestOrderCreateTime));
         Timestamp syncTime = new Timestamp(now.getTime());
         Set<String> syncedOrderNumbers = new HashSet<>();
         int syncedCount = 0;

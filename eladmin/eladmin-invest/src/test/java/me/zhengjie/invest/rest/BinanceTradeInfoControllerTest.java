@@ -7,20 +7,19 @@ import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.service.BinanceCoinFuturesTradeInfoService;
+import me.zhengjie.invest.service.BinanceC2cOrderService;
 import me.zhengjie.invest.service.BinanceFuturesTradeInfoService;
 import me.zhengjie.invest.service.BinanceSpotTradeMatcherService;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
 import me.zhengjie.invest.service.support.BinanceStatsRealtimeService;
 import me.zhengjie.invest.service.support.BinanceStatsRealtimeSnapshot;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
-import me.zhengjie.invest.util.BinanceSpotUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
-import java.util.Collections;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -40,7 +39,7 @@ class BinanceTradeInfoControllerTest {
     private final BinanceCoinFuturesTradeInfoService coinFuturesService =
             mock(BinanceCoinFuturesTradeInfoService.class);
     private final BinanceAccountInfoService accountService = mock(BinanceAccountInfoService.class);
-    private final BinanceSpotUtil spotUtil = mock(BinanceSpotUtil.class);
+    private final BinanceC2cOrderService c2cOrderService = mock(BinanceC2cOrderService.class);
     private final BinanceSpotTradeMatcherService matcherService = mock(BinanceSpotTradeMatcherService.class);
     private final BinanceStatsRealtimeService realtimeService = mock(BinanceStatsRealtimeService.class);
     private final BinanceTradeInfoController controller = new BinanceTradeInfoController();
@@ -51,13 +50,13 @@ class BinanceTradeInfoControllerTest {
         ReflectionTestUtils.setField(controller, "binanceFuturesTradeInfoService", usdFuturesService);
         ReflectionTestUtils.setField(controller, "binanceCoinFuturesTradeInfoService", coinFuturesService);
         ReflectionTestUtils.setField(controller, "binanceAccountInfoService", accountService);
-        ReflectionTestUtils.setField(controller, "binanceSpotUtil", spotUtil);
+        ReflectionTestUtils.setField(controller, "binanceC2cOrderService", c2cOrderService);
         ReflectionTestUtils.setField(controller, "binanceSpotTradeMatcherService", matcherService);
         ReflectionTestUtils.setField(controller, "binanceStatsRealtimeService", realtimeService);
     }
 
     @Test
-    void shouldQueryOnlySpotStatsAndAccountSummary() {
+    void shouldQueryOnlySpotStats() {
         BinanceAccountInfo account = new BinanceAccountInfo();
         account.setUid(7);
         BinanceTradeInfoQueryCriteria criteria = new BinanceTradeInfoQueryCriteria();
@@ -65,7 +64,6 @@ class BinanceTradeInfoControllerTest {
         criteria.setSymbol("BTCUSDT");
         BinanceStatsRealtimeSnapshot snapshot = new BinanceStatsRealtimeSnapshot();
         snapshot.setCurrentSpotPrice(new BigDecimal("63000"));
-        snapshot.setAccountInfo(Collections.singletonMap("usdAmount", new BigDecimal("100")));
         BinanceTradeStatsInfoVO spotStats = new BinanceTradeStatsInfoVO();
         when(accountService.getAccountByUid(7)).thenReturn(account);
         when(realtimeService.loadSpot(7, "BTCUSDT")).thenReturn(snapshot);
@@ -75,7 +73,7 @@ class BinanceTradeInfoControllerTest {
         Map<?, ?> body = (Map<?, ?>) response.getBody();
 
         assertEquals(spotStats, body.get("spotFuturesStatsInfo"));
-        assertEquals(snapshot.getAccountInfo(), body.get("accountInfo"));
+        assertFalse(body.containsKey("accountInfo"));
         assertFalse(body.containsKey("usdFuturesStatsInfo"));
         assertFalse(body.containsKey("coinFuturesStatsInfo"));
         verify(realtimeService).loadSpot(7, "BTCUSDT");
@@ -99,11 +97,11 @@ class BinanceTradeInfoControllerTest {
         assertEquals(2, response.getBody().get("spotCount"));
         assertEquals(1, response.getBody().get("usdFuturesCount"));
         assertEquals(0, response.getBody().get("coinFuturesCount"));
-        assertEquals(true, response.getBody().get("accountUpdated"));
+        assertFalse(response.getBody().containsKey("c2cOrderCount"));
         verify(spotService).syncTradeInfo(account, "BTCUSDT");
         verify(usdFuturesService).sync(account);
         verify(coinFuturesService).sync(account);
-        verify(spotUtil).usdStats(false);
+        verifyNoInteractions(c2cOrderService);
         assertNull(BinanceAccountContextHolder.get());
     }
 

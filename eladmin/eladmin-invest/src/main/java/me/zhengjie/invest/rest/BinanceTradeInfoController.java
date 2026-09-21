@@ -35,7 +35,6 @@ import me.zhengjie.invest.service.*;
 import me.zhengjie.invest.service.support.BinanceStatsRealtimeService;
 import me.zhengjie.invest.service.support.BinanceStatsRealtimeSnapshot;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
-import me.zhengjie.invest.util.BinanceSpotUtil;
 import me.zhengjie.utils.PageResult;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -72,11 +71,11 @@ public class BinanceTradeInfoController {
     @Resource
     private BinanceAccountInfoService binanceAccountInfoService;
     @Resource
-    private BinanceSpotUtil binanceSpotUtil;
-    @Resource
     private BinanceStatsRealtimeService binanceStatsRealtimeService;
     @Resource
     private BinanceSpotTradeMatcherService binanceSpotTradeMatcherService;
+    @Resource
+    private BinanceC2cOrderService binanceC2cOrderService;
 
     @Log("导出数据")
     @ApiOperation("导出数据")
@@ -142,7 +141,6 @@ public class BinanceTradeInfoController {
             BinanceTradeStatsInfoVO spotStats = binanceTradeInfoService.stats(
                     criteria, realtimeSnapshot.getCurrentSpotPrice());
             resMap.put("spotFuturesStatsInfo", spotStats);
-            resMap.put("accountInfo", realtimeSnapshot.getAccountInfo());
             resMap.put("realtimeStatus", realtimeSnapshot.getStatuses());
             List<String> warnings = new ArrayList<>(realtimeSnapshot.getWarnings());
             warnings.addAll(spotStats.getWarnings());
@@ -162,9 +160,7 @@ public class BinanceTradeInfoController {
         binanceCoinFuturesTradeInfoService.sync();
         List<BinanceAccountInfo> accountInfoList = binanceAccountInfoService.listUseApiAccount();
         for (BinanceAccountInfo accountInfo : accountInfoList) {
-            BinanceAccountContextHolder.runWith(accountInfo, () -> {
-                binanceSpotUtil.usdStats(false);
-            });
+            binanceC2cOrderService.sync(accountInfo.getUid());
         }
         return new ResponseEntity<>(HttpStatus.OK);
     }
@@ -209,13 +205,6 @@ public class BinanceTradeInfoController {
         } catch (Exception e) {
             log.warn("当前账户币本位同步失败: uid={}, error={}", uid, e.getClass().getSimpleName());
             throw new BadRequestException("币本位同步失败，请稍后重试");
-        }
-        try {
-            BinanceAccountContextHolder.runWith(accountInfo, () -> binanceSpotUtil.usdStats(false));
-            result.put("accountUpdated", true);
-        } catch (Exception e) {
-            log.warn("当前账户资产同步失败: uid={}, error={}", uid, e.getClass().getSimpleName());
-            throw new BadRequestException("账户资产同步失败，请稍后重试");
         }
         return new ResponseEntity<>(result, HttpStatus.OK);
     }

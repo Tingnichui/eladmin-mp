@@ -51,7 +51,19 @@
         <div class="toolbar-actions">
           <el-popover placement="bottom-end" width="260" trigger="hover" :open-delay="150" :close-delay="200">
             <div class="account-popover-content">
-              <div class="popover-heading">账户统计</div>
+              <div class="account-popover-header">
+                <span class="popover-heading">账户统计</span>
+                <el-button
+                  type="text"
+                  icon="el-icon-refresh"
+                  class="account-refresh-button"
+                  :loading="accountSyncLoading"
+                  :disabled="query.uid == null"
+                  title="同步账户资产"
+                  aria-label="同步账户资产"
+                  @click.stop="syncAccountAssets"
+                />
+              </div>
               <div v-for="item in accountSummaryItems" :key="item.label" class="popover-stat-row">
                 <span>{{ item.label }}</span>
                 <strong>{{ item.value }}</strong>
@@ -342,6 +354,7 @@
 <script>
 import crudBinanceTradeInfo from '@/api/binanceTradeInfo'
 import { listAllAccount } from '@/api/binanceAccountInfo'
+import { getAccountAssets, sync as syncC2cOrder } from '@/api/binanceC2cOrder'
 import TradePositionDistributionBar from '@/views/invest/binance/tradeInfo/TradePositionDistributionBar.vue'
 import CRUD from '@crud/crud'
 import * as numberUtil from '@/utils/numberUtil'
@@ -363,6 +376,7 @@ export default {
       accountList: [],
       statsLoading: false,
       syncLoading: false,
+      accountSyncLoading: false,
       statsDebounceTimer: null,
       statsRequestId: 0,
       showCoreActions: false,
@@ -418,10 +432,6 @@ export default {
     realtimeWarningText() {
       const warnings = ((this.statsInfo && this.statsInfo.warnings) || [])
         .filter(message => !/U本位|币本位|合约|对冲/.test(message))
-      const accountStatus = this.statsInfo && this.statsInfo.realtimeStatus && this.statsInfo.realtimeStatus.accountInfo
-      if (accountStatus && accountStatus.status === 'CACHE' && accountStatus.updatedAt) {
-        warnings.push(`账户资产缓存时间：${new Date(accountStatus.updatedAt).toLocaleString('zh-CN')}`)
-      }
       return warnings.join('；')
     },
     positionMetrics() {
@@ -497,9 +507,12 @@ export default {
         return
       }
       this.statsLoading = true
-      crudBinanceTradeInfo.stats({ ...this.query }).then(res => {
+      Promise.all([
+        crudBinanceTradeInfo.stats({ ...this.query }),
+        getAccountAssets(this.query.uid)
+      ]).then(([res, accountInfo]) => {
         if (requestId === this.statsRequestId) {
-          this.statsInfo = res
+          this.statsInfo = { ...res, accountInfo }
         }
       }).catch(() => {
         // 请求错误由全局拦截器提示；过期请求不改变当前页面状态
@@ -539,6 +552,27 @@ export default {
         this.syncLoading = false
       }).catch(() => {
         this.syncLoading = false
+      })
+    },
+    syncAccountAssets() {
+      if (this.query.uid == null || this.accountSyncLoading) return
+      const uid = this.query.uid
+      this.accountSyncLoading = true
+      syncC2cOrder(uid).then(res => {
+        return getAccountAssets(uid).then(accountInfo => {
+          if (this.query.uid === uid) {
+            this.$set(this.statsInfo, 'accountInfo', accountInfo)
+          }
+          this.$notify({
+            title: `账户资产同步成功：C2C ${res.count || 0} 条`,
+            type: CRUD.NOTIFICATION_TYPE.SUCCESS,
+            duration: 2500
+          })
+        })
+      }).catch(() => {
+        // 请求错误由全局拦截器提示
+      }).then(() => {
+        this.accountSyncLoading = false
       })
     },
     openTradeCoreActions(trade) {
@@ -865,6 +899,9 @@ export default {
 .positive { color: #13a76f !important; }
 .negative { color: #f56c6c !important; }
 .popover-heading { margin-bottom: 6px; color: #17233d; font-weight: 600; }
+.account-popover-header { display: flex; align-items: center; justify-content: space-between; min-height: 28px; }
+.account-popover-header .popover-heading { margin-bottom: 0; }
+.account-refresh-button { padding: 4px; font-size: 17px; }
 .popover-stat-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 2px; border-top: 1px solid #ebeef5; }
 .popover-stat-row span { color: #8492a6; }
 .popover-stat-row strong { color: #17233d; }

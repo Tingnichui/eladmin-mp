@@ -6,14 +6,11 @@ import cn.hutool.core.date.DateUtil;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import me.zhengjie.invest.constants.BinanceEnum;
-import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfoExt;
 import me.zhengjie.invest.domain.InvestKlinesRecord;
 import me.zhengjie.invest.domain.dto.BinanceFundingRate;
 import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
-import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.service.InvestKlinesRecordService;
-import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceSpotUtil;
 import me.zhengjie.invest.util.BinanceUsdFuturesUtil;
 import me.zhengjie.utils.DingdingUtil;
@@ -37,10 +34,6 @@ public class BinanceSpotUtilTests {
 
     @Resource
     private BinanceSpotUtil binanceSpotUtil;
-
-    @Resource
-    private BinanceAccountInfoService binanceAccountInfoService;
-
 
     @Test
     void getPrice() {
@@ -77,14 +70,5 @@ public class BinanceSpotUtilTests {
         Long resultJson = binanceSpotUtil.order(apiDto);
         System.err.println(resultJson);
     }
-
-    @Test
-    void listUserOrderHistory() {
-        BinanceAccountContextHolder.runWith(binanceAccountInfoService.getAccountByIdCardName("耿辉"), () -> {
-            Object o = binanceSpotUtil.usdStats(false);
-            System.err.println(o);
-        });
-    }
-
 
 }

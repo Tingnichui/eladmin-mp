@@ -16,6 +16,7 @@
 package me.zhengjie.invest.service;
 
 import me.zhengjie.invest.domain.BinanceC2cOrder;
+import me.zhengjie.invest.domain.dto.BinanceC2cAccountAssetsVO;
 import me.zhengjie.invest.domain.dto.BinanceC2cOrderQueryCriteria;
 import java.util.List;
 import java.io.IOException;
@@ -37,6 +38,13 @@ public interface BinanceC2cOrderService extends IService<BinanceC2cOrder> {
     * @return 本次接收并写入的订单数量
     */
     int sync(Integer uid);
+
+    /**
+    * 从已同步的 C2C 买入订单中查询账户资产汇总
+    * @param uid 币安账户用户编号
+    * @return 账户资产汇总
+    */
+    BinanceC2cAccountAssetsVO getAccountAssets(Integer uid);
 
     /**
     * 查询数据分页
