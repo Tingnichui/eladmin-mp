@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="me.zhengjie.invest.mapper.BinanceC2cOrderMapper">
+    <resultMap id="BaseResultMap" type="me.zhengjie.invest.domain.BinanceC2cOrder">
+        <id column="id" property="id"/>
+        <result column="uid" property="uid"/>
+        <result column="order_number" property="orderNumber"/>
+        <result column="adv_no" property="advNo"/>
+        <result column="trade_type" property="tradeType"/>
+        <result column="asset" property="asset"/>
+        <result column="fiat" property="fiat"/>
+        <result column="fiat_symbol" property="fiatSymbol"/>
+        <result column="amount" property="amount"/>
+        <result column="taker_amount" property="takerAmount"/>
+        <result column="total_price" property="totalPrice"/>
+        <result column="unit_price" property="unitPrice"/>
+        <result column="order_status" property="orderStatus"/>
+        <result column="order_create_time" property="orderCreateTime"/>
+        <result column="order_time" property="orderTime"/>
+        <result column="commission" property="commission"/>
+        <result column="counter_part_nick_name" property="counterPartNickName"/>
+        <result column="advertisement_role" property="advertisementRole"/>
+        <result column="raw_data" property="rawData"/>
+        <result column="sync_time" property="syncTime"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, uid, order_number, adv_no, trade_type, asset, fiat, fiat_symbol, amount, taker_amount, total_price, unit_price, order_status, order_create_time, order_time, commission, counter_part_nick_name, advertisement_role, raw_data, sync_time, create_time, update_time
+    </sql>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM binance_c2c_order t1
+        WHERE 1 = 1
+            <if test="criteria.uid != null">
+                AND t1.uid = #{criteria.uid}
+            </if>
+            <if test="criteria.orderNumber != null and criteria.orderNumber != ''">
+                AND t1.order_number LIKE CONCAT('%',#{criteria.orderNumber},'%')
+            </if>
+            <if test="criteria.tradeType != null and criteria.tradeType != ''">
+                AND t1.trade_type = #{criteria.tradeType}
+            </if>
+            <if test="criteria.asset != null and criteria.asset != ''">
+                AND t1.asset = #{criteria.asset}
+            </if>
+            <if test="criteria.fiat != null and criteria.fiat != ''">
+                AND t1.fiat = #{criteria.fiat}
+            </if>
+            <if test="criteria.orderStatus != null and criteria.orderStatus != ''">
+                AND t1.order_status = #{criteria.orderStatus}
+            </if>
+            <if test="criteria.orderTime != null and criteria.orderTime.size() > 1">
+                AND t1.order_time BETWEEN #{criteria.orderTime[0]} AND #{criteria.orderTime[1]}
+            </if>
+            <if test="criteria.syncTime != null and criteria.syncTime.size() > 1">
+                AND t1.sync_time BETWEEN #{criteria.syncTime[0]} AND #{criteria.syncTime[1]}
+            </if>
+        ORDER BY t1.id DESC
+    </select>
+</mapper>
