@@ -2,50 +2,62 @@
   <div class="app-container stats-page">
     <section class="panel toolbar-panel">
       <div class="toolbar-row">
-        <label class="field-label">账户</label>
-        <el-select
-          v-model="query.uid"
-          clearable
-          filterable
-          size="small"
-          placeholder="账户"
-          class="account-select"
-          @change="handleAccountChange"
-        >
-          <el-option v-for="item in accountList" :key="item.id" :label="item.idCardName" :value="item.uid" />
-        </el-select>
-        <label class="field-label">交易对</label>
-        <el-select
-          v-model="query.symbol"
-          size="small"
-          placeholder="交易对"
-          class="symbol-select"
-          @change="scheduleStats"
-        >
-          <el-option
-            v-for="item in dict.invest_binance_symbol"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-        <el-button
-          size="small"
-          type="success"
-          icon="el-icon-search"
-          :loading="statsLoading"
-          :disabled="query.uid == null || !query.symbol"
-          @click="doStats"
-        >查询</el-button>
-        <el-button
-          size="small"
-          plain
-          type="success"
-          icon="el-icon-refresh"
-          :loading="syncLoading"
-          :disabled="query.uid == null || !query.symbol"
-          @click="syncSpotTradeInfo"
-        >同步数据</el-button>
+        <div class="toolbar-main">
+          <label class="field-label">账户</label>
+          <el-select
+            v-model="query.uid"
+            clearable
+            filterable
+            size="small"
+            placeholder="账户"
+            class="account-select"
+            @change="handleAccountChange"
+          >
+            <el-option v-for="item in accountList" :key="item.id" :label="item.idCardName" :value="item.uid" />
+          </el-select>
+          <label class="field-label">交易对</label>
+          <el-select
+            v-model="query.symbol"
+            size="small"
+            placeholder="交易对"
+            class="symbol-select"
+            @change="scheduleStats"
+          >
+            <el-option
+              v-for="item in dict.invest_binance_symbol"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+          <el-button
+            size="small"
+            type="success"
+            icon="el-icon-search"
+            :loading="statsLoading"
+            :disabled="query.uid == null || !query.symbol"
+            @click="doStats"
+          >查询</el-button>
+          <el-button
+            size="small"
+            plain
+            type="success"
+            icon="el-icon-refresh"
+            :loading="syncLoading"
+            :disabled="query.uid == null || !query.symbol"
+            @click="syncSpotTradeInfo"
+          >同步数据</el-button>
+        </div>
+        <el-popover placement="bottom-end" width="260" trigger="hover" :open-delay="150" :close-delay="200">
+          <div class="account-popover-content">
+            <div class="popover-heading">账户统计</div>
+            <div v-for="item in accountSummaryItems" :key="item.label" class="popover-stat-row">
+              <span>{{ item.label }}</span>
+              <strong>{{ item.value }}</strong>
+            </div>
+          </div>
+          <el-button slot="reference" size="small" plain icon="el-icon-wallet">账户资产</el-button>
+        </el-popover>
       </div>
       <el-alert
         v-if="realtimeWarningText"
@@ -60,6 +72,34 @@
     <section v-loading="statsLoading" class="panel position-panel">
       <div class="panel-title-row">
         <h3>{{ query.symbol || '现货' }} 持仓买入分布</h3>
+        <div class="headline-summary">
+          <div v-for="item in primaryTradeSummaryItems" :key="item.label" class="headline-summary-item">
+            <span>{{ item.label }}</span>
+            <div class="summary-value-row">
+              <strong :class="['headline-summary-value', item.tone]">{{ item.value }}</strong>
+              <el-tooltip v-if="item.delta" content="相对上次查询" placement="top">
+                <span :class="['summary-delta', item.deltaTone]">{{ item.delta }}</span>
+              </el-tooltip>
+            </div>
+          </div>
+          <el-popover placement="bottom-end" width="660" trigger="click">
+            <div class="trade-summary-popover">
+              <div class="popover-heading">交易汇总</div>
+              <div class="summary-grid">
+                <div v-for="item in tradeSummaryItems" :key="item.label" class="summary-item">
+                  <span class="summary-label">{{ item.label }}</span>
+                  <div class="summary-value-row">
+                    <strong :class="['summary-value', item.tone]">{{ item.value }}</strong>
+                    <el-tooltip v-if="item.delta" content="相对上次查询" placement="top">
+                      <span :class="['summary-delta', item.deltaTone]">{{ item.delta }}</span>
+                    </el-tooltip>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <el-button slot="reference" size="mini" plain icon="el-icon-s-grid">全部汇总</el-button>
+          </el-popover>
+        </div>
       </div>
       <div class="position-metrics">
         <div v-for="item in positionMetrics" :key="item.label" class="metric-item">
@@ -76,34 +116,6 @@
         @select-bucket="openBucketCoreActions"
       />
     </section>
-
-    <div class="summary-layout">
-      <section class="panel account-panel">
-        <h3>账户统计</h3>
-        <div v-for="item in accountSummaryItems" :key="item.label" class="account-row">
-          <span>{{ item.label }}</span>
-          <strong>{{ item.value }}</strong>
-        </div>
-      </section>
-      <section class="panel trade-summary-panel">
-        <div class="panel-title-row">
-          <h3>交易汇总</h3>
-        </div>
-        <div class="summary-grid">
-          <div v-for="item in tradeSummaryItems" :key="item.label" class="summary-item">
-            <div>
-              <span class="summary-label">{{ item.label }}</span>
-              <div class="summary-value-row">
-                <strong :class="['summary-value', item.tone]">{{ item.value }}</strong>
-                <el-tooltip v-if="item.delta" content="相对上次查询" placement="top">
-                  <span :class="['summary-delta', item.deltaTone]">{{ item.delta }}</span>
-                </el-tooltip>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
 
     <el-drawer
       :title="coreActionTitle"
@@ -424,6 +436,10 @@ export default {
         { label: '持仓盈利', value: this.signedMoneyValue(this.spotStats.holdingProfit), tone: 'positive' },
         { label: '持仓亏损', value: this.signedMoneyValue(this.spotStats.holdingLoss), tone: 'negative' }
       ]
+    },
+    primaryTradeSummaryItems() {
+      const primaryLabels = ['净盈亏', '手续费']
+      return primaryLabels.map(label => this.tradeSummaryItems.find(item => item.label === label)).filter(Boolean)
     },
     netPnlDelta() {
       if (this.spotStats.netPnl == null || this.spotStats.lastNetPnl == null) return null
@@ -788,15 +804,20 @@ export default {
 .stats-page { display: flex; flex-direction: column; gap: 12px; box-sizing: border-box; height: calc(100vh - 117px); overflow: hidden; background: #f5f7fa; padding: 12px 16px; }
 .panel { background: #fff; border: 1px solid #ebeef5; border-radius: 10px; box-shadow: 0 4px 14px rgba(31, 45, 61, 0.05); }
 .toolbar-panel { flex: 0 0 auto; padding: 12px 16px; }
-.toolbar-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.toolbar-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.toolbar-main { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; min-width: 0; }
 .field-label { color: #303133; font-weight: 500; }
 .account-select, .symbol-select { width: 210px; }
-.toolbar-row .el-button + .el-button { margin-left: 0; }
+.toolbar-main .el-button + .el-button { margin-left: 0; }
 .realtime-warning { margin-top: 12px; }
 .position-panel { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; padding: 12px 18px 6px; overflow: hidden; }
 .position-panel .position-chart { flex: 1 1 auto; min-height: 0; }
 .panel-title-row { display: flex; align-items: center; justify-content: space-between; }
-.panel-title-row h3, .account-panel h3 { margin: 0; color: #17233d; font-size: 18px; }
+.panel-title-row h3 { margin: 0; color: #17233d; font-size: 18px; }
+.headline-summary { display: flex; align-items: center; gap: 20px; }
+.headline-summary-item { min-width: 92px; }
+.headline-summary-item > span { display: block; margin-bottom: 3px; color: #8492a6; font-size: 12px; }
+.headline-summary-value { color: #17233d; font-size: 15px; white-space: nowrap; }
 .position-metrics { display: grid; flex: 0 0 auto; grid-template-columns: repeat(5, minmax(150px, 1fr)); margin-top: 8px; }
 .metric-item { padding: 4px 20px; border-right: 1px solid #ebeef5; }
 .metric-item:first-child { padding-left: 0; }
@@ -807,15 +828,13 @@ export default {
 .warning { color: #e6a23c !important; }
 .positive { color: #13a76f !important; }
 .negative { color: #f56c6c !important; }
-.summary-layout { display: grid; flex: 0 0 166px; grid-template-columns: minmax(260px, 0.8fr) minmax(720px, 3.2fr); gap: 12px; min-height: 0; }
-.account-panel, .trade-summary-panel { padding: 10px 14px; overflow: hidden; }
-.account-row { display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; height: 32px; margin-top: 6px; padding: 4px 9px; background: #f8fafc; border-radius: 6px; }
-.account-row span { color: #637083; }
-.account-row strong { color: #17233d; }
-.summary-grid { display: grid; grid-auto-rows: 48px; grid-template-columns: repeat(5, minmax(125px, 1fr)); margin-top: 4px; }
-.summary-item { display: flex; align-items: center; min-height: 0; padding: 4px 12px; border-right: 1px solid #ebeef5; border-top: 1px solid #f1f3f7; }
+.popover-heading { margin-bottom: 6px; color: #17233d; font-weight: 600; }
+.popover-stat-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 2px; border-top: 1px solid #ebeef5; }
+.popover-stat-row span { color: #8492a6; }
+.popover-stat-row strong { color: #17233d; }
+.trade-summary-popover .summary-grid { display: grid; grid-template-columns: repeat(5, minmax(110px, 1fr)); }
+.summary-item { min-width: 0; padding: 9px 10px; border-right: 1px solid #ebeef5; border-top: 1px solid #f1f3f7; }
 .summary-item:nth-child(5n) { border-right: 0; }
-.summary-item > div { min-width: 0; }
 .summary-value-row { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .summary-value { display: block; color: #17233d; font-size: 16px; white-space: nowrap; }
 .summary-delta { flex: 0 0 auto; padding: 1px 6px; background: #f4f4f5; border-radius: 9px; font-size: 12px; line-height: 18px; white-space: nowrap; }
@@ -840,17 +859,15 @@ export default {
 ::v-deep .core-trade-child-row > td:nth-child(2) { padding-left: 18px; }
 @media (max-width: 1200px) {
   .stats-page { height: auto; min-height: calc(100vh - 117px); overflow: visible; }
+  .toolbar-row { align-items: flex-start; flex-direction: column; }
+  .panel-title-row { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .headline-summary { align-self: stretch; justify-content: flex-end; }
   .position-panel .position-chart { min-height: 430px; }
   .position-metrics { grid-template-columns: repeat(3, 1fr); row-gap: 12px; }
-  .summary-layout { flex-basis: auto; grid-template-columns: 1fr; }
-  .summary-grid { grid-template-columns: repeat(3, 1fr); }
-  .summary-item:nth-child(5n) { border-right: 1px solid #ebeef5; }
-  .summary-item:nth-child(3n) { border-right: 0; }
   ::v-deep .core-action-drawer { width: 94% !important; }
 }
 @media (max-height: 760px) {
   .stats-page { height: auto; min-height: calc(100vh - 117px); overflow: visible; }
-  .position-panel .position-chart { min-height: 360px; }
-  .summary-layout { flex-basis: auto; }
+  .position-panel .position-chart { min-height: 430px; }
 }
 </style>
