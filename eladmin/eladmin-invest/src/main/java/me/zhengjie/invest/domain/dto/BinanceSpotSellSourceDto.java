@@ -24,4 +24,7 @@ public class BinanceSpotSellSourceDto implements Serializable {
     private Long sourceTradeId;
     private BigDecimal quantity;
     private Long createdAt;
+    private String status;
+    private BigDecimal executedQty;
+    private Long updatedAt;
 }

@@ -8,6 +8,7 @@ import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
 import me.zhengjie.invest.domain.dto.BinanceSpotOrderRequest;
 import me.zhengjie.invest.domain.dto.BinanceSpotOpenOrderDto;
 import me.zhengjie.invest.domain.dto.BinanceSpotSellSourceDto;
+import me.zhengjie.invest.domain.dto.BinanceSpotSellSourceReconcileResult;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeStatsAggregate;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
@@ -105,6 +106,7 @@ class BinanceTradeInfoServiceImplTest {
         when(spotUtil.order(any(BinanceOrderApiDto.class))).thenReturn(123L);
         when(redisUtils.set(eq("BINANCE:SPOT:SELL_SOURCE:7:BTCUSDT:123"),
                 any(BinanceSpotSellSourceDto.class), eq(365L), eq(TimeUnit.DAYS))).thenReturn(true);
+        when(redisUtils.sHasKey("BINANCE:SPOT:SELL_SOURCE:INDEX:7:BTCUSDT", 123L)).thenReturn(true);
 
         assertEquals(123L, service.createSpotOrder(request));
 
@@ -222,6 +224,133 @@ class BinanceTradeInfoServiceImplTest {
         verify(spotUtil).cancelOrder("BTCUSDT", 789L);
         verify(redisUtils).del("BINANCE:SPOT:SELL_SOURCE:7:BTCUSDT:789");
         assertNull(BinanceAccountContextHolder.get());
+    }
+
+    @Test
+    void shouldRemoveCanceledSellSourceDuringReconciliation() {
+        BinanceAccountInfo account = validAccount();
+        BinanceSpotOpenOrderDto canceledOrder = spotOrder(789L, "CANCELED", "0");
+        when(accountService.getAccountByUid(7)).thenReturn(account);
+        when(spotUtil.listOpenOrders("BTCUSDT")).thenReturn(Collections.emptyList());
+        when(redisUtils.hasKey("BINANCE:SPOT:SELL_SOURCE:INDEXED:7:BTCUSDT")).thenReturn(true);
+        when(redisUtils.sGet("BINANCE:SPOT:SELL_SOURCE:INDEX:7:BTCUSDT"))
+                .thenReturn(Collections.singleton((Object) 789L));
+        when(spotUtil.queryOrder("BTCUSDT", 789L)).thenReturn(canceledOrder);
+
+        BinanceSpotSellSourceReconcileResult result =
+                service.reconcileSpotSellSources(7, "BTCUSDT");
+
+        assertEquals(1, result.getCheckedCount());
+        assertEquals(1, result.getRemovedCount());
+        verify(redisUtils).del("BINANCE:SPOT:SELL_SOURCE:7:BTCUSDT:789");
+        verify(redisUtils).setRemove("BINANCE:SPOT:SELL_SOURCE:INDEX:7:BTCUSDT", 789L);
+        assertNull(BinanceAccountContextHolder.get());
+    }
+
+    @Test
+    void shouldKeepFilledSellSourceAndRemoveItFromActiveIndex() {
+        BinanceAccountInfo account = validAccount();
+        BinanceSpotOpenOrderDto filledOrder = spotOrder(789L, "FILLED", "0.006");
+        BinanceSpotSellSourceDto source = new BinanceSpotSellSourceDto();
+        source.setSellOrderId(789L);
+        when(accountService.getAccountByUid(7)).thenReturn(account);
+        when(spotUtil.listOpenOrders("BTCUSDT")).thenReturn(Collections.emptyList());
+        when(redisUtils.hasKey("BINANCE:SPOT:SELL_SOURCE:INDEXED:7:BTCUSDT")).thenReturn(true);
+        when(redisUtils.sGet("BINANCE:SPOT:SELL_SOURCE:INDEX:7:BTCUSDT"))
+                .thenReturn(Collections.singleton((Object) 789L));
+        when(spotUtil.queryOrder("BTCUSDT", 789L)).thenReturn(filledOrder);
+        when(redisUtils.get("BINANCE:SPOT:SELL_SOURCE:7:BTCUSDT:789", BinanceSpotSellSourceDto.class))
+                .thenReturn(source);
+
+        BinanceSpotSellSourceReconcileResult result =
+                service.reconcileSpotSellSources(7, "BTCUSDT");
+
+        assertEquals(1, result.getFilledCount());
+        assertEquals("FILLED", source.getStatus());
+        assertEquals(new BigDecimal("0.006"), source.getExecutedQty());
+        verify(redisUtils, never()).del("BINANCE:SPOT:SELL_SOURCE:7:BTCUSDT:789");
+        verify(redisUtils).set(eq("BINANCE:SPOT:SELL_SOURCE:7:BTCUSDT:789"), eq(source),
+                eq(365L), eq(TimeUnit.DAYS));
+        verify(redisUtils).setRemove("BINANCE:SPOT:SELL_SOURCE:INDEX:7:BTCUSDT", 789L);
+    }
+
+    @Test
+    void shouldRetainSellSourceWhenOrderStatusQueryFails() {
+        BinanceAccountInfo account = validAccount();
+        when(accountService.getAccountByUid(7)).thenReturn(account);
+        when(spotUtil.listOpenOrders("BTCUSDT")).thenReturn(Collections.emptyList());
+        when(redisUtils.hasKey("BINANCE:SPOT:SELL_SOURCE:INDEXED:7:BTCUSDT")).thenReturn(true);
+        when(redisUtils.sGet("BINANCE:SPOT:SELL_SOURCE:INDEX:7:BTCUSDT"))
+                .thenReturn(Collections.singleton((Object) 789L));
+        when(spotUtil.queryOrder("BTCUSDT", 789L)).thenThrow(new RuntimeException("temporary failure"));
+
+        BinanceSpotSellSourceReconcileResult result =
+                service.reconcileSpotSellSources(7, "BTCUSDT");
+
+        assertEquals(1, result.getFailedCount());
+        verify(redisUtils, never()).del("BINANCE:SPOT:SELL_SOURCE:7:BTCUSDT:789");
+        verify(redisUtils, never()).setRemove("BINANCE:SPOT:SELL_SOURCE:INDEX:7:BTCUSDT", 789L);
+        assertNull(BinanceAccountContextHolder.get());
+    }
+
+    @Test
+    void shouldRetainPartiallyFilledSellSourceDuringReconciliation() {
+        BinanceAccountInfo account = validAccount();
+        BinanceSpotOpenOrderDto partialOrder = spotOrder(789L, "PARTIALLY_FILLED", "0.002");
+        BinanceSpotSellSourceDto source = new BinanceSpotSellSourceDto();
+        source.setSellOrderId(789L);
+        when(accountService.getAccountByUid(7)).thenReturn(account);
+        when(spotUtil.listOpenOrders("BTCUSDT")).thenReturn(Collections.emptyList());
+        when(redisUtils.hasKey("BINANCE:SPOT:SELL_SOURCE:INDEXED:7:BTCUSDT")).thenReturn(true);
+        when(redisUtils.sGet("BINANCE:SPOT:SELL_SOURCE:INDEX:7:BTCUSDT"))
+                .thenReturn(Collections.singleton((Object) 789L));
+        when(spotUtil.queryOrder("BTCUSDT", 789L)).thenReturn(partialOrder);
+        when(redisUtils.get("BINANCE:SPOT:SELL_SOURCE:7:BTCUSDT:789", BinanceSpotSellSourceDto.class))
+                .thenReturn(source);
+
+        BinanceSpotSellSourceReconcileResult result =
+                service.reconcileSpotSellSources(7, "BTCUSDT");
+
+        assertEquals(1, result.getRetainedCount());
+        assertEquals("PARTIALLY_FILLED", source.getStatus());
+        assertEquals(new BigDecimal("0.002"), source.getExecutedQty());
+        verify(redisUtils, never()).del("BINANCE:SPOT:SELL_SOURCE:7:BTCUSDT:789");
+        verify(redisUtils, never()).setRemove("BINANCE:SPOT:SELL_SOURCE:INDEX:7:BTCUSDT", 789L);
+    }
+
+    @Test
+    void shouldBootstrapExistingSellSourceIntoIndex() {
+        BinanceAccountInfo account = validAccount();
+        BinanceSpotSellSourceDto source = new BinanceSpotSellSourceDto();
+        source.setSellOrderId(789L);
+        when(accountService.getAccountByUid(7)).thenReturn(account);
+        when(spotUtil.listOpenOrders("BTCUSDT")).thenReturn(Collections.singletonList(
+                spotOrder(789L, "NEW", "0")));
+        when(redisUtils.scan("BINANCE:SPOT:SELL_SOURCE:7:BTCUSDT:*")).thenReturn(
+                Collections.singletonList("BINANCE:SPOT:SELL_SOURCE:7:BTCUSDT:789"));
+        when(redisUtils.get("BINANCE:SPOT:SELL_SOURCE:7:BTCUSDT:789", BinanceSpotSellSourceDto.class))
+                .thenReturn(source);
+        when(redisUtils.sHasKey("BINANCE:SPOT:SELL_SOURCE:INDEX:7:BTCUSDT", 789L)).thenReturn(true);
+        when(redisUtils.sGet("BINANCE:SPOT:SELL_SOURCE:INDEX:7:BTCUSDT"))
+                .thenReturn(Collections.singleton((Object) 789L));
+
+        BinanceSpotSellSourceReconcileResult result =
+                service.reconcileSpotSellSources(7, "BTCUSDT");
+
+        assertEquals(1, result.getOpenCount());
+        verify(redisUtils).sSetAndTime("BINANCE:SPOT:SELL_SOURCE:INDEX:7:BTCUSDT",
+                TimeUnit.DAYS.toSeconds(365L), 789L);
+        verify(redisUtils).set("BINANCE:SPOT:SELL_SOURCE:INDEXED:7:BTCUSDT", true,
+                365L, TimeUnit.DAYS);
+        verify(spotUtil, never()).queryOrder("BTCUSDT", 789L);
+    }
+
+    private BinanceSpotOpenOrderDto spotOrder(Long orderId, String status, String executedQty) {
+        BinanceSpotOpenOrderDto order = new BinanceSpotOpenOrderDto();
+        order.setOrderId(orderId);
+        order.setStatus(status);
+        order.setExecutedQty(new BigDecimal(executedQty));
+        return order;
     }
 
     private BinanceAccountInfo validAccount() {

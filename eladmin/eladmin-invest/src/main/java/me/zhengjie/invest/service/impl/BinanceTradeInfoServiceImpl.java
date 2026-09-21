@@ -34,6 +34,7 @@ import me.zhengjie.invest.domain.dto.BinanceSpotTradeStatsAggregate;
 import me.zhengjie.invest.domain.dto.BinanceSpotOrderRequest;
 import me.zhengjie.invest.domain.dto.BinanceSpotOpenOrderDto;
 import me.zhengjie.invest.domain.dto.BinanceSpotSellSourceDto;
+import me.zhengjie.invest.domain.dto.BinanceSpotSellSourceReconcileResult;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
 import me.zhengjie.invest.mapper.BinanceTradeInfoMapper;
@@ -78,7 +79,12 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
     private static final int SYNC_PAGE_SIZE = 1000;
     private static final String SPOT_SELL_SOURCE_KEY_PREFIX = "BINANCE:SPOT:SELL_SOURCE:";
+    private static final String SPOT_SELL_SOURCE_INDEX_KEY_PREFIX = "BINANCE:SPOT:SELL_SOURCE:INDEX:";
+    private static final String SPOT_SELL_SOURCE_INDEXED_KEY_PREFIX = "BINANCE:SPOT:SELL_SOURCE:INDEXED:";
     private static final long SPOT_SELL_SOURCE_TTL_DAYS = 365L;
+    private static final long SPOT_SELL_SOURCE_TTL_SECONDS = TimeUnit.DAYS.toSeconds(SPOT_SELL_SOURCE_TTL_DAYS);
+    private static final Set<String> SPOT_SELL_SOURCE_REMOVE_STATUSES =
+            new HashSet<>(Arrays.asList("CANCELED", "EXPIRED", "EXPIRED_IN_MATCH", "REJECTED"));
 
     @Resource
     private BinanceTradeInfoMapper binanceTradeInfoMapper;
@@ -460,11 +466,76 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                 () -> canceledOrderId[0] = binanceSpotUtil.cancelOrder(symbol.name(), orderId));
         try {
             redisUtils.del(spotSellSourceKey(uid, symbol.name(), orderId));
+            redisUtils.setRemove(spotSellSourceIndexKey(uid, symbol.name()), orderId);
         } catch (Exception e) {
             log.warn("币安现货撤单成功，但来源关联清理失败: uid={}, symbol={}, orderId={}, error={}",
                     uid, symbol.name(), orderId, e.getClass().getSimpleName());
         }
         return canceledOrderId[0];
+    }
+
+    @Override
+    public BinanceSpotSellSourceReconcileResult reconcileSpotSellSources(Integer uid, String symbolValue) {
+        BinanceEnum.SYMBOL symbol = requireSpotSymbol(symbolValue);
+        BinanceAccountInfo accountInfo = requireAvailableAccount(uid);
+        AtomicReference<List<BinanceSpotOpenOrderDto>> result = new AtomicReference<>();
+        BinanceAccountContextHolder.runWith(accountInfo,
+                () -> result.set(binanceSpotUtil.listOpenOrders(symbol.name())));
+        List<BinanceSpotOpenOrderDto> openOrders = result.get() == null
+                ? Collections.emptyList() : result.get();
+
+        ensureSpotSellSourceIndex(uid, symbol.name());
+        Set<Long> indexedOrderIds = spotSellSourceOrderIds(uid, symbol.name());
+        Set<Long> openOrderIds = openOrders.stream()
+                .map(BinanceSpotOpenOrderDto::getOrderId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        BinanceSpotSellSourceReconcileResult reconcileResult = new BinanceSpotSellSourceReconcileResult();
+        reconcileResult.setOpenCount(openOrderIds.size());
+
+        for (BinanceSpotOpenOrderDto openOrder : openOrders) {
+            if (openOrder.getOrderId() != null && indexedOrderIds.contains(openOrder.getOrderId())) {
+                updateSpotSellSourceStatus(uid, symbol.name(), openOrder);
+            }
+        }
+        for (Long orderId : indexedOrderIds) {
+            if (openOrderIds.contains(orderId)) {
+                continue;
+            }
+            reconcileResult.setCheckedCount(reconcileResult.getCheckedCount() + 1);
+            try {
+                AtomicReference<BinanceSpotOpenOrderDto> orderResult = new AtomicReference<>();
+                BinanceAccountContextHolder.runWith(accountInfo,
+                        () -> orderResult.set(binanceSpotUtil.queryOrder(symbol.name(), orderId)));
+                reconcileMissingSpotSellSource(uid, symbol.name(), orderId,
+                        orderResult.get(), reconcileResult);
+            } catch (Exception e) {
+                reconcileResult.setFailedCount(reconcileResult.getFailedCount() + 1);
+                log.warn("查询币安现货卖出订单状态失败，保留来源关联: uid={}, symbol={}, orderId={}, error={}",
+                        uid, symbol.name(), orderId, e.getClass().getSimpleName());
+            }
+        }
+        return reconcileResult;
+    }
+
+    private void reconcileMissingSpotSellSource(Integer uid, String symbol, Long orderId,
+                                                BinanceSpotOpenOrderDto order,
+                                                BinanceSpotSellSourceReconcileResult result) {
+        String status = order == null ? null : order.getStatus();
+        if (SPOT_SELL_SOURCE_REMOVE_STATUSES.contains(status)) {
+            redisUtils.del(spotSellSourceKey(uid, symbol, orderId));
+            redisUtils.setRemove(spotSellSourceIndexKey(uid, symbol), orderId);
+            result.setRemovedCount(result.getRemovedCount() + 1);
+            return;
+        }
+        if ("FILLED".equals(status)) {
+            updateSpotSellSourceStatus(uid, symbol, order);
+            redisUtils.setRemove(spotSellSourceIndexKey(uid, symbol), orderId);
+            result.setFilledCount(result.getFilledCount() + 1);
+            return;
+        }
+        updateSpotSellSourceStatus(uid, symbol, order);
+        result.setRetainedCount(result.getRetainedCount() + 1);
     }
 
     private void validateSpotSellCapacity(BinanceSpotOrderRequest request, String symbol) {
@@ -567,12 +638,17 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         source.setSourceTradeId(request.getSourceTradeId());
         source.setQuantity(request.getQuantity());
         source.setCreatedAt(System.currentTimeMillis());
+        source.setStatus("NEW");
+        source.setExecutedQty(BigDecimal.ZERO);
+        source.setUpdatedAt(System.currentTimeMillis());
         boolean recorded = redisUtils.set(spotSellSourceKey(request.getUid(), symbol, sellOrderId),
                 source, SPOT_SELL_SOURCE_TTL_DAYS, TimeUnit.DAYS);
         if (!recorded) {
             log.warn("币安现货卖出已下单，但来源关联记录失败: uid={}, symbol={}, sellOrderId={}",
                     request.getUid(), symbol, sellOrderId);
+            return;
         }
+        addSpotSellSourceIndex(request.getUid(), symbol, sellOrderId);
     }
 
     private void enrichSpotSellSource(Integer uid, String symbol, BinanceSpotOpenOrderDto order) {
@@ -597,6 +673,102 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
     private String spotSellSourceKey(Integer uid, String symbol, Long sellOrderId) {
         return SPOT_SELL_SOURCE_KEY_PREFIX + uid + ":" + symbol + ":" + sellOrderId;
+    }
+
+    private String spotSellSourceIndexKey(Integer uid, String symbol) {
+        return SPOT_SELL_SOURCE_INDEX_KEY_PREFIX + uid + ":" + symbol;
+    }
+
+    private String spotSellSourceIndexedKey(Integer uid, String symbol) {
+        return SPOT_SELL_SOURCE_INDEXED_KEY_PREFIX + uid + ":" + symbol;
+    }
+
+    private void ensureSpotSellSourceIndex(Integer uid, String symbol) {
+        String indexedKey = spotSellSourceIndexedKey(uid, symbol);
+        if (redisUtils.hasKey(indexedKey)) {
+            return;
+        }
+        String prefix = SPOT_SELL_SOURCE_KEY_PREFIX + uid + ":" + symbol + ":";
+        List<String> sourceKeys = redisUtils.scan(prefix + "*");
+        boolean indexReady = true;
+        if (sourceKeys != null) {
+            for (String sourceKey : sourceKeys) {
+                Long orderId = parseSpotSellSourceOrderId(prefix, sourceKey);
+                if (orderId == null) {
+                    continue;
+                }
+                BinanceSpotSellSourceDto source = redisUtils.get(sourceKey, BinanceSpotSellSourceDto.class);
+                if (source == null || "FILLED".equals(source.getStatus())) {
+                    continue;
+                }
+                String indexKey = spotSellSourceIndexKey(uid, symbol);
+                redisUtils.sSetAndTime(indexKey, SPOT_SELL_SOURCE_TTL_SECONDS, orderId);
+                if (!redisUtils.sHasKey(indexKey, orderId)) {
+                    indexReady = false;
+                    log.warn("币安现货卖出来源活动索引写入失败: uid={}, symbol={}, sellOrderId={}",
+                            uid, symbol, orderId);
+                }
+            }
+        }
+        if (indexReady) {
+            redisUtils.set(indexedKey, true, SPOT_SELL_SOURCE_TTL_DAYS, TimeUnit.DAYS);
+        }
+    }
+
+    private void addSpotSellSourceIndex(Integer uid, String symbol, Long sellOrderId) {
+        String indexKey = spotSellSourceIndexKey(uid, symbol);
+        try {
+            redisUtils.sSetAndTime(indexKey, SPOT_SELL_SOURCE_TTL_SECONDS, sellOrderId);
+            if (!redisUtils.sHasKey(indexKey, sellOrderId)) {
+                redisUtils.del(spotSellSourceIndexedKey(uid, symbol));
+                log.warn("币安现货卖出来源已记录，但活动索引写入失败: uid={}, symbol={}, sellOrderId={}",
+                        uid, symbol, sellOrderId);
+            }
+        } catch (Exception e) {
+            log.warn("币安现货卖出来源已记录，但活动索引维护失败: uid={}, symbol={}, sellOrderId={}, error={}",
+                    uid, symbol, sellOrderId, e.getClass().getSimpleName());
+        }
+    }
+
+    private Set<Long> spotSellSourceOrderIds(Integer uid, String symbol) {
+        Set<Object> values = redisUtils.sGet(spotSellSourceIndexKey(uid, symbol));
+        if (values == null || values.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return values.stream()
+                .map(this::toLong)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    }
+
+    private Long parseSpotSellSourceOrderId(String prefix, String key) {
+        if (key == null || !key.startsWith(prefix)) {
+            return null;
+        }
+        return toLong(key.substring(prefix.length()));
+    }
+
+    private Long toLong(Object value) {
+        try {
+            return value == null ? null : Long.valueOf(value.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private void updateSpotSellSourceStatus(Integer uid, String symbol, BinanceSpotOpenOrderDto order) {
+        if (order == null || order.getOrderId() == null) {
+            return;
+        }
+        String key = spotSellSourceKey(uid, symbol, order.getOrderId());
+        BinanceSpotSellSourceDto source = redisUtils.get(key, BinanceSpotSellSourceDto.class);
+        if (source == null) {
+            return;
+        }
+        source.setStatus(order.getStatus());
+        source.setExecutedQty(order.getExecutedQty());
+        source.setUpdatedAt(System.currentTimeMillis());
+        redisUtils.set(key, source, SPOT_SELL_SOURCE_TTL_DAYS, TimeUnit.DAYS);
     }
 
     private BinanceEnum.SYMBOL requireSpotSymbol(String symbolValue) {

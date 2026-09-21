@@ -136,6 +136,14 @@ public class BinanceSpotUtil {
                 .toJavaList(BinanceSpotOpenOrderDto.class);
     }
 
+    public BinanceSpotOpenOrderDto queryOrder(String symbol, Long orderId) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("symbol", symbol);
+        params.put("orderId", orderId);
+        return JSON.parseObject(this.doRequest("/api/v3/order", params, true, true),
+                BinanceSpotOpenOrderDto.class);
+    }
+
     public Long cancelOrder(String symbol, Long orderId) {
         Map<String, Object> params = new HashMap<>();
         params.put("symbol", symbol);

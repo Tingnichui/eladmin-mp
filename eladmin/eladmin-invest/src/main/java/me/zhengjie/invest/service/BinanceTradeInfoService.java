@@ -22,6 +22,7 @@ import me.zhengjie.invest.domain.dto.BinanceSpotHedgedTradeStatsInfoVO;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceSpotOrderRequest;
 import me.zhengjie.invest.domain.dto.BinanceSpotOpenOrderDto;
+import me.zhengjie.invest.domain.dto.BinanceSpotSellSourceReconcileResult;
 
 import java.util.List;
 import java.io.IOException;
@@ -103,5 +104,7 @@ public interface BinanceTradeInfoService extends IService<BinanceTradeInfo> {
     List<BinanceSpotOpenOrderDto> listSpotOpenOrders(Integer uid, String symbol);
 
     Long cancelSpotOrder(Integer uid, String symbol, Long orderId);
+
+    BinanceSpotSellSourceReconcileResult reconcileSpotSellSources(Integer uid, String symbol);
 
 }
