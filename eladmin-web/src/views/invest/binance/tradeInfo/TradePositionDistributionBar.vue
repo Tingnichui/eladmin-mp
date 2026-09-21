@@ -331,8 +331,6 @@ export default {
           value: item.totalQty,
           itemStyle: {
             color,
-            borderColor: item.coreCount > 0 || item.range === currentBucketKey ? '#409eff' : color,
-            borderWidth: item.coreCount > 0 || item.range === currentBucketKey ? 2 : 0,
             borderRadius: [0, 4, 4, 0]
           }
         }
