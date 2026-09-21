@@ -206,12 +206,23 @@ public class BinanceSpotUtil {
 
 
     public List<JSONObject> listUserOrderHistory(Long startTimestamp, Long endTimestamp) {
+        return listUserOrderHistory(startTimestamp, endTimestamp, null, null);
+    }
+
+    public List<JSONObject> listUserOrderHistory(Long startTimestamp, Long endTimestamp,
+                                                 Integer page, Integer rows) {
         Map<String, Object> params = new HashMap<>();
         if (null != startTimestamp) {
             params.put("startTimestamp", startTimestamp);
         }
         if (null != endTimestamp) {
             params.put("endTimestamp", endTimestamp);
+        }
+        if (null != page) {
+            params.put("page", page);
+        }
+        if (null != rows) {
+            params.put("rows", rows);
         }
         String resStr = this.doRequest("/sapi/v1/c2c/orderMatch/listUserOrderHistory", params, true, true);
         JSONObject resJson = JSON.parseObject(resStr);

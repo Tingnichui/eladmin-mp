@@ -31,6 +31,7 @@ import java.io.IOException;
 import javax.servlet.http.HttpServletResponse;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import me.zhengjie.utils.PageResult;
+import java.util.Collections;
 
 /**
 * @author genghui
@@ -43,6 +44,15 @@ import me.zhengjie.utils.PageResult;
 public class BinanceC2cOrderController {
 
     private final BinanceC2cOrderService binanceC2cOrderService;
+
+    @PutMapping("/sync")
+    @Log("同步币安C2C订单")
+    @ApiOperation("同步币安C2C订单")
+    @PreAuthorize("@el.check('binanceC2cOrder:sync')")
+    public ResponseEntity<Object> syncBinanceC2cOrder(@RequestParam Integer uid) {
+        int count = binanceC2cOrderService.sync(uid);
+        return ResponseEntity.ok(Collections.singletonMap("count", count));
+    }
 
     @ApiOperation("导出数据")
     @GetMapping(value = "/download")

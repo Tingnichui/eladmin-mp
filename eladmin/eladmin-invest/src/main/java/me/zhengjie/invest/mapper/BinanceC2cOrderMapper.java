@@ -22,6 +22,7 @@ import org.apache.ibatis.annotations.Mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import java.util.List;
 
 /**
 * @author genghui
@@ -31,4 +32,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 public interface BinanceC2cOrderMapper extends BaseMapper<BinanceC2cOrder> {
 
     IPage<BinanceC2cOrder> findAll(@Param("criteria") BinanceC2cOrderQueryCriteria criteria, Page<Object> page);
+
+    int upsertBatch(@Param("orders") List<BinanceC2cOrder> orders);
 }

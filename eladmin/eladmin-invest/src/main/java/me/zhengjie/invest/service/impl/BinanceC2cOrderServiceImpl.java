@@ -15,7 +15,17 @@
 */
 package me.zhengjie.invest.service.impl;
 
+import cn.hutool.core.date.DatePattern;
+import cn.hutool.core.date.DateTime;
+import cn.hutool.core.date.DateUtil;
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import me.zhengjie.invest.domain.BinanceC2cOrder;
+import me.zhengjie.invest.domain.BinanceAccountInfo;
+import me.zhengjie.invest.service.BinanceAccountInfoService;
+import me.zhengjie.invest.util.BinanceAccountContextHolder;
+import me.zhengjie.invest.util.BinanceSpotUtil;
+import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.utils.FileUtil;
 import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -31,8 +41,14 @@ import java.util.Map;
 import java.io.IOException;
 import javax.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.Set;
+import java.sql.Timestamp;
 import me.zhengjie.utils.PageResult;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 /**
 * @description 服务实现
@@ -43,7 +59,120 @@ import me.zhengjie.utils.PageResult;
 @RequiredArgsConstructor
 public class BinanceC2cOrderServiceImpl extends ServiceImpl<BinanceC2cOrderMapper, BinanceC2cOrder> implements BinanceC2cOrderService {
 
+    private static final String SYNC_START_DATE = "2024-10-01";
+    private static final int API_PAGE_SIZE = 100;
+    private static final int UPSERT_BATCH_SIZE = 200;
+
     private final BinanceC2cOrderMapper binanceC2cOrderMapper;
+    private final BinanceAccountInfoService binanceAccountInfoService;
+    private final BinanceSpotUtil binanceSpotUtil;
+
+    @Override
+    public int sync(Integer uid) {
+        BinanceAccountInfo accountInfo = binanceAccountInfoService.getAccountByUid(uid);
+        if (!Integer.valueOf(1).equals(accountInfo.getApiValidFlag())) {
+            throw new BadRequestException("当前账户 API 不可用");
+        }
+
+        int[] syncedCount = {0};
+        BinanceAccountContextHolder.runWith(accountInfo, () -> syncedCount[0] = syncCurrentAccount(uid));
+        return syncedCount[0];
+    }
+
+    private int syncCurrentAccount(Integer uid) {
+        Date now = new Date();
+        DateTime cursor = DateUtil.parse(SYNC_START_DATE, DatePattern.NORM_DATE_PATTERN);
+        Timestamp syncTime = new Timestamp(now.getTime());
+        Set<String> syncedOrderNumbers = new HashSet<>();
+        int syncedCount = 0;
+
+        while (!cursor.isAfter(now)) {
+            DateTime monthStart = DateUtil.beginOfMonth(cursor);
+            DateTime monthEnd = DateUtil.endOfMonth(cursor);
+            long rangeEnd = Math.min(monthEnd.getTime(), now.getTime());
+            syncedCount += syncRange(uid, monthStart.getTime(), rangeEnd,
+                    syncTime, syncedOrderNumbers);
+            cursor = DateUtil.offsetMonth(monthStart, 1);
+        }
+        return syncedCount;
+    }
+
+    private int syncRange(Integer uid,
+                          long startTimestamp,
+                          long endTimestamp,
+                          Timestamp syncTime,
+                          Set<String> syncedOrderNumbers) {
+        int page = 1;
+        int syncedCount = 0;
+        while (true) {
+            List<JSONObject> records = binanceSpotUtil.listUserOrderHistory(
+                    startTimestamp, endTimestamp, page, API_PAGE_SIZE);
+            if (CollectionUtils.isEmpty(records)) {
+                break;
+            }
+
+            List<BinanceC2cOrder> orders = new ArrayList<>();
+            for (JSONObject record : records) {
+                BinanceC2cOrder order = toOrder(uid, record, syncTime);
+                if (syncedOrderNumbers.add(order.getOrderNumber())) {
+                    orders.add(order);
+                }
+            }
+            if (orders.isEmpty()) {
+                throw new IllegalStateException("币安 C2C 订单分页未向前推进");
+            }
+            upsertInBatches(orders);
+            syncedCount += orders.size();
+
+            if (records.size() < API_PAGE_SIZE) {
+                break;
+            }
+            page++;
+        }
+        return syncedCount;
+    }
+
+    private void upsertInBatches(List<BinanceC2cOrder> orders) {
+        for (int from = 0; from < orders.size(); from += UPSERT_BATCH_SIZE) {
+            int to = Math.min(from + UPSERT_BATCH_SIZE, orders.size());
+            binanceC2cOrderMapper.upsertBatch(orders.subList(from, to));
+        }
+    }
+
+    private BinanceC2cOrder toOrder(Integer uid, JSONObject record, Timestamp syncTime) {
+        String orderNumber = record.getString("orderNumber");
+        Long orderCreateTime = record.getLong("createTime");
+        if (!StringUtils.hasText(orderNumber) || orderCreateTime == null
+                || !StringUtils.hasText(record.getString("tradeType"))
+                || !StringUtils.hasText(record.getString("asset"))
+                || !StringUtils.hasText(record.getString("fiat"))
+                || !StringUtils.hasText(record.getString("orderStatus"))
+                || record.getBigDecimal("totalPrice") == null) {
+            throw new IllegalStateException("币安 C2C 订单缺少必填字段：" + orderNumber);
+        }
+
+        BinanceC2cOrder order = new BinanceC2cOrder();
+        order.setUid(uid);
+        order.setOrderNumber(orderNumber);
+        order.setAdvNo(record.getString("advNo"));
+        order.setTradeType(record.getString("tradeType"));
+        order.setAsset(record.getString("asset"));
+        order.setFiat(record.getString("fiat"));
+        order.setFiatSymbol(record.getString("fiatSymbol"));
+        order.setAmount(record.getBigDecimal("amount"));
+        order.setTakerAmount(record.getBigDecimal("takerAmount"));
+        order.setTotalPrice(record.getBigDecimal("totalPrice"));
+        order.setUnitPrice(record.getBigDecimal("unitPrice"));
+        order.setOrderStatus(record.getString("orderStatus"));
+        order.setOrderCreateTime(orderCreateTime);
+        order.setOrderTime(new Timestamp(orderCreateTime));
+        order.setCommission(record.getBigDecimal("commission"));
+        order.setCounterPartNickName(record.getString("counterPartNickName"));
+        order.setAdvertisementRole(record.getString("advertisementRole"));
+        order.setRawData(JSON.toJSONString(record));
+        order.setSyncTime(syncTime);
+        return order;
+    }
 
     @Override
     public PageResult<BinanceC2cOrder> queryAll(BinanceC2cOrderQueryCriteria criteria, Page<Object> page){

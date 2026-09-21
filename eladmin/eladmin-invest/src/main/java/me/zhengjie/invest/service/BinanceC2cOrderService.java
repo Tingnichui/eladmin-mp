@@ -32,6 +32,13 @@ import me.zhengjie.utils.PageResult;
 public interface BinanceC2cOrderService extends IService<BinanceC2cOrder> {
 
     /**
+    * 从币安同步指定账户的 C2C 历史订单
+    * @param uid 币安账户用户编号
+    * @return 本次接收并写入的订单数量
+    */
+    int sync(Integer uid);
+
+    /**
     * 查询数据分页
     * @param criteria 条件
     * @param page 分页参数

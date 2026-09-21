@@ -1,5 +1,13 @@
 import request from '@/utils/request'
 
+export function sync(uid) {
+  return request({
+    url: 'api/binanceC2cOrder/sync',
+    method: 'put',
+    params: { uid }
+  })
+}
+
 export function add(data) {
   return request({
     url: 'api/binanceC2cOrder',
@@ -24,4 +32,4 @@ export function edit(data) {
   })
 }
 
-export default { add, edit, del }
+export default { add, edit, del, sync }
