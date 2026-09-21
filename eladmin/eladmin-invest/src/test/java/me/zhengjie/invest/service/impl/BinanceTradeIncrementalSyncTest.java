@@ -88,13 +88,13 @@ class BinanceTradeIncrementalSyncTest {
         doReturn(true).when(service).saveOrUpdateBatch(anyCollection());
         BinanceFuturesTradeInfo next = new BinanceFuturesTradeInfo();
         next.setId(51L);
-        when(futuresUtil.userTradesFromId(BinanceEnum.SYMBOL.BTCUSDT, 51L, 1000))
+        when(futuresUtil.userTradesFromId("BTCUSDT", 51L, 1000))
                 .thenReturn(Collections.singletonList(next));
 
         int count = service.sync(account(7));
 
         assertEquals(1, count);
-        verify(futuresUtil).userTradesFromId(BinanceEnum.SYMBOL.BTCUSDT, 51L, 1000);
+        verify(futuresUtil).userTradesFromId("BTCUSDT", 51L, 1000);
         verify(service).saveOrUpdateBatch(anyCollection());
         assertNull(BinanceAccountContextHolder.get());
     }
