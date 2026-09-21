@@ -93,6 +93,11 @@ public class BinanceSpotTradeMatchState implements Serializable {
     private BigDecimal price;
 
     @TableField(exist = false)
+    @ApiModelProperty(value = "币安订单 ID")
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long orderId;
+
+    @TableField(exist = false)
     @ApiModelProperty(value = "当前有效底仓数量")
     private BigDecimal activeCoreQty;
 

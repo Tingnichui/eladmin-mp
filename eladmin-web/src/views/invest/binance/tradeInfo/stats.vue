@@ -160,15 +160,16 @@
       :title="coreActionTitle"
       :visible.sync="showCoreActions"
       direction="rtl"
-      size="1050px"
+      size="1180px"
       custom-class="core-action-drawer"
       @closed="handleCoreActionDrawerClosed"
     >
       <div class="core-action-content">
         <div v-if="selectedCoreRange" class="core-range-summary">
-          <el-tag type="info">共 {{ coreActionRows.length }} 笔</el-tag>
+          <el-tag type="info">订单 {{ coreActionOrderGroups.length }} 个</el-tag>
+          <el-tag type="info">成交 {{ coreActionRows.length }} 笔</el-tag>
           <el-tag type="primary">当前价 {{ moneyValue(spotStats.currentSpotPrice) }}</el-tag>
-          <el-tag>底仓 {{ selectedCoreRange.coreCount || 0 }} 笔</el-tag>
+          <el-tag>底仓成交 {{ selectedCoreRange.coreCount || 0 }} 笔</el-tag>
           <el-tag>底仓 {{ decimalValue(selectedCoreRange.coreQty || 0, 8) }} BTC</el-tag>
           <el-tag type="success">可撮合 {{ decimalValue(selectedCoreRange.availableQty || 0, 8) }} BTC</el-tag>
           <el-popconfirm
@@ -214,22 +215,63 @@
           </el-popconfirm>
         </div>
         <el-alert
-          title="底仓只影响未来撮合；聚合区间需选择具体买入批次进行操作。"
+          :title="selectedCoreRange ? '默认按订单折叠；展开后对具体成交批次设置或调整底仓。' : '底仓只影响未来撮合。'"
           type="info"
           :closable="false"
           show-icon
           class="core-action-tip"
         />
-        <el-table :data="coreActionRows" border stripe class="core-action-table">
-          <el-table-column label="买入时间" width="165">
+        <el-radio-group
+          v-if="selectedCoreRange"
+          v-model="coreActionView"
+          size="mini"
+          class="core-action-view-switch"
+          @change="handleCoreActionViewChange"
+        >
+          <el-radio-button label="order">按订单</el-radio-button>
+          <el-radio-button label="trade">按成交</el-radio-button>
+        </el-radio-group>
+        <el-table
+          :data="coreActionDisplayRows"
+          :row-key="coreActionRowKey"
+          :row-class-name="coreActionRowClassName"
+          border
+          stripe
+          class="core-action-table"
+        >
+          <el-table-column v-if="isCoreOrderView" width="44" align="center">
             <template slot-scope="scope">
-              <div class="core-cell-primary">{{ scope.row.tradeTime || '--' }}</div>
-              <small v-if="scope.row.tradeId" class="core-cell-meta" :title="String(scope.row.tradeId)">
-                成交 ID {{ scope.row.tradeId }}
-              </small>
+              <el-button
+                v-if="scope.row._rowType === 'order'"
+                type="text"
+                class="core-order-toggle"
+                :aria-label="isCoreOrderExpanded(scope.row) ? '收起订单成交明细' : '展开订单成交明细'"
+                @click="toggleCoreOrder(scope.row)"
+              >
+                <span
+                  :class="['core-order-chevron', { 'is-expanded': isCoreOrderExpanded(scope.row) }]"
+                  aria-hidden="true"
+                />
+              </el-button>
             </template>
           </el-table-column>
-          <el-table-column label="买入价格" width="135">
+          <el-table-column :label="isCoreOrderView ? '订单 / 买入时间' : '买入时间'" width="190">
+            <template slot-scope="scope">
+              <template v-if="scope.row._rowType === 'order'">
+                <div class="core-cell-primary">订单 ID {{ scope.row.orderId || '--' }}</div>
+                <small class="core-cell-meta">
+                  {{ scope.row.tradeTime || '--' }} · {{ scope.row.tradeCount }} 个成交
+                </small>
+              </template>
+              <template v-else>
+                <div class="core-cell-primary">{{ scope.row.tradeTime || '--' }}</div>
+                <small v-if="scope.row.tradeId" class="core-cell-meta" :title="String(scope.row.tradeId)">
+                  成交 ID {{ scope.row.tradeId }}
+                </small>
+              </template>
+            </template>
+          </el-table-column>
+          <el-table-column :label="isCoreOrderView ? '均价 / 金额' : '买入价格'" width="135">
             <template slot-scope="scope">
               <div class="core-cell-primary">{{ decimalValue(scope.row.price, 2) }}</div>
               <small class="core-cell-meta">金额 {{ moneyValue(scope.row.openAmount) }}</small>
@@ -252,15 +294,25 @@
           </el-table-column>
           <el-table-column label="底仓" width="125" align="center">
             <template slot-scope="scope">
-              <el-tag :type="hasCorePosition(scope.row) ? '' : 'info'" size="mini">
-                {{ hasCorePosition(scope.row) ? '已设置' : '未设置' }}
+              <el-tag
+                :type="scope.row._rowType === 'order' ? coreOrderStatusType(scope.row) : (hasCorePosition(scope.row) ? '' : 'info')"
+                size="mini"
+              >
+                {{ scope.row._rowType === 'order' ? scope.row.coreStatus : (hasCorePosition(scope.row) ? '已设置' : '未设置') }}
               </el-tag>
               <small class="core-cell-meta">数量 {{ decimalValue(scope.row.coreQty || 0, 8) }}</small>
             </template>
           </el-table-column>
           <el-table-column label="操作" min-width="170" align="center" fixed="right">
             <template slot-scope="scope">
-              <div class="core-action-buttons">
+              <el-button
+                v-if="scope.row._rowType === 'order'"
+                type="primary"
+                plain
+                size="mini"
+                @click="toggleCoreOrder(scope.row)"
+              >{{ isCoreOrderExpanded(scope.row) ? '收起明细' : '展开明细' }}</el-button>
+              <div v-else class="core-action-buttons">
                 <el-button
                   v-if="!hasCorePosition(scope.row) && checkPer(['admin', 'binanceSpotCorePosition:add'])"
                   type="primary"
@@ -333,6 +385,8 @@ export default {
       corePositionLoading: false,
       corePositionCandidates: [],
       coreActionRows: [],
+      coreActionView: 'order',
+      expandedCoreOrderKeys: [],
       selectedCoreRange: null,
       coreActionsDirty: false,
       batchLockLoading: false,
@@ -352,6 +406,26 @@ export default {
     },
     coreActionTitle() {
       return this.selectedCoreRange ? `${this.selectedCoreRange.range} 区间持仓` : '底仓操作'
+    },
+    isCoreOrderView() {
+      return Boolean(this.selectedCoreRange) && this.coreActionView === 'order'
+    },
+    coreActionOrderGroups() {
+      const groupedRows = new Map()
+      this.coreActionRows.forEach(row => {
+        const orderKey = this.coreActionOrderKey(row)
+        if (!groupedRows.has(orderKey)) groupedRows.set(orderKey, [])
+        groupedRows.get(orderKey).push(row)
+      })
+      return Array.from(groupedRows.entries()).map(([orderKey, rows]) => this.createCoreOrderGroup(orderKey, rows))
+    },
+    coreActionDisplayRows() {
+      if (!this.isCoreOrderView) return this.coreActionRows
+      return this.coreActionOrderGroups.reduce((rows, order) => {
+        rows.push(order)
+        if (this.isCoreOrderExpanded(order)) rows.push(...order.trades)
+        return rows
+      }, [])
     },
     coreActionCoreRows() {
       return this.coreActionRows.filter(row => this.hasCorePosition(row))
@@ -489,12 +563,16 @@ export default {
     openTradeCoreActions(trade) {
       this.selectedCoreRange = null
       this.coreActionRows = [this.toCoreActionRow(trade)]
+      this.coreActionView = 'trade'
+      this.expandedCoreOrderKeys = []
       this.coreActionsDirty = false
       this.showCoreActions = true
     },
     openBucketCoreActions(bucket) {
       this.selectedCoreRange = { ...bucket }
       this.coreActionRows = (bucket.trades || []).map(trade => this.toCoreActionRow(trade.raw || trade))
+      this.coreActionView = 'order'
+      this.expandedCoreOrderKeys = []
       this.coreActionsDirty = false
       this.showCoreActions = true
     },
@@ -506,6 +584,8 @@ export default {
         : row.availableQty
       return {
         ...row,
+        _rowType: 'trade',
+        _rowKey: `trade:${row.tradeId}`,
         uid: row.uid == null ? this.query.uid : row.uid,
         symbol: row.symbol || this.query.symbol,
         tradeTime: row.tradeTime || row.openTime,
@@ -515,6 +595,83 @@ export default {
         availableQty,
         lockedAt: row.lockedAt || row.coreLockedAt
       }
+    },
+    coreActionOrderKey(row) {
+      if (row.orderId !== null && row.orderId !== undefined && row.orderId !== '') {
+        return `order:${row.orderId}`
+      }
+      return `trade:${row.tradeId}`
+    },
+    createCoreOrderGroup(orderKey, rows) {
+      const summary = rows.reduce((result, row) => {
+        const remainingQty = Number(row.remainingQty) || 0
+        const openAmount = row.openAmount == null
+          ? numberUtil.mulAmount(row.price, remainingQty)
+          : Number(row.openAmount) || 0
+        const breakEvenAmount = numberUtil.mulAmount(row.breakEvenPrice || row.price, remainingQty)
+        result.remainingQty = numberUtil.addAmount(result.remainingQty, remainingQty, 8)
+        result.availableQty = numberUtil.addAmount(result.availableQty, this.coreAvailableQty(row), 8)
+        result.openAmount = numberUtil.addAmount(result.openAmount, openAmount, 8)
+        result.netPnl = numberUtil.addAmount(result.netPnl, row.netPnl, 8)
+        result.coreQty = numberUtil.addAmount(result.coreQty, row.coreQty, 8)
+        result.breakEvenAmount = numberUtil.addAmount(result.breakEvenAmount, breakEvenAmount, 8)
+        if (this.hasCorePosition(row)) result.coreCount++
+        return result
+      }, {
+        remainingQty: 0,
+        availableQty: 0,
+        openAmount: 0,
+        netPnl: 0,
+        coreQty: 0,
+        breakEvenAmount: 0,
+        coreCount: 0
+      })
+      const firstRow = rows[0] || {}
+      return {
+        _rowType: 'order',
+        _rowKey: `group:${orderKey}`,
+        _orderKey: orderKey,
+        orderId: firstRow.orderId,
+        tradeTime: firstRow.tradeTime,
+        tradeCount: rows.length,
+        price: numberUtil.divAmount(summary.openAmount, summary.remainingQty, 8),
+        openAmount: summary.openAmount,
+        remainingQty: summary.remainingQty,
+        availableQty: summary.availableQty,
+        netPnl: summary.netPnl,
+        roi: numberUtil.divAmount(summary.netPnl, summary.openAmount, 8),
+        breakEvenPrice: numberUtil.divAmount(summary.breakEvenAmount, summary.remainingQty, 8),
+        coreQty: summary.coreQty,
+        coreCount: summary.coreCount,
+        coreStatus: summary.coreCount === 0 ? '未设置' : (summary.coreCount === rows.length ? '全部设置' : '部分设置'),
+        trades: rows
+      }
+    },
+    handleCoreActionViewChange() {
+      this.expandedCoreOrderKeys = []
+    },
+    toggleCoreOrder(order) {
+      const index = this.expandedCoreOrderKeys.indexOf(order._orderKey)
+      if (index >= 0) {
+        this.expandedCoreOrderKeys.splice(index, 1)
+      } else {
+        this.expandedCoreOrderKeys.push(order._orderKey)
+      }
+    },
+    isCoreOrderExpanded(order) {
+      return this.expandedCoreOrderKeys.includes(order._orderKey)
+    },
+    coreActionRowKey(row) {
+      return row._rowKey
+    },
+    coreActionRowClassName({ row }) {
+      if (!this.isCoreOrderView) return ''
+      return row._rowType === 'order' ? 'core-order-row' : 'core-trade-child-row'
+    },
+    coreOrderStatusType(order) {
+      if (order.coreStatus === '未设置') return 'info'
+      if (order.coreStatus === '部分设置') return 'warning'
+      return ''
     },
     hasCorePosition(row) {
       return Boolean(row && row.corePositionId && Number(row.coreQty) > 0)
@@ -745,12 +902,20 @@ export default {
 .core-action-content { padding: 0 20px 24px; }
 .core-range-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
 .core-action-tip { margin-bottom: 14px; }
+.core-action-view-switch { margin-bottom: 12px; }
 .core-action-table { width: 100%; }
 .core-cell-primary { color: #303133; white-space: nowrap; }
 .core-cell-meta { display: block; overflow: hidden; margin-top: 4px; color: #909399; font-size: 12px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
 .core-cell-pnl { display: block; white-space: nowrap; }
 .core-action-buttons { display: flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; }
 .core-action-buttons .el-button + .el-button { margin-left: 0; }
+.core-order-toggle { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; overflow: hidden; padding: 0; }
+.core-order-chevron { display: block; width: 7px; height: 7px; border-right: 1px solid #409eff; border-bottom: 1px solid #409eff; transform: rotate(-45deg); transition: transform 0.2s; }
+.core-order-chevron.is-expanded { transform: rotate(45deg); }
+::v-deep .core-order-row > td { background: #f7faff !important; }
+::v-deep .core-order-row .core-cell-primary { font-weight: 600; }
+::v-deep .core-trade-child-row > td { background: #fff !important; }
+::v-deep .core-trade-child-row > td:nth-child(2) { padding-left: 18px; }
 @media (max-width: 1200px) {
   .stats-page { height: auto; min-height: calc(100vh - 117px); overflow: visible; }
   .position-panel .position-chart { min-height: 430px; }

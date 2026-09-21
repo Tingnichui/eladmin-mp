@@ -280,6 +280,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                 MatchedTradeInfo trade = new MatchedTradeInfo(side, feeRate);
                 BigDecimal coreQty = zeroIfNull(position.getActiveCoreQty());
                 trade.setTradeId(position.getTradeId());
+                trade.setOrderId(position.getOrderId());
                 trade.setCorePositionId(position.getCorePositionId());
                 trade.setCoreQty(coreQty);
                 trade.setAvailableQty(zeroIfNull(position.getRemainingQty()).subtract(coreQty));

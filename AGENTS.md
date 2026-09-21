@@ -44,7 +44,7 @@ Java 代码目标版本为 Java 8，并沿用现有 `me.zhengjie` 包结构。Sp
 
 如需构建或测试后端，优先使用上述 Maven 与 Java 路径。若任一路径不存在，必须先说明缺失项并询问用户如何处理；等待用户回复后，再继续执行构建、测试或代码修改。
 
-启动 Java 后端项目前，必须向用户确认 `JASYPT_ENCRYPTOR_PASSWORD` 的值；这是后端配置解密密钥，未确认前不要启动后端服务。
+启动 Java 后端项目前，必须先检查 `JASYPT_ENCRYPTOR_PASSWORD`：依次从当前进程环境变量、Windows 用户级环境变量和本机 `.codex-local/env.ps1` 获取。任一来源已配置时直接使用且不得输出密钥值；全部未配置时才向用户询问，未取得密钥前不要启动后端服务。
 
 本地开发服务的启动和后端重启优先使用 `scripts/start-dev.ps1`。只修改前端时依赖热更新，不重启后端；修改后端并需要运行验证时，使用 `-RestartBackend`，脚本会先构建再停止旧服务。不要手工拼接 Maven 启动参数、把运行日志写入业务模块目录或硬编码进程 PID；快速重启且已确认构建产物最新时使用 `-RestartBackend -SkipBuild`。
 

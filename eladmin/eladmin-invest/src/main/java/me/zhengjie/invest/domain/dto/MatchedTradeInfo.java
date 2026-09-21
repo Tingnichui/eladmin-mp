@@ -18,6 +18,12 @@ public class MatchedTradeInfo {
     private Long tradeId;
 
     /**
+     * 原始买入订单 ID，同一订单可能包含多个成交 ID。
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long orderId;
+
+    /**
      * 当前有效底仓记录 ID。
      */
     @JsonSerialize(using = ToStringSerializer.class)

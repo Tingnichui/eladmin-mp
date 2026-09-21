@@ -28,12 +28,12 @@
         </div>
       </div>
       <el-radio-group v-model="profitFilter" size="small" class="profit-filter" @change="updateChart">
-        <el-radio-button label="all">全部 {{ tradeCounts.all }}</el-radio-button>
-        <el-radio-button label="profit">盈利 {{ tradeCounts.profit }}</el-radio-button>
-        <el-radio-button label="loss">亏损 {{ tradeCounts.loss }}</el-radio-button>
+        <el-radio-button label="all">全部成交 {{ tradeCounts.all }}</el-radio-button>
+        <el-radio-button label="profit">盈利成交 {{ tradeCounts.profit }}</el-radio-button>
+        <el-radio-button label="loss">亏损成交 {{ tradeCounts.loss }}</el-radio-button>
       </el-radio-group>
       <span v-if="coreTradeCount" class="core-legend">
-        <i class="el-icon-lock" />底仓持仓 {{ coreTradeCount }} 笔
+        <i class="el-icon-lock" />底仓成交 {{ coreTradeCount }} 笔
       </span>
     </div>
     <div ref="chartContainer" :class="className" :style="{ height: height, width: width }" />
@@ -446,9 +446,9 @@ export default {
     bucketTooltip(bucket) {
       return [
         `价格区间：${bucket.range}`,
-        `买入笔数：${bucket.count}笔`,
+        `成交笔数：${bucket.count}笔`,
         `持仓数量：${this.formatNumber(bucket.totalQty, 8)} BTC`,
-        `底仓笔数：${bucket.coreCount}笔`,
+        `底仓成交：${bucket.coreCount}笔`,
         `底仓数量：${this.formatNumber(bucket.coreQty, 8)} BTC`,
         `可撮合数量：${this.formatNumber(bucket.availableQty, 8)} BTC`,
         `加权均价：${this.formatNumber(bucket.avgPrice, 2)}`,

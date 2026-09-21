@@ -23,10 +23,12 @@ $mavenCommand = Join-Path $MavenHome 'bin\mvn.cmd'
 $mavenSettings = Join-Path $MavenHome 'conf\settings.xml'
 $vueCli = Join-Path $frontendRoot 'node_modules\@vue\cli-service\bin\vue-cli-service.js'
 $localEnvFile = Join-Path $projectRoot '.codex-local\env.ps1'
+$processJasyptPassword = $env:JASYPT_ENCRYPTOR_PASSWORD
 
 if (Test-Path -LiteralPath $localEnvFile) {
     . $localEnvFile
 }
+$localFileJasyptPassword = $env:JASYPT_ENCRYPTOR_PASSWORD
 
 function Assert-PathExists {
     param(
@@ -241,9 +243,12 @@ Assert-PathExists -Path $backendRoot -Name '后端目录'
 Assert-PathExists -Path $frontendRoot -Name '前端目录'
 Assert-PathExists -Path $vueCli -Name '前端 Vue CLI 依赖'
 
-$jasyptPassword = $env:JASYPT_ENCRYPTOR_PASSWORD
+$jasyptPassword = $processJasyptPassword
 if ([string]::IsNullOrWhiteSpace($jasyptPassword)) {
     $jasyptPassword = [Environment]::GetEnvironmentVariable('JASYPT_ENCRYPTOR_PASSWORD', 'User')
+}
+if ([string]::IsNullOrWhiteSpace($jasyptPassword)) {
+    $jasyptPassword = $localFileJasyptPassword
 }
 if ([string]::IsNullOrWhiteSpace($jasyptPassword)) {
     throw '未找到 JASYPT_ENCRYPTOR_PASSWORD。请先设置当前进程或 Windows 用户级环境变量。'

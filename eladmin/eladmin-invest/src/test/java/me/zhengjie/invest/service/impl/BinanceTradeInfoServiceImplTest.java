@@ -158,6 +158,7 @@ class BinanceTradeInfoServiceImplTest {
     @Test
     void shouldIncludeCorePositionStatusInOpenTrades() {
         BinanceSpotTradeMatchState position = position(2L, "100", "1", 2_000L);
+        position.setOrderId(88L);
         position.setCorePositionId(9L);
         position.setActiveCoreQty(new BigDecimal("0.4"));
         position.setCoreLockedAt(new Timestamp(1_500L));
@@ -169,6 +170,7 @@ class BinanceTradeInfoServiceImplTest {
 
         MatchedTradeInfo trade = result.getTradeList().get(0);
         assertEquals(Long.valueOf(2L), trade.getTradeId());
+        assertEquals(Long.valueOf(88L), trade.getOrderId());
         assertEquals(Long.valueOf(9L), trade.getCorePositionId());
         assertEquals(new BigDecimal("0.4"), trade.getCoreQty());
         assertEquals(new BigDecimal("0.6"), trade.getAvailableQty());

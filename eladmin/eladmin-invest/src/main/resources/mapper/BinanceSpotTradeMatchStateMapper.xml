@@ -15,6 +15,7 @@
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
         <result column="price" property="price"/>
+        <result column="order_id" property="orderId"/>
         <result column="active_core_qty" property="activeCoreQty"/>
         <result column="core_position_id" property="corePositionId"/>
         <result column="core_locked_at" property="coreLockedAt"/>
@@ -152,6 +153,7 @@
                s.create_time,
                s.update_time,
                t.price,
+               t.order_id,
                c.id AS core_position_id,
                COALESCE(c.core_qty, 0) AS active_core_qty,
                c.locked_at AS core_locked_at

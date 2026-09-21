@@ -205,6 +205,62 @@ describe('trade stats request lifecycle', () => {
     expect(vm.showCoreActions).toBe(true)
   })
 
+  it('aggregates fills from the same order without changing actionable trades', () => {
+    const vm = {
+      coreAvailableQty: Stats.methods.coreAvailableQty,
+      hasCorePosition: Stats.methods.hasCorePosition
+    }
+    const rows = [
+      {
+        tradeId: '11',
+        orderId: '88',
+        tradeTime: '2026-09-20 10:00:00',
+        price: 100,
+        remainingQty: 1,
+        availableQty: 0.6,
+        openAmount: 100,
+        netPnl: 10,
+        breakEvenPrice: 101,
+        corePositionId: '101',
+        coreQty: 0.4
+      },
+      {
+        tradeId: '12',
+        orderId: '88',
+        tradeTime: '2026-09-20 10:00:01',
+        price: 110,
+        remainingQty: 2,
+        availableQty: 2,
+        openAmount: 220,
+        netPnl: -5,
+        breakEvenPrice: 111,
+        corePositionId: null,
+        coreQty: 0
+      }
+    ]
+
+    const group = Stats.methods.createCoreOrderGroup.call(vm, 'order:88', rows)
+
+    expect(group).toEqual(expect.objectContaining({
+      orderId: '88',
+      tradeCount: 2,
+      remainingQty: 3,
+      availableQty: 2.6,
+      openAmount: 320,
+      price: 106.66666667,
+      netPnl: 5,
+      roi: 0.015625,
+      coreQty: 0.4,
+      coreStatus: '部分设置',
+      trades: rows
+    }))
+  })
+
+  it('uses the trade id as a safe grouping key when an order id is missing', () => {
+    expect(Stats.methods.coreActionOrderKey({ orderId: '88', tradeId: '11' })).toBe('order:88')
+    expect(Stats.methods.coreActionOrderKey({ orderId: null, tradeId: '11' })).toBe('trade:11')
+  })
+
   it('keeps the drawer open and defers statistics refresh until it closes', async() => {
     const row = {
       corePositionId: '9',
