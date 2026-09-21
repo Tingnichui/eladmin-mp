@@ -32,9 +32,11 @@
         <el-radio-button label="profit">盈利成交 {{ tradeCounts.profit }}</el-radio-button>
         <el-radio-button label="loss">亏损成交 {{ tradeCounts.loss }}</el-radio-button>
       </el-radio-group>
-      <span v-if="coreTradeCount" class="core-legend">
-        <i class="el-icon-lock" />底仓成交 {{ coreTradeCount }} 笔
-      </span>
+      <el-radio-group v-model="coreFilter" size="small" class="core-filter" @change="updateChart">
+        <el-radio-button label="all">底仓不限</el-radio-button>
+        <el-radio-button label="core">含底仓 {{ coreTradeCounts.core }}</el-radio-button>
+        <el-radio-button label="nonCore">不含底仓 {{ coreTradeCounts.nonCore }}</el-radio-button>
+      </el-radio-group>
     </div>
     <div ref="chartContainer" :class="className" :style="{ height: height, width: width }" />
   </div>
@@ -63,6 +65,7 @@ export default {
       chart: null,
       viewMode: 'buckets',
       profitFilter: 'all',
+      coreFilter: 'all',
       priceInterval: 2500
     }
   },
@@ -77,13 +80,18 @@ export default {
         return result
       }, { all: 0, profit: 0, loss: 0 })
     },
-    coreTradeCount() {
-      return this.normalizedTrades.filter(trade => trade.coreQty > 0).length
+    coreTradeCounts() {
+      return this.normalizedTrades.reduce((result, trade) => {
+        result[trade.coreQty > 0 ? 'core' : 'nonCore']++
+        return result
+      }, { core: 0, nonCore: 0 })
     },
     filteredTrades() {
-      if (this.profitFilter === 'all') return this.normalizedTrades
-      const profitable = this.profitFilter === 'profit'
-      return this.normalizedTrades.filter(trade => trade.profitable === profitable)
+      return this.normalizedTrades.filter(trade => {
+        const profitMatched = this.profitFilter === 'all' || trade.profitable === (this.profitFilter === 'profit')
+        const coreMatched = this.coreFilter === 'all' || (trade.coreQty > 0) === (this.coreFilter === 'core')
+        return profitMatched && coreMatched
+      })
     },
     canDecreaseInterval() {
       return PRICE_INTERVALS.indexOf(this.priceInterval) > 0
@@ -491,6 +499,5 @@ export default {
 .interval-stepper .interval-button-right { border-radius: 0 4px 4px 0; }
 .interval-value { display: flex; align-items: center; justify-content: center; min-width: 90px; margin: 0 -1px; padding: 0 8px; border: 1px solid #dcdfe6; color: #303133; font-size: 13px; white-space: nowrap; background: #fff; }
 .profit-filter { margin-left: 4px; }
-.core-legend { color: #409eff; font-size: 13px; white-space: nowrap; }
-.core-legend i { margin-right: 4px; }
+.core-filter { white-space: nowrap; }
 </style>

@@ -5,6 +5,7 @@ describe('trade position distribution core position aggregation', () => {
   it('defaults to price bucket aggregation', () => {
     expect(Chart.data().viewMode).toBe('buckets')
     expect(Chart.data().priceInterval).toBe(2500)
+    expect(Chart.data().coreFilter).toBe('all')
   })
 
   it('switches between fixed price interval levels', () => {
@@ -60,5 +61,23 @@ describe('trade position distribution core position aggregation', () => {
       availableQty: 0.002
     }))
     expect(buckets[0].trades).toHaveLength(2)
+  })
+
+  it('filters trades by profit and core position independently', () => {
+    const normalizedTrades = [
+      { tradeId: '1', profitable: true, coreQty: 0.001 },
+      { tradeId: '2', profitable: false, coreQty: 0 },
+      { tradeId: '3', profitable: false, coreQty: 0.002 }
+    ]
+    const vm = { normalizedTrades, profitFilter: 'all', coreFilter: 'core' }
+
+    expect(Chart.computed.filteredTrades.call(vm).map(trade => trade.tradeId)).toEqual(['1', '3'])
+
+    vm.profitFilter = 'loss'
+    expect(Chart.computed.filteredTrades.call(vm).map(trade => trade.tradeId)).toEqual(['3'])
+
+    vm.coreFilter = 'nonCore'
+    expect(Chart.computed.filteredTrades.call(vm).map(trade => trade.tradeId)).toEqual(['2'])
+    expect(Chart.computed.coreTradeCounts.call({ normalizedTrades })).toEqual({ core: 2, nonCore: 1 })
   })
 })
