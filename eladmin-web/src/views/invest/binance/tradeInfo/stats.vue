@@ -127,7 +127,7 @@
     </section>
 
     <el-dialog
-      title="现货下单"
+      :title="spotOrderDialogTitle"
       :visible.sync="showSpotOrderDialog"
       width="620px"
       :close-on-click-modal="false"
@@ -150,12 +150,30 @@
         label-position="top"
         class="spot-order-form"
       >
-        <el-form-item label="买卖方向" prop="side">
+        <el-form-item v-if="!spotOrderSource" label="买卖方向" prop="side">
           <el-radio-group v-model="spotOrderForm.side" class="spot-order-side-group">
             <el-radio-button label="BUY">买入</el-radio-button>
             <el-radio-button label="SELL">卖出</el-radio-button>
           </el-radio-group>
         </el-form-item>
+        <div v-else class="position-sell-summary">
+          <div>
+            <span>卖出来源</span>
+            <strong>{{ spotOrderSourceLabel }}</strong>
+          </div>
+          <div>
+            <span>可卖数量</span>
+            <strong>{{ decimalValue(spotOrderSource.maxQuantity, 8) }} {{ spotBaseAsset }}</strong>
+          </div>
+          <div>
+            <span>买入均价</span>
+            <strong>{{ decimalValue(spotOrderSource.price, 2) }} USDT</strong>
+          </div>
+          <div>
+            <span>当前盈亏</span>
+            <strong :class="valueTone(spotOrderSource.netPnl)">{{ signedMoneyValue(spotOrderSource.netPnl) }}</strong>
+          </div>
+        </div>
         <div class="spot-order-form-grid">
           <el-form-item label="订单类型" prop="type">
             <el-select v-model="spotOrderForm.type" class="spot-order-control">
@@ -167,6 +185,7 @@
             <el-input-number
               v-model="spotOrderForm.quantity"
               :min="0.00000001"
+              :max="spotOrderQuantityMax"
               :precision="8"
               :step="0.0001"
               controls-position="right"
@@ -212,6 +231,14 @@
           show-icon
           class="spot-order-hint"
         />
+        <el-alert
+          v-if="spotOrderSource"
+          title="成交后的成本归属仍按 FIFO 规则计算，不保证冲销当前所选订单。"
+          type="warning"
+          :closable="false"
+          show-icon
+          class="spot-order-hint"
+        />
       </el-form>
 
       <div v-else class="spot-order-confirm">
@@ -229,7 +256,17 @@
           <div><dt>数量</dt><dd>{{ decimalValue(spotOrderForm.quantity, 8) }} {{ spotBaseAsset }}</dd></div>
           <div><dt>触发价</dt><dd>{{ decimalValue(spotOrderForm.stopPrice, 8) }} USDT</dd></div>
           <div><dt>委托价格</dt><dd>{{ spotOrderPriceLabel }}</dd></div>
+          <div v-if="spotOrderSource"><dt>卖出来源</dt><dd>{{ spotOrderSourceLabel }}</dd></div>
+          <div v-if="spotOrderSource"><dt>卖出后剩余可卖</dt><dd>{{ spotOrderRemainingQuantity }} {{ spotBaseAsset }}</dd></div>
         </dl>
+        <el-alert
+          v-if="spotOrderSource"
+          title="本次成交将按系统 FIFO 规则优先冲销最早的非底仓持仓。"
+          type="warning"
+          :closable="false"
+          show-icon
+          class="spot-order-confirm-tip"
+        />
       </div>
 
       <span slot="footer" class="dialog-footer">
@@ -395,9 +432,25 @@
               <small class="core-cell-meta">数量 {{ decimalValue(scope.row.coreQty || 0, 8) }}</small>
             </template>
           </el-table-column>
-          <el-table-column label="操作" min-width="180" align="center" fixed="right">
+          <el-table-column label="操作" min-width="245" align="center" fixed="right">
             <template slot-scope="scope">
               <div v-if="scope.row._rowType === 'order'" class="core-action-buttons">
+                <el-tooltip
+                  v-if="checkPer(['admin', 'binanceTradeInfo:createPos'])"
+                  :disabled="coreAvailableQty(scope.row) > 0"
+                  content="该订单没有可卖数量；如已设置底仓，请先调整或解除底仓"
+                  placement="top"
+                >
+                  <span>
+                    <el-button
+                      type="danger"
+                      plain
+                      size="mini"
+                      :disabled="coreAvailableQty(scope.row) <= 0"
+                      @click="openPositionSellDialog(scope.row)"
+                    >卖出</el-button>
+                  </span>
+                </el-tooltip>
                 <el-popconfirm
                   v-if="coreOrderUnlockedRows(scope.row).length && checkPer(['admin', 'binanceSpotCorePosition:add'])"
                   title="确定将该订单内尚未设置底仓的持仓数量全部设为底仓吗？"
@@ -440,6 +493,22 @@
                 </el-popconfirm>
               </div>
               <div v-else class="core-action-buttons">
+                <el-tooltip
+                  v-if="checkPer(['admin', 'binanceTradeInfo:createPos'])"
+                  :disabled="coreAvailableQty(scope.row) > 0"
+                  content="该成交没有可卖数量；如已设置底仓，请先调整或解除底仓"
+                  placement="top"
+                >
+                  <span>
+                    <el-button
+                      type="danger"
+                      plain
+                      size="mini"
+                      :disabled="coreAvailableQty(scope.row) <= 0"
+                      @click="openPositionSellDialog(scope.row)"
+                    >卖出</el-button>
+                  </span>
+                </el-tooltip>
                 <el-button
                   v-if="!hasCorePosition(scope.row) && checkPer(['admin', 'binanceSpotCorePosition:add'])"
                   type="primary"
@@ -520,6 +589,7 @@ export default {
       showSpotOrderDialog: false,
       spotOrderStep: 'form',
       spotOrderSubmitting: false,
+      spotOrderSource: null,
       spotOrderForm: {
         side: 'BUY',
         type: 'STOP_LOSS_LIMIT',
@@ -531,7 +601,7 @@ export default {
       spotOrderRules: {
         side: [{ required: true, message: '请选择买卖方向', trigger: 'change' }],
         type: [{ required: true, message: '请选择订单类型', trigger: 'change' }],
-        quantity: [{ required: true, message: '请输入下单数量', trigger: 'blur' }],
+        quantity: [{ validator: this.validateSpotOrderQuantity, trigger: 'blur' }],
         stopPrice: [{ required: true, message: '请输入触发价', trigger: 'blur' }],
         priceMode: [{ required: true, message: '请选择委托价模式', trigger: 'change' }]
       },
@@ -554,6 +624,23 @@ export default {
     },
     spotOrderSideLabel() {
       return this.spotOrderForm.side === 'BUY' ? '买入' : '卖出'
+    },
+    spotOrderDialogTitle() {
+      return this.spotOrderSource ? '卖出持仓' : '现货下单'
+    },
+    spotOrderSourceLabel() {
+      if (!this.spotOrderSource) return '--'
+      return this.spotOrderSource.rowType === 'order'
+        ? `订单 ID ${this.spotOrderSource.orderId || '--'}`
+        : `成交 ID ${this.spotOrderSource.tradeId || '--'}`
+    },
+    spotOrderQuantityMax() {
+      return this.spotOrderSource ? Number(this.spotOrderSource.maxQuantity) : Infinity
+    },
+    spotOrderRemainingQuantity() {
+      if (!this.spotOrderSource) return '--'
+      const remaining = numberUtil.subAmount(this.spotOrderSource.maxQuantity, this.spotOrderForm.quantity || 0, 8)
+      return this.decimalValue(Math.max(Number(remaining) || 0, 0), 8)
     },
     spotOrderTypeLabel() {
       return this.spotOrderForm.type === 'TAKE_PROFIT_LIMIT' ? '限价止盈' : '限价止损'
@@ -729,16 +816,39 @@ export default {
     },
     openSpotOrderDialog() {
       if (this.query.uid == null || !this.query.symbol) return
-      this.spotOrderStep = 'form'
-      this.spotOrderSubmitting = false
-      this.spotOrderForm = {
+      this.openSpotOrder({
         side: 'BUY',
         type: 'STOP_LOSS_LIMIT',
         quantity: null,
         stopPrice: null,
         priceMode: 'OPPONENT_FIRST',
         price: null
-      }
+      }, null)
+    },
+    openPositionSellDialog(row) {
+      const maxQuantity = this.coreAvailableQty(row)
+      if (this.query.uid == null || !this.query.symbol || Number(maxQuantity) <= 0) return
+      this.openSpotOrder({
+        side: 'SELL',
+        type: 'STOP_LOSS_LIMIT',
+        quantity: Number(maxQuantity),
+        stopPrice: this.spotStats.currentSpotPrice == null ? null : Number(this.spotStats.currentSpotPrice),
+        priceMode: 'OPPONENT_FIRST',
+        price: null
+      }, {
+        rowType: row._rowType,
+        orderId: row.orderId,
+        tradeId: row.tradeId,
+        maxQuantity,
+        price: row.price,
+        netPnl: row.netPnl
+      })
+    },
+    openSpotOrder(form, source) {
+      this.spotOrderStep = 'form'
+      this.spotOrderSubmitting = false
+      this.spotOrderSource = source
+      this.spotOrderForm = form
       this.showSpotOrderDialog = true
       this.$nextTick(() => {
         if (this.$refs.spotOrderForm) this.$refs.spotOrderForm.clearValidate()
@@ -747,6 +857,7 @@ export default {
     resetSpotOrderDialog() {
       this.spotOrderStep = 'form'
       this.spotOrderSubmitting = false
+      this.spotOrderSource = null
     },
     handleSpotOrderPriceModeChange(mode) {
       if (mode === 'OPPONENT_FIRST') this.spotOrderForm.price = null
@@ -761,6 +872,18 @@ export default {
       }
       if (value == null || Number(value) <= 0) {
         callback(new Error('请输入大于 0 的固定委托价'))
+        return
+      }
+      callback()
+    },
+    validateSpotOrderQuantity(rule, value, callback) {
+      const quantity = Number(value)
+      if (!Number.isFinite(quantity) || quantity <= 0) {
+        callback(new Error('请输入大于 0 的下单数量'))
+        return
+      }
+      if (this.spotOrderSource && quantity > Number(this.spotOrderSource.maxQuantity)) {
+        callback(new Error(`卖出数量不能超过可卖数量 ${this.spotOrderSource.maxQuantity}`))
         return
       }
       callback()
@@ -1180,6 +1303,10 @@ export default {
 .spot-order-context strong { color: #303133; }
 .spot-order-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; }
 .spot-order-control { width: 100%; }
+.position-sell-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; margin-bottom: 18px; padding: 14px 16px; background: #f7f9fc; border: 1px solid #ebeef5; border-radius: 6px; }
+.position-sell-summary > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.position-sell-summary span { color: #909399; font-size: 13px; }
+.position-sell-summary strong { overflow: hidden; color: #303133; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .spot-order-side-group { display: flex; width: 100%; }
 .spot-order-side-group .el-radio-button { flex: 1 1 50%; }
 ::v-deep .spot-order-side-group .el-radio-button__inner { width: 100%; }
@@ -1187,6 +1314,7 @@ export default {
 ::v-deep .spot-order-side-group .el-radio-button:last-child.is-active .el-radio-button__inner { border-color: #f56c6c; background: #f56c6c; box-shadow: -1px 0 0 0 #f56c6c; }
 .spot-order-hint { margin-top: 2px; }
 .spot-order-confirm { padding-bottom: 6px; }
+.spot-order-confirm-tip { margin-top: 14px; }
 .spot-order-summary { margin: 14px 0 0; }
 .spot-order-summary > div { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 10px 2px; border-bottom: 1px solid #ebeef5; }
 .spot-order-summary dt { color: #909399; }
@@ -1203,7 +1331,7 @@ export default {
 }
 @media (max-width: 700px) {
   ::v-deep .spot-order-dialog { width: 94% !important; }
-  .spot-order-form-grid { grid-template-columns: 1fr; }
+  .spot-order-form-grid, .position-sell-summary { grid-template-columns: 1fr; }
 }
 @media (max-height: 760px) {
   .stats-page { height: auto; min-height: calc(100vh - 117px); overflow: visible; }
