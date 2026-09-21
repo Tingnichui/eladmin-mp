@@ -21,7 +21,6 @@ jest.mock('@/views/invest/binance/tradeInfo/TradePositionDistributionBar.vue', (
 jest.mock('@/api/binanceSpotCorePosition', () => ({
   add: jest.fn(),
   edit: jest.fn(),
-  getCandidates: jest.fn(),
   lockAll: jest.fn(),
   release: jest.fn(),
   releaseAll: jest.fn()
@@ -150,6 +149,9 @@ describe('trade stats request lifecycle', () => {
     expect(state).not.toHaveProperty('tradeList')
     expect(state).not.toHaveProperty('filterForm')
     expect(state).not.toHaveProperty('tableColumns')
+    expect(state).not.toHaveProperty('showCorePositions')
+    expect(state).not.toHaveProperty('corePositionLoading')
+    expect(state).not.toHaveProperty('corePositionCandidates')
   })
 
   it('normalizes a statistics trade for core position actions', () => {
@@ -270,7 +272,6 @@ describe('trade stats request lifecycle', () => {
     }
     const vm = {
       showCoreActions: true,
-      showCorePositions: false,
       coreActionsDirty: false,
       coreActionRows: [row],
       selectedCoreRange: {
@@ -281,8 +282,7 @@ describe('trade stats request lifecycle', () => {
       },
       coreAvailableQty: Stats.methods.coreAvailableQty,
       refreshSelectedCoreRangeSummary: Stats.methods.refreshSelectedCoreRangeSummary,
-      doStats: jest.fn(),
-      loadCorePositionCandidates: jest.fn()
+      doStats: jest.fn()
     }
 
     await Stats.methods.handleCorePositionMutation.call(vm, row, { releasedAt: '2026-09-20' }, 'release')
