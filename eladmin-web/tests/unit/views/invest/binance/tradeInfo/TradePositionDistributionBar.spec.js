@@ -104,7 +104,7 @@ describe('trade position distribution core position aggregation', () => {
   })
 
   it('compacts both ends of a mobile price range', () => {
-    expect(Chart.methods.compactBucketRange('120000-122500')).toBe('120k-122.5k')
+    expect(Chart.methods.compactBucketRange('120000-122500')).toBe('120–122.5k')
     expect(Chart.methods.compactBucketRange('500-1000')).toBe('500-1k')
   })
 

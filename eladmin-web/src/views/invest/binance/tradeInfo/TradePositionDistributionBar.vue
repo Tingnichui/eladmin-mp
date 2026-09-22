@@ -398,7 +398,7 @@ export default {
           }
         },
         grid: compact
-          ? { left: 92, right: 44, top: 18, bottom: 26 }
+          ? { left: 72, right: 44, top: 18, bottom: 26 }
           : { left: 128, right: 170, top: 38, bottom: 58 },
         tooltip: { trigger: 'item', formatter: params => this.bucketTooltip(params.data) },
         xAxis: {
@@ -473,10 +473,14 @@ export default {
       return `${lower}-${lower + this.priceInterval}`
     },
     compactBucketRange(value) {
-      return String(value).split('-').map(part => {
+      const parts = String(value).split('-')
+      const prices = parts.map(part => Number(part))
+      if (prices.length === 2 && prices.every(price => Number.isFinite(price) && price >= 1000)) {
+        return `${Number((prices[0] / 1000).toFixed(1))}–${Number((prices[1] / 1000).toFixed(1))}k`
+      }
+      return parts.map(part => {
         const price = Number(part)
-        if (!Number.isFinite(price) || price < 1000) return part
-        return `${Number((price / 1000).toFixed(1))}k`
+        return Number.isFinite(price) && price >= 1000 ? `${Number((price / 1000).toFixed(1))}k` : part
       }).join('-')
     },
     weightedAverage(trades) {
