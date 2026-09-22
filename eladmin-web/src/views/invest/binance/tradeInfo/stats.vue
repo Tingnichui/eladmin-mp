@@ -659,6 +659,150 @@
             </template>
           </el-table-column>
         </el-table>
+
+        <div class="core-action-mobile-list">
+          <article
+            v-for="row in coreActionDisplayRows"
+            :key="`mobile:${coreActionRowKey(row)}`"
+            :class="['core-mobile-card', { 'is-trade-child': isCoreOrderView && row._rowType === 'trade' }]"
+          >
+            <div class="core-mobile-card-header">
+              <div class="core-mobile-card-heading">
+                <el-button
+                  v-if="row._rowType === 'order'"
+                  type="text"
+                  class="core-order-toggle"
+                  :aria-label="isCoreOrderExpanded(row) ? '收起订单成交明细' : '展开订单成交明细'"
+                  @click="toggleCoreOrder(row)"
+                >
+                  <span
+                    :class="['core-order-chevron', { 'is-expanded': isCoreOrderExpanded(row) }]"
+                    aria-hidden="true"
+                  />
+                </el-button>
+                <div>
+                  <strong>
+                    {{ row._rowType === 'order' ? `订单 ID ${row.orderId || '--'}` : (row.tradeTime || '--') }}
+                  </strong>
+                  <small>
+                    {{ row._rowType === 'order' ? `${row.tradeTime || '--'} · ${row.tradeCount} 个成交` : `成交 ID ${row.tradeId || '--'}` }}
+                  </small>
+                </div>
+              </div>
+              <div class="core-mobile-pnl">
+                <strong :class="valueTone(row.netPnl)">{{ signedMoneyValue(row.netPnl) }}</strong>
+                <small>收益率 {{ signedPercentValue(row.roi) }}</small>
+              </div>
+            </div>
+
+            <div class="core-mobile-metrics">
+              <div><span>{{ row._rowType === 'order' ? '买入均价' : '买入价格' }}</span><strong>{{ decimalValue(row.price, 2) }}</strong></div>
+              <div><span>买入金额</span><strong>{{ moneyValue(row.openAmount) }}</strong></div>
+              <div><span>持仓数量</span><strong>{{ decimalValue(row.remainingQty, 8) }}</strong></div>
+              <div>
+                <span>可撮合数量</span><strong>{{ decimalValue(coreAvailableQty(row), 8) }}</strong>
+                <small v-if="spotPendingQty(row) > 0" class="negative">已挂单 {{ decimalValue(spotPendingQty(row), 8) }}</small>
+              </div>
+              <div><span>保本价</span><strong>{{ decimalValue(row.breakEvenPrice, 2) }}</strong></div>
+              <div>
+                <span>底仓状态</span>
+                <strong>{{ row._rowType === 'order' ? row.coreStatus : (hasCorePosition(row) ? '已设置' : '未设置') }}</strong>
+                <small>数量 {{ decimalValue(row.coreQty || 0, 8) }}</small>
+              </div>
+            </div>
+
+            <div v-if="row._rowType === 'order'" class="core-mobile-actions">
+              <el-button
+                v-if="checkPer(['admin', 'binanceTradeInfo:createPos'])"
+                type="danger"
+                plain
+                size="small"
+                :disabled="coreAvailableQty(row) <= 0"
+                @click="openPositionSellDialog(row)"
+              >卖出</el-button>
+              <el-popconfirm
+                v-if="rowSpotOpenOrders(row).length && checkPer(['admin', 'binanceTradeInfo:createPos'])"
+                :title="`确定撤销该来源关联的 ${rowSpotOpenOrders(row).length} 个币安卖出挂单吗？`"
+                placement="top"
+                :width="300"
+                confirm-button-text="确认撤单"
+                cancel-button-text="取消"
+                @confirm="cancelRowSpotOrders(row)"
+              >
+                <el-button slot="reference" type="warning" plain size="small" :loading="isRowSpotOrderCancelling(row)">撤单</el-button>
+              </el-popconfirm>
+              <el-popconfirm
+                v-if="coreOrderUnlockedRows(row).length && checkPer(['admin', 'binanceSpotCorePosition:add'])"
+                title="确定将该订单内尚未设置底仓的持仓数量全部设为底仓吗？"
+                placement="top"
+                :width="300"
+                confirm-button-text="全部设置"
+                cancel-button-text="取消"
+                @confirm="lockCoreOrder(row)"
+              >
+                <el-button slot="reference" type="primary" plain size="small" :disabled="batchLockLoading || batchReleaseLoading" :loading="batchLockLoading">一键设置</el-button>
+              </el-popconfirm>
+              <el-popconfirm
+                v-if="coreOrderCoreRows(row).length && checkPer(['admin', 'binanceSpotCorePosition:edit'])"
+                title="确定解除该订单内的全部底仓吗？"
+                placement="top"
+                :width="300"
+                confirm-button-text="全部解除"
+                cancel-button-text="取消"
+                @confirm="releaseCoreOrder(row)"
+              >
+                <el-button slot="reference" type="warning" plain size="small" :disabled="batchLockLoading || batchReleaseLoading" :loading="batchReleaseLoading">一键解除</el-button>
+              </el-popconfirm>
+            </div>
+
+            <div v-else class="core-mobile-actions">
+              <el-button
+                v-if="checkPer(['admin', 'binanceTradeInfo:createPos'])"
+                type="danger"
+                plain
+                size="small"
+                :disabled="coreAvailableQty(row) <= 0"
+                @click="openPositionSellDialog(row)"
+              >卖出</el-button>
+              <el-popconfirm
+                v-if="rowSpotOpenOrders(row).length && checkPer(['admin', 'binanceTradeInfo:createPos'])"
+                :title="`确定撤销该来源关联的 ${rowSpotOpenOrders(row).length} 个币安卖出挂单吗？`"
+                placement="top"
+                :width="300"
+                confirm-button-text="确认撤单"
+                cancel-button-text="取消"
+                @confirm="cancelRowSpotOrders(row)"
+              >
+                <el-button slot="reference" type="warning" plain size="small" :loading="isRowSpotOrderCancelling(row)">撤单</el-button>
+              </el-popconfirm>
+              <el-button
+                v-if="!hasCorePosition(row) && checkPer(['admin', 'binanceSpotCorePosition:add'])"
+                type="primary"
+                size="small"
+                @click="lockCorePosition(row)"
+              >设为底仓</el-button>
+              <template v-else-if="hasCorePosition(row)">
+                <el-button
+                  v-if="checkPer(['admin', 'binanceSpotCorePosition:edit'])"
+                  type="primary"
+                  size="small"
+                  @click="adjustCorePosition(row)"
+                >调整</el-button>
+                <el-popconfirm
+                  v-if="checkPer(['admin', 'binanceSpotCorePosition:edit'])"
+                  title="解除后，该数量会重新参与后续 FIFO 撮合，是否继续？"
+                  placement="top"
+                  :width="300"
+                  confirm-button-text="确定"
+                  cancel-button-text="取消"
+                  @confirm="confirmDrawerReleaseCorePosition(row)"
+                >
+                  <el-button slot="reference" type="warning" plain size="small">解除</el-button>
+                </el-popconfirm>
+              </template>
+            </div>
+          </article>
+        </div>
       </div>
     </el-drawer>
   </div>
@@ -1550,6 +1694,7 @@ export default {
 .core-action-tip { margin-bottom: 14px; }
 .core-action-view-switch { margin-bottom: 12px; }
 .core-action-table { width: 100%; }
+.core-action-mobile-list { display: none; }
 .core-cell-primary { color: #303133; white-space: nowrap; }
 .core-cell-meta { display: block; overflow: hidden; margin-top: 4px; color: #909399; font-size: 12px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
 .core-cell-pnl { display: block; white-space: nowrap; }
@@ -1600,8 +1745,57 @@ export default {
   ::v-deep .core-action-drawer { width: 94% !important; }
 }
 @media (max-width: 700px) {
+  .stats-page { gap: 8px; padding: 8px; }
+  .toolbar-panel { padding: 10px; }
+  .toolbar-main { width: 100%; gap: 8px; }
+  .field-label { flex: 0 0 48px; }
+  .account-select, .symbol-select { flex: 1 1 calc(100% - 56px); width: auto; }
+  .toolbar-main > .el-button { flex: 1 1 calc(50% - 4px); margin: 0; }
+  .toolbar-actions { align-self: stretch; width: 100%; }
+  .toolbar-actions > span { flex: 1 1 50%; }
+  .toolbar-actions .el-button { width: 100%; }
+  .position-panel { padding: 12px 10px 6px; }
+  .position-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 0; }
+  .metric-item { min-width: 0; padding: 10px 12px; border-bottom: 1px solid #ebeef5; }
+  .metric-item:nth-child(2n) { border-right: 0; }
+  .metric-item:nth-last-child(-n+2) { border-bottom: 0; }
+  .metric-item:first-child { padding-left: 12px; }
+  .metric-value { overflow: hidden; font-size: 19px; text-overflow: ellipsis; white-space: nowrap; }
+  .position-panel .position-chart { min-height: 0; }
   ::v-deep .spot-order-dialog { width: 94% !important; }
   ::v-deep .spot-open-orders-dialog { width: 96% !important; }
+  ::v-deep .core-action-drawer { width: 100% !important; }
+  ::v-deep .core-action-drawer .el-drawer__header { align-items: center; margin-bottom: 0; padding: 16px 14px 12px; border-bottom: 1px solid #ebeef5; }
+  ::v-deep .core-action-drawer .el-drawer__body { overflow-y: auto; }
+  .core-action-content { padding: 10px 10px 24px; }
+  .core-range-summary { gap: 6px; }
+  .core-range-summary .el-tag { margin: 0; }
+  .core-range-summary > span { flex: 1 1 calc(50% - 3px); }
+  .core-range-summary > span .el-button { width: 100%; }
+  .core-action-tip { font-size: 12px; }
+  .core-action-view-switch { display: flex; width: 100%; }
+  ::v-deep .core-action-view-switch .el-radio-button { flex: 1 1 50%; }
+  ::v-deep .core-action-view-switch .el-radio-button__inner { width: 100%; }
+  .core-action-table { display: none; }
+  .core-action-mobile-list { display: grid; gap: 10px; }
+  .core-mobile-card { padding: 12px; border: 1px solid #ebeef5; border-radius: 10px; background: #fff; box-shadow: 0 3px 10px rgba(31, 45, 61, 0.05); }
+  .core-mobile-card.is-trade-child { margin-left: 12px; border-left: 3px solid #d9ecff; }
+  .core-mobile-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .core-mobile-card-heading { display: flex; align-items: flex-start; min-width: 0; }
+  .core-mobile-card-heading > div { min-width: 0; }
+  .core-mobile-card-heading strong, .core-mobile-card-heading small, .core-mobile-pnl strong, .core-mobile-pnl small { display: block; }
+  .core-mobile-card-heading strong { overflow: hidden; color: #303133; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+  .core-mobile-card-heading small, .core-mobile-pnl small { margin-top: 4px; color: #909399; font-size: 11px; }
+  .core-mobile-pnl { flex: 0 0 auto; text-align: right; }
+  .core-mobile-pnl strong { font-size: 15px; }
+  .core-mobile-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #ebeef5; }
+  .core-mobile-metrics span, .core-mobile-metrics small, .core-mobile-metrics strong { display: block; }
+  .core-mobile-metrics span { color: #909399; font-size: 11px; }
+  .core-mobile-metrics strong { overflow: hidden; margin-top: 3px; color: #303133; font-size: 13px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+  .core-mobile-metrics small { margin-top: 3px; color: #909399; font-size: 11px; }
+  .core-mobile-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .core-mobile-actions > .el-button, .core-mobile-actions > span { flex: 1 1 calc(50% - 4px); margin: 0; }
+  .core-mobile-actions > span .el-button { width: 100%; margin: 0; }
   .spot-order-form-grid, .position-sell-summary { grid-template-columns: 1fr; }
 }
 @media (max-height: 760px) {

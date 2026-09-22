@@ -1,7 +1,7 @@
 <template>
   <div class="position-chart">
     <div class="chart-toolbar">
-      <el-radio-group v-model="viewMode" size="small" @change="updateChart">
+      <el-radio-group v-model="viewMode" size="small" class="view-mode-switch" @change="refreshChartLayout">
         <el-radio-button label="trades">逐笔买入</el-radio-button>
         <el-radio-button label="buckets">价格区间聚合</el-radio-button>
       </el-radio-group>
@@ -27,18 +27,18 @@
           />
         </div>
       </div>
-      <el-radio-group v-model="profitFilter" size="small" class="profit-filter" @change="updateChart">
+      <el-radio-group v-model="profitFilter" size="small" class="profit-filter" @change="refreshChartLayout">
         <el-radio-button label="all">全部成交 {{ tradeCounts.all }}</el-radio-button>
         <el-radio-button label="profit">盈利成交 {{ tradeCounts.profit }}</el-radio-button>
         <el-radio-button label="loss">亏损成交 {{ tradeCounts.loss }}</el-radio-button>
       </el-radio-group>
-      <el-radio-group v-model="coreFilter" size="small" class="core-filter" @change="updateChart">
+      <el-radio-group v-model="coreFilter" size="small" class="core-filter" @change="refreshChartLayout">
         <el-radio-button label="all">底仓不限</el-radio-button>
         <el-radio-button label="core">含底仓 {{ coreTradeCounts.core }}</el-radio-button>
         <el-radio-button label="nonCore">不含底仓 {{ coreTradeCounts.nonCore }}</el-radio-button>
       </el-radio-group>
     </div>
-    <div ref="chartContainer" :class="className" :style="{ height: height, width: width }" />
+    <div ref="chartContainer" :class="className" :style="{ height: chartHeight, width: width }" />
   </div>
 </template>
 
@@ -63,6 +63,7 @@ export default {
   data() {
     return {
       chart: null,
+      isMobileViewport: false,
       viewMode: 'buckets',
       profitFilter: 'all',
       coreFilter: 'all',
@@ -99,17 +100,25 @@ export default {
     canIncreaseInterval() {
       const index = PRICE_INTERVALS.indexOf(this.priceInterval)
       return index >= 0 && index < PRICE_INTERVALS.length - 1
+    },
+    chartHeight() {
+      if (!this.isMobileViewport || this.height !== '100%') return this.height
+      if (this.viewMode !== 'buckets') return '420px'
+      const bucketCount = this.groupTradesByPrice(this.filteredTrades).length
+      return `${Math.max(360, bucketCount * 38 + 76)}px`
     }
   },
   watch: {
-    rowData: { deep: true, handler() { this.updateChart() } },
+    rowData: { deep: true, handler() { this.refreshChartLayout() } },
     currentPrice() { this.updateChart() },
     averagePrice() { this.updateChart() }
   },
   mounted() {
+    this.updateViewportMode()
     this.initChart()
     this.__resizeHandler = debounce(() => {
-      if (this.chart) this.chart.resize()
+      this.updateViewportMode()
+      this.refreshChartLayout()
     }, 100)
     window.addEventListener('resize', this.__resizeHandler)
   },
@@ -127,18 +136,34 @@ export default {
       const nextIndex = currentIndex + direction
       if (nextIndex < 0 || nextIndex >= PRICE_INTERVALS.length) return
       this.priceInterval = PRICE_INTERVALS[nextIndex]
-      this.updateChart()
+      this.refreshChartLayout()
+    },
+    updateViewportMode() {
+      this.isMobileViewport = window.innerWidth <= 700
+    },
+    refreshChartLayout() {
+      this.$nextTick(() => {
+        if (this.chart) this.chart.resize()
+        this.updateChart()
+      })
     },
     initChart() {
       this.chart = echarts.init(this.$refs.chartContainer, 'macarons')
-      this.chart.on('click', params => {
-        if (params.data && params.data.trade) {
-          this.$emit('select-trade', params.data.trade.raw)
-        } else if (params.data && params.data.trades) {
-          this.$emit('select-bucket', params.data)
-        }
-      })
+      this.chart.on('click', this.handleChartClick)
       this.updateChart()
+    },
+    handleChartClick(params) {
+      if (!params.data) return
+      if (params.data.trade) {
+        this.hideTooltip()
+        this.$emit('select-trade', params.data.trade.raw)
+      } else if (params.data.trades) {
+        this.hideTooltip()
+        this.$emit('select-bucket', params.data)
+      }
+    },
+    hideTooltip() {
+      if (this.chart) this.chart.dispatchAction({ type: 'hideTip' })
     },
     normalizeTrade(trade) {
       const openPrice = Number(trade.openPrice) || 0
@@ -195,6 +220,7 @@ export default {
       })
     },
     renderTradeChart() {
+      const compact = this.isMobileViewport
       const currentPrice = Number(this.currentPrice) || 0
       const averagePrice = Number(this.averagePrice) || this.weightedAverage(this.normalizedTrades)
       const visibleTrades = this.filteredTrades
@@ -269,8 +295,9 @@ export default {
       this.chart.setOption({
         animationDuration: 300,
         color: ['#13ce8a', '#f56c6c'],
-        legend: { bottom: 0, data: ['盈利买入', '亏损买入'] },
+        legend: { show: !compact, bottom: 0, data: ['盈利买入', '亏损买入'] },
         toolbox: {
+          show: !compact,
           right: 10,
           top: 0,
           feature: {
@@ -278,24 +305,26 @@ export default {
             saveAsImage: { title: '保存图片', pixelRatio: 2 }
           }
         },
-        grid: { left: 78, right: 36, top: 38, bottom: 58 },
+        grid: compact
+          ? { left: 62, right: 12, top: 18, bottom: 36 }
+          : { left: 78, right: 36, top: 38, bottom: 58 },
         tooltip: { trigger: 'item', formatter: params => this.tradeTooltip(params.data.trade) },
         xAxis: {
-          name: '买入时间',
+          name: compact ? '' : '买入时间',
           type: 'time',
           axisLine: { lineStyle: { color: '#dcdfe6' }},
           splitLine: { show: true, lineStyle: { color: '#eef1f6', type: 'dashed' }},
-          axisLabel: { color: '#606266' }
+          axisLabel: { color: '#606266', fontSize: compact ? 11 : 12 }
         },
         yAxis: {
-          name: '买入价格 (USDT)',
+          name: compact ? '' : '买入价格 (USDT)',
           type: 'value',
           min: Math.max(0, minPrice - padding),
           max: maxPrice + padding,
           scale: true,
           axisLine: { lineStyle: { color: '#dcdfe6' }},
           splitLine: { lineStyle: { color: '#eef1f6', type: 'dashed' }},
-          axisLabel: { color: '#606266', formatter: value => this.formatNumber(value, 0) }
+          axisLabel: { color: '#606266', fontSize: compact ? 11 : 12, formatter: value => this.formatNumber(value, 0) }
         },
         series
       }, true)
@@ -316,6 +345,7 @@ export default {
       }
     },
     renderBucketChart() {
+      const compact = this.isMobileViewport
       const buckets = this.groupTradesByPrice(this.filteredTrades)
       const currentPrice = Number(this.currentPrice) || 0
       const averagePrice = Number(this.averagePrice) || this.weightedAverage(this.normalizedTrades)
@@ -338,7 +368,7 @@ export default {
       const makeBucketSeries = (name, type, color) => ({
         name,
         type: 'bar',
-        barMaxWidth: 24,
+        barMaxWidth: compact ? 18 : 24,
         barGap: '-100%',
         data: makeBucketData(type),
         itemStyle: { color },
@@ -346,7 +376,9 @@ export default {
           show: true,
           position: 'right',
           color: '#606266',
+          fontSize: compact ? 11 : 12,
           formatter: params => {
+            if (compact) return `${params.data.count}笔`
             const coreText = params.data.coreCount > 0 ? `  🔒${params.data.coreCount}笔` : ''
             return `${this.formatNumber(params.data.totalQty, 6)} BTC · ${params.data.count}笔${coreText}  均价 ${this.formatNumber(params.data.avgPrice, 2)}`
           }
@@ -355,8 +387,9 @@ export default {
       this.chart.clear()
       this.chart.setOption({
         animationDuration: 300,
-        legend: { bottom: 0, data: ['盈利区间', '亏损区间', '持仓均价区间'] },
+        legend: { show: !compact, bottom: 0, data: ['盈利区间', '亏损区间', '持仓均价区间'] },
         toolbox: {
+          show: !compact,
           right: 10,
           top: 0,
           feature: {
@@ -364,22 +397,27 @@ export default {
             saveAsImage: { title: '保存图片', pixelRatio: 2 }
           }
         },
-        grid: { left: 128, right: 170, top: 38, bottom: 58 },
+        grid: compact
+          ? { left: 92, right: 44, top: 18, bottom: 26 }
+          : { left: 128, right: 170, top: 38, bottom: 58 },
         tooltip: { trigger: 'item', formatter: params => this.bucketTooltip(params.data) },
         xAxis: {
-          name: '持仓数量 (BTC)',
+          name: compact ? '' : '持仓数量 (BTC)',
           type: 'value',
+          axisLabel: { show: !compact },
           splitLine: { lineStyle: { color: '#eef1f6', type: 'dashed' }},
           axisLine: { lineStyle: { color: '#dcdfe6' }}
         },
         yAxis: {
-          name: '买入价格区间',
+          name: compact ? '' : '买入价格区间',
           type: 'category',
           data: buckets.map(item => item.range),
           axisLine: { lineStyle: { color: '#dcdfe6' }},
           axisLabel: {
             color: value => value === currentBucketKey ? '#409eff' : '#606266',
-            fontWeight: value => value === currentBucketKey ? 'bold' : 'normal'
+            fontWeight: value => value === currentBucketKey ? 'bold' : 'normal',
+            fontSize: compact ? 11 : 12,
+            formatter: value => compact ? this.compactBucketRange(value) : value
           }
         },
         series: [
@@ -433,6 +471,13 @@ export default {
       if (!value || !this.priceInterval) return ''
       const lower = Math.floor(value / this.priceInterval) * this.priceInterval
       return `${lower}-${lower + this.priceInterval}`
+    },
+    compactBucketRange(value) {
+      return String(value).split('-').map(part => {
+        const price = Number(part)
+        if (!Number.isFinite(price) || price < 1000) return part
+        return `${Number((price / 1000).toFixed(1))}k`
+      }).join('-')
     },
     weightedAverage(trades) {
       const totalQty = trades.reduce((sum, trade) => addAmount(sum, trade.qty), 0)
@@ -498,4 +543,17 @@ export default {
 .interval-value { display: flex; align-items: center; justify-content: center; min-width: 90px; margin: 0 -1px; padding: 0 8px; border: 1px solid #dcdfe6; color: #303133; font-size: 13px; white-space: nowrap; background: #fff; }
 .profit-filter { margin-left: 4px; }
 .core-filter { white-space: nowrap; }
+@media (max-width: 700px) {
+  .chart-toolbar { gap: 8px; padding-top: 12px; }
+  .view-mode-switch, .profit-filter, .core-filter { display: flex; width: 100%; margin-left: 0; }
+  .interval-control { width: 100%; }
+  .interval-stepper { flex: 1 1 auto; }
+  .interval-value { flex: 1 1 auto; min-width: 0; }
+  ::v-deep .view-mode-switch .el-radio-button,
+  ::v-deep .profit-filter .el-radio-button,
+  ::v-deep .core-filter .el-radio-button { flex: 1 1 0; min-width: 0; }
+  ::v-deep .view-mode-switch .el-radio-button__inner,
+  ::v-deep .profit-filter .el-radio-button__inner,
+  ::v-deep .core-filter .el-radio-button__inner { width: 100%; padding-right: 4px; padding-left: 4px; }
+}
 </style>
