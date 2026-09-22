@@ -20,6 +20,8 @@ import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesStatsInfoVO;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesOrderDto;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesOrderRequest;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -88,6 +90,14 @@ public interface BinanceCoinFuturesTradeInfoService extends IService<BinanceCoin
     int sync(BinanceAccountInfo accountInfo, String symbol);
 
     BinanceCoinFuturesStatsInfoVO queryStats(Integer uid, String symbol, String positionSide);
+
+    BinanceCoinFuturesOrderDto placeOrder(BinanceCoinFuturesOrderRequest request);
+
+    List<BinanceCoinFuturesOrderDto> listOpenOrders(String symbol);
+
+    BinanceCoinFuturesOrderDto queryOrder(String symbol, Long orderId);
+
+    BinanceCoinFuturesOrderDto cancelOrder(String symbol, Long orderId);
 
     Date getLastPosCloseTime(Integer uid);
 

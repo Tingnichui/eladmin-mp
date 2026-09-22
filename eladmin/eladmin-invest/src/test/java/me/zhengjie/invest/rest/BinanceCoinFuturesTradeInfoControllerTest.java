@@ -3,6 +3,8 @@ package me.zhengjie.invest.rest;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesStatsInfoVO;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesOrderDto;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesOrderRequest;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.service.BinanceCoinFuturesTradeInfoService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
@@ -60,6 +62,27 @@ class BinanceCoinFuturesTradeInfoControllerTest {
                 () -> controller.queryStats(7, "ETHUSD_PERP", "SHORT"));
 
         verify(service, never()).queryStats(7, "ETHUSD_PERP", "SHORT");
+    }
+
+    @Test
+    void shouldPlaceOrderWithSelectedAccountContext() {
+        BinanceAccountInfo account = availableAccount(7);
+        BinanceCoinFuturesOrderRequest request = new BinanceCoinFuturesOrderRequest();
+        request.setUid(7);
+        request.setSymbol(" btcusd_perp ");
+        BinanceCoinFuturesOrderDto order = new BinanceCoinFuturesOrderDto();
+        order.setOrderId(99L);
+        when(accountService.getAccountByUid(7)).thenReturn(account);
+        when(service.placeOrder(request)).thenAnswer(invocation -> {
+            assertEquals(account, BinanceAccountContextHolder.get());
+            return order;
+        });
+
+        ResponseEntity<BinanceCoinFuturesOrderDto> response = controller.placeOrder(request);
+
+        assertEquals(Long.valueOf(99L), response.getBody().getOrderId());
+        assertEquals("BTCUSD_PERP", request.getSymbol());
+        assertNull(BinanceAccountContextHolder.get());
     }
 
     private BinanceAccountInfo availableAccount(int uid) {

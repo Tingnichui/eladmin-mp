@@ -20,6 +20,8 @@ import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesStatsInfoVO;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesOrderDto;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesOrderRequest;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.service.BinanceCoinFuturesTradeInfoService;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesTradeInfoQueryCriteria;
@@ -28,6 +30,7 @@ import java.util.List;
 import java.util.Collections;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -80,6 +83,62 @@ public class BinanceCoinFuturesTradeInfoController {
         BinanceAccountInfo accountInfo = requireAvailableAccount(uid);
         int tradeCount = binanceCoinFuturesTradeInfoService.sync(accountInfo, normalizedSymbol);
         return ResponseEntity.ok(Collections.singletonMap("tradeCount", tradeCount));
+    }
+
+    @PostMapping("/order")
+    @Log("币本位合约下单")
+    @ApiOperation("币本位合约市价或限价下单")
+    @PreAuthorize("@el.check('binanceCoinFuturesTradeInfo:order')")
+    public ResponseEntity<BinanceCoinFuturesOrderDto> placeOrder(
+            @Validated @RequestBody BinanceCoinFuturesOrderRequest request) {
+        request.setSymbol(normalizeSymbol(request.getSymbol()));
+        BinanceAccountInfo accountInfo = requireAvailableAccount(request.getUid());
+        BinanceCoinFuturesOrderDto[] result = new BinanceCoinFuturesOrderDto[1];
+        BinanceAccountContextHolder.runWith(accountInfo,
+                () -> result[0] = binanceCoinFuturesTradeInfoService.placeOrder(request));
+        return ResponseEntity.ok(result[0]);
+    }
+
+    @GetMapping("/open-orders")
+    @Log("查询币本位合约当前挂单")
+    @ApiOperation("查询币本位合约当前挂单")
+    @PreAuthorize("@el.check('binanceCoinFuturesTradeInfo:order')")
+    public ResponseEntity<List<BinanceCoinFuturesOrderDto>> listOpenOrders(
+            @RequestParam Integer uid, @RequestParam String symbol) {
+        String normalizedSymbol = normalizeSymbol(symbol);
+        BinanceAccountInfo accountInfo = requireAvailableAccount(uid);
+        AtomicReference<List<BinanceCoinFuturesOrderDto>> result = new AtomicReference<>();
+        BinanceAccountContextHolder.runWith(accountInfo,
+                () -> result.set(binanceCoinFuturesTradeInfoService.listOpenOrders(normalizedSymbol)));
+        return ResponseEntity.ok(result.get());
+    }
+
+    @GetMapping("/order")
+    @Log("查询币本位合约订单")
+    @ApiOperation("查询币本位合约订单")
+    @PreAuthorize("@el.check('binanceCoinFuturesTradeInfo:order')")
+    public ResponseEntity<BinanceCoinFuturesOrderDto> queryOrder(
+            @RequestParam Integer uid, @RequestParam String symbol, @RequestParam Long orderId) {
+        String normalizedSymbol = normalizeSymbol(symbol);
+        BinanceAccountInfo accountInfo = requireAvailableAccount(uid);
+        BinanceCoinFuturesOrderDto[] result = new BinanceCoinFuturesOrderDto[1];
+        BinanceAccountContextHolder.runWith(accountInfo,
+                () -> result[0] = binanceCoinFuturesTradeInfoService.queryOrder(normalizedSymbol, orderId));
+        return ResponseEntity.ok(result[0]);
+    }
+
+    @DeleteMapping("/order")
+    @Log("撤销币本位合约订单")
+    @ApiOperation("撤销币本位合约订单")
+    @PreAuthorize("@el.check('binanceCoinFuturesTradeInfo:order')")
+    public ResponseEntity<BinanceCoinFuturesOrderDto> cancelOrder(
+            @RequestParam Integer uid, @RequestParam String symbol, @RequestParam Long orderId) {
+        String normalizedSymbol = normalizeSymbol(symbol);
+        BinanceAccountInfo accountInfo = requireAvailableAccount(uid);
+        BinanceCoinFuturesOrderDto[] result = new BinanceCoinFuturesOrderDto[1];
+        BinanceAccountContextHolder.runWith(accountInfo,
+                () -> result[0] = binanceCoinFuturesTradeInfoService.cancelOrder(normalizedSymbol, orderId));
+        return ResponseEntity.ok(result[0]);
     }
 
     @Log("导出数据")

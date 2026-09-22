@@ -27,6 +27,8 @@ import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesAccountInfo;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesContractInfo;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesOpenTradeInfo;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesOrderDto;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesOrderRequest;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesPositionInfo;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesStatsInfoVO;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesTradeSummary;
@@ -42,6 +44,7 @@ import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceCoinFuturesUtil;
 import me.zhengjie.invest.util.TradeMatcherUtil;
 import me.zhengjie.utils.FileUtil;
+import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.utils.PageResult;
 import me.zhengjie.utils.PageUtil;
 import me.zhengjie.utils.RedisUtils;
@@ -67,6 +70,10 @@ import java.util.stream.Collectors;
 public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceCoinFuturesTradeInfoMapper, BinanceCoinFuturesTradeInfo> implements BinanceCoinFuturesTradeInfoService {
 
     private static final int SYNC_PAGE_SIZE = 1000;
+    private static final Set<String> ORDER_ACTIONS = new HashSet<>(Arrays.asList("OPEN", "CLOSE"));
+    private static final Set<String> ORDER_POSITION_SIDES = new HashSet<>(Arrays.asList("LONG", "SHORT"));
+    private static final Set<String> ORDER_TYPES = new HashSet<>(Arrays.asList("MARKET", "LIMIT"));
+    private static final Set<String> TIME_IN_FORCE_VALUES = new HashSet<>(Arrays.asList("GTC", "IOC", "FOK", "GTX"));
 
     @Resource
     private BinanceCoinFuturesTradeInfoMapper binanceCoinFuturesTradeInfoMapper;
@@ -199,6 +206,197 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
             }
         });
         return syncedCount[0];
+    }
+
+    @Override
+    public BinanceCoinFuturesOrderDto placeOrder(BinanceCoinFuturesOrderRequest request) {
+        String symbol = normalizeOrderValue(request.getSymbol(), "合约");
+        String action = normalizeOrderValue(request.getAction(), "开平仓动作");
+        String intendedPositionSide = normalizeOrderValue(request.getPositionSide(), "持仓方向");
+        String type = normalizeOrderValue(request.getType(), "订单类型");
+        if (!"BTCUSD_PERP".equals(symbol)) {
+            throw new BadRequestException("当前仅支持 BTCUSD_PERP");
+        }
+        if (!ORDER_ACTIONS.contains(action)) {
+            throw new BadRequestException("开平仓动作必须是 OPEN 或 CLOSE");
+        }
+        if (!ORDER_POSITION_SIDES.contains(intendedPositionSide)) {
+            throw new BadRequestException("持仓方向必须是 LONG 或 SHORT");
+        }
+        if (!ORDER_TYPES.contains(type)) {
+            throw new BadRequestException("当前仅支持 MARKET 或 LIMIT 订单");
+        }
+        if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException("下单张数必须大于 0");
+        }
+        String timeInForce = normalizeTimeInForce(request.getTimeInForce(), type);
+        if ("LIMIT".equals(type) && (request.getPrice() == null
+                || request.getPrice().compareTo(BigDecimal.ZERO) <= 0)) {
+            throw new BadRequestException("限价单必须填写大于 0 的委托价");
+        }
+        if ("MARKET".equals(type) && request.getPrice() != null) {
+            throw new BadRequestException("市价单不能填写委托价");
+        }
+
+        JSONObject contract = binanceCoinFuturesUtil.contractInfo(symbol);
+        validateContractOrder(contract, request.getQuantity(), request.getPrice(), type);
+        boolean hedgeMode = binanceCoinFuturesUtil.isHedgeMode();
+        if ("CLOSE".equals(action)) {
+            validateClosePosition(symbol, intendedPositionSide, request.getQuantity(), hedgeMode);
+        }
+
+        String side = resolveOrderSide(action, intendedPositionSide);
+        String clientOrderId = buildClientOrderId(request.getUid());
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put("symbol", symbol);
+        params.put("side", side);
+        params.put("positionSide", hedgeMode ? intendedPositionSide : "BOTH");
+        params.put("type", type);
+        params.put("quantity", request.getQuantity().stripTrailingZeros().toPlainString());
+        params.put("newClientOrderId", clientOrderId);
+        params.put("newOrderRespType", "RESULT");
+        if ("LIMIT".equals(type)) {
+            params.put("price", request.getPrice().stripTrailingZeros().toPlainString());
+            params.put("timeInForce", timeInForce);
+        }
+        if (!hedgeMode && "CLOSE".equals(action)) {
+            params.put("reduceOnly", "true");
+        }
+        try {
+            return binanceCoinFuturesUtil.placeOrder(params);
+        } catch (RuntimeException placeError) {
+            try {
+                BinanceCoinFuturesOrderDto reconciled = binanceCoinFuturesUtil.queryOrder(symbol, clientOrderId);
+                if (reconciled != null && reconciled.getOrderId() != null) {
+                    return reconciled;
+                }
+            } catch (RuntimeException queryError) {
+                placeError.addSuppressed(queryError);
+            }
+            throw placeError;
+        }
+    }
+
+    @Override
+    public List<BinanceCoinFuturesOrderDto> listOpenOrders(String symbol) {
+        return binanceCoinFuturesUtil.listOpenOrders(requireSupportedOrderSymbol(symbol));
+    }
+
+    @Override
+    public BinanceCoinFuturesOrderDto queryOrder(String symbol, Long orderId) {
+        if (orderId == null) {
+            throw new BadRequestException("订单 ID 不能为空");
+        }
+        return binanceCoinFuturesUtil.queryOrder(requireSupportedOrderSymbol(symbol), orderId);
+    }
+
+    @Override
+    public BinanceCoinFuturesOrderDto cancelOrder(String symbol, Long orderId) {
+        if (orderId == null) {
+            throw new BadRequestException("订单 ID 不能为空");
+        }
+        return binanceCoinFuturesUtil.cancelOrder(requireSupportedOrderSymbol(symbol), orderId);
+    }
+
+    private String normalizeOrderValue(String value, String fieldName) {
+        String normalized = value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
+        if (normalized.isEmpty()) {
+            throw new BadRequestException(fieldName + "不能为空");
+        }
+        return normalized;
+    }
+
+    private String requireSupportedOrderSymbol(String symbol) {
+        String normalized = normalizeOrderValue(symbol, "合约");
+        if (!"BTCUSD_PERP".equals(normalized)) {
+            throw new BadRequestException("当前仅支持 BTCUSD_PERP");
+        }
+        return normalized;
+    }
+
+    private String normalizeTimeInForce(String value, String type) {
+        if (!"LIMIT".equals(type)) {
+            return null;
+        }
+        String normalized = value == null || value.trim().isEmpty()
+                ? "GTC" : value.trim().toUpperCase(Locale.ROOT);
+        if (!TIME_IN_FORCE_VALUES.contains(normalized)) {
+            throw new BadRequestException("限价单有效方式必须是 GTC、IOC、FOK 或 GTX");
+        }
+        return normalized;
+    }
+
+    private String resolveOrderSide(String action, String positionSide) {
+        boolean buy = ("OPEN".equals(action) && "LONG".equals(positionSide))
+                || ("CLOSE".equals(action) && "SHORT".equals(positionSide));
+        return buy ? "BUY" : "SELL";
+    }
+
+    private String buildClientOrderId(Integer uid) {
+        String random = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        return "elc-" + uid + "-" + System.currentTimeMillis() + "-" + random;
+    }
+
+    private void validateClosePosition(String symbol, String intendedPositionSide,
+                                       BigDecimal quantity, boolean hedgeMode) {
+        List<JSONObject> positions = binanceCoinFuturesUtil.positionRisk(symbol);
+        JSONObject matched = positions == null ? null : positions.stream()
+                .filter(Objects::nonNull)
+                .filter(item -> (hedgeMode ? intendedPositionSide : "BOTH")
+                        .equalsIgnoreCase(item.getString("positionSide")))
+                .findFirst().orElse(null);
+        BigDecimal amount = matched == null ? BigDecimal.ZERO : matched.getBigDecimal("positionAmt");
+        amount = amount == null ? BigDecimal.ZERO : amount;
+        if (!hedgeMode) {
+            boolean directionMatches = (amount.signum() > 0 && "LONG".equals(intendedPositionSide))
+                    || (amount.signum() < 0 && "SHORT".equals(intendedPositionSide));
+            if (!directionMatches) {
+                throw new BadRequestException("当前没有可平的" + ("LONG".equals(intendedPositionSide) ? "多仓" : "空仓"));
+            }
+        } else if (amount.signum() == 0) {
+            throw new BadRequestException("当前没有可平的" + ("LONG".equals(intendedPositionSide) ? "多仓" : "空仓"));
+        }
+        if (quantity.compareTo(amount.abs()) > 0) {
+            throw new BadRequestException("平仓张数不能超过当前持仓 " + amount.abs().stripTrailingZeros().toPlainString() + " 张");
+        }
+    }
+
+    private void validateContractOrder(JSONObject contract, BigDecimal quantity, BigDecimal price, String type) {
+        if (contract == null || !"TRADING".equalsIgnoreCase(contract.getString("contractStatus"))) {
+            throw new BadRequestException("当前合约不可交易");
+        }
+        JSONArray filters = contract.getJSONArray("filters");
+        validateFilter(filters, "MARKET".equals(type) ? "MARKET_LOT_SIZE" : "LOT_SIZE", quantity, "下单张数");
+        if ("LIMIT".equals(type)) {
+            validateFilter(filters, "PRICE_FILTER", price, "委托价");
+        }
+    }
+
+    private void validateFilter(JSONArray filters, String filterType, BigDecimal value, String fieldName) {
+        if (filters == null || value == null) {
+            return;
+        }
+        JSONObject filter = filters.stream().map(JSONObject.class::cast)
+                .filter(item -> filterType.equals(item.getString("filterType")))
+                .findFirst().orElse(null);
+        if (filter == null) {
+            return;
+        }
+        String minKey = "PRICE_FILTER".equals(filterType) ? "minPrice" : "minQty";
+        String maxKey = "PRICE_FILTER".equals(filterType) ? "maxPrice" : "maxQty";
+        String stepKey = "PRICE_FILTER".equals(filterType) ? "tickSize" : "stepSize";
+        BigDecimal min = filter.getBigDecimal(minKey);
+        BigDecimal max = filter.getBigDecimal(maxKey);
+        BigDecimal step = filter.getBigDecimal(stepKey);
+        if (min != null && min.signum() > 0 && value.compareTo(min) < 0) {
+            throw new BadRequestException(fieldName + "不能小于 " + min.stripTrailingZeros().toPlainString());
+        }
+        if (max != null && max.signum() > 0 && value.compareTo(max) > 0) {
+            throw new BadRequestException(fieldName + "不能大于 " + max.stripTrailingZeros().toPlainString());
+        }
+        if (step != null && step.signum() > 0 && value.remainder(step).compareTo(BigDecimal.ZERO) != 0) {
+            throw new BadRequestException(fieldName + "必须是 " + step.stripTrailingZeros().toPlainString() + " 的整数倍");
+        }
     }
 
     @Override

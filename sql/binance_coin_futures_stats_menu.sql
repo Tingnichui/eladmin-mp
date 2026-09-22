@@ -43,6 +43,40 @@ SET title = '币本位统计',
     update_time = NOW()
 WHERE menu_id = @coin_stats_menu_id;
 
+INSERT INTO sys_menu
+    (pid, sub_count, type, title, name, component, menu_sort, icon, path,
+     i_frame, cache, hidden, permission, create_by, update_by, create_time, update_time)
+SELECT
+    @coin_stats_menu_id, 0, 2, '币本位下单', NULL, '', 1, '', '',
+    b'0', b'0', b'0', 'binanceCoinFuturesTradeInfo:order', 'admin', 'admin', NOW(), NOW()
+WHERE @coin_stats_menu_id IS NOT NULL
+  AND NOT EXISTS (
+      SELECT 1 FROM sys_menu
+      WHERE pid = @coin_stats_menu_id
+        AND permission = 'binanceCoinFuturesTradeInfo:order'
+  );
+
+SET @coin_order_menu_id := (
+    SELECT menu_id
+    FROM sys_menu
+    WHERE pid = @coin_stats_menu_id
+      AND permission = 'binanceCoinFuturesTradeInfo:order'
+    ORDER BY menu_id
+    LIMIT 1
+);
+
+INSERT IGNORE INTO sys_roles_menus (menu_id, role_id)
+SELECT @coin_order_menu_id, menu_role.role_id
+FROM sys_roles_menus menu_role
+WHERE menu_role.menu_id = @coin_stats_menu_id
+  AND @coin_order_menu_id IS NOT NULL;
+
+UPDATE sys_menu parent
+SET parent.sub_count = (
+    SELECT COUNT(*) FROM (SELECT pid FROM sys_menu) child WHERE child.pid = parent.menu_id
+)
+WHERE parent.menu_id = @coin_stats_menu_id;
+
 UPDATE sys_menu parent
 SET parent.sub_count = (
     SELECT COUNT(*) FROM (SELECT pid FROM sys_menu) child WHERE child.pid = parent.menu_id

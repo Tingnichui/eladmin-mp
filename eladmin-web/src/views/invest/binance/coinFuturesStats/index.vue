@@ -19,6 +19,15 @@
           </el-select>
           <el-button size="small" type="success" icon="el-icon-search" :loading="statsLoading" :disabled="!canQuery" @click="doStats">查询</el-button>
           <el-button v-if="checkPer(['admin', 'binanceTradeInfo:sync'])" size="small" plain type="success" icon="el-icon-refresh" :loading="syncLoading" :disabled="!canQuery" @click="syncData">同步数据</el-button>
+          <template v-if="checkPer(['admin', 'binanceCoinFuturesTradeInfo:order'])">
+            <el-button-group class="order-buttons">
+              <el-button size="small" type="success" :disabled="!canQuery" @click="openOrderDialog('OPEN', 'LONG')">开多</el-button>
+              <el-button size="small" type="danger" :disabled="!canQuery" @click="openOrderDialog('OPEN', 'SHORT')">开空</el-button>
+              <el-button size="small" plain type="success" :disabled="!canQuery" @click="openOrderDialog('CLOSE', 'LONG')">平多</el-button>
+              <el-button size="small" plain type="danger" :disabled="!canQuery" @click="openOrderDialog('CLOSE', 'SHORT')">平空</el-button>
+            </el-button-group>
+            <el-button size="small" plain icon="el-icon-tickets" :disabled="!canQuery" @click="showOpenOrders">当前挂单</el-button>
+          </template>
         </div>
         <div class="toolbar-actions">
           <el-popover placement="bottom-end" width="300" trigger="hover">
@@ -55,6 +64,59 @@
         :average-price="position.entryPrice"
       />
     </section>
+
+    <el-dialog :title="orderDialogTitle" :visible.sync="orderDialogVisible" width="520px" append-to-body @closed="resetOrderForm">
+      <el-alert title="币本位数量单位为合约张数；提交后将直接发送至币安账户" type="warning" :closable="false" show-icon class="order-alert" />
+      <el-form ref="orderForm" :model="orderForm" :rules="orderRules" label-width="100px">
+        <el-form-item label="账户"><span>{{ selectedAccountName }}</span></el-form-item>
+        <el-form-item label="操作">
+          <el-tag :type="orderForm.positionSide === 'LONG' ? 'success' : 'danger'">{{ orderDialogTitle }}</el-tag>
+        </el-form-item>
+        <el-form-item label="订单类型" prop="type">
+          <el-radio-group v-model="orderForm.type">
+            <el-radio-button label="MARKET">市价</el-radio-button>
+            <el-radio-button label="LIMIT">限价</el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="数量（张）" prop="quantity">
+          <el-input-number v-model="orderForm.quantity" :min="1" :precision="0" :step="1" controls-position="right" />
+        </el-form-item>
+        <el-form-item v-if="orderForm.type === 'LIMIT'" label="委托价" prop="price">
+          <el-input-number v-model="orderForm.price" :min="0.01" :precision="2" :step="100" controls-position="right" />
+        </el-form-item>
+        <el-form-item v-if="orderForm.type === 'LIMIT'" label="有效方式" prop="timeInForce">
+          <el-select v-model="orderForm.timeInForce">
+            <el-option label="一直有效 GTC" value="GTC" />
+            <el-option label="立即成交或取消 IOC" value="IOC" />
+            <el-option label="全部成交或取消 FOK" value="FOK" />
+            <el-option label="只做 Maker GTX" value="GTX" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="预估价值"><span>{{ estimatedOrderBase }} BTC（按当前/委托价格估算）</span></el-form-item>
+      </el-form>
+      <span slot="footer">
+        <el-button @click="orderDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="orderSubmitting" @click="submitOrder">确认下单</el-button>
+      </span>
+    </el-dialog>
+
+    <el-dialog title="币本位当前挂单" :visible.sync="openOrdersVisible" width="900px" append-to-body>
+      <el-table v-loading="openOrdersLoading" :data="openOrderList" empty-text="暂无挂单" size="small">
+        <el-table-column prop="orderId" label="订单 ID" min-width="145" />
+        <el-table-column label="方向" width="90">
+          <template slot-scope="scope"><el-tag size="mini" :type="scope.row.side === 'BUY' ? 'success' : 'danger'">{{ scope.row.side }}</el-tag></template>
+        </el-table-column>
+        <el-table-column prop="positionSide" label="持仓方向" width="95" />
+        <el-table-column prop="type" label="类型" width="90" />
+        <el-table-column prop="origQty" label="委托张数" width="95" />
+        <el-table-column prop="executedQty" label="已成交" width="90" />
+        <el-table-column prop="price" label="委托价" min-width="110" />
+        <el-table-column prop="status" label="状态" width="85" />
+        <el-table-column label="操作" width="80" fixed="right">
+          <template slot-scope="scope"><el-button type="text" class="cancel-order" @click="cancelOpenOrder(scope.row)">撤单</el-button></template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
   </div>
 </template>
 
@@ -75,6 +137,16 @@ export default {
       statsInfo: { positionInfo: {}, tradeSummary: {}, accountInfo: {}, contractInfo: {}, tradeList: [], warnings: [] },
       statsLoading: false,
       syncLoading: false,
+      orderDialogVisible: false,
+      orderSubmitting: false,
+      openOrdersVisible: false,
+      openOrdersLoading: false,
+      openOrderList: [],
+      orderForm: { action: 'OPEN', positionSide: 'LONG', type: 'LIMIT', quantity: 1, price: null, timeInForce: 'GTC' },
+      orderRules: {
+        quantity: [{ required: true, message: '请输入下单张数', trigger: 'blur' }],
+        price: [{ validator: (rule, value, callback) => this.validateOrderPrice(value, callback), trigger: 'blur' }]
+      },
       requestId: 0,
       debounceTimer: null
     }
@@ -87,6 +159,22 @@ export default {
     contract() { return this.statsInfo.contractInfo || {} },
     marginAsset() { return this.contract.marginAsset || this.account.asset || 'BTC' },
     warningText() { return (this.statsInfo.warnings || []).join('；') },
+    selectedAccountName() {
+      const account = this.accountList.find(item => item.uid === this.query.uid)
+      return account ? account.idCardName : '--'
+    },
+    orderDialogTitle() {
+      const action = this.orderForm.action === 'OPEN' ? '开' : '平'
+      const side = this.orderForm.positionSide === 'LONG' ? '多' : '空'
+      return `${action}${side}`
+    },
+    estimatedOrderBase() {
+      const quantity = Number(this.orderForm.quantity)
+      const contractSize = Number(this.contract.contractSize)
+      const orderPrice = this.orderForm.type === 'LIMIT' ? Number(this.orderForm.price) : Number(this.position.markPrice)
+      if (![quantity, contractSize, orderPrice].every(value => Number.isFinite(value) && value > 0)) return '--'
+      return this.decimal(quantity * contractSize / orderPrice)
+    },
     marginTypeText() {
       const value = String(this.position.marginType || '').toLowerCase()
       if (value === 'cross' || value === 'crossed') return '全仓'
@@ -168,6 +256,74 @@ export default {
         return this.doStats()
       }).finally(() => { this.syncLoading = false })
     },
+    openOrderDialog(action, positionSide) {
+      this.orderForm = {
+        action,
+        positionSide,
+        type: 'LIMIT',
+        quantity: action === 'CLOSE' && this.query.positionSide === positionSide
+          ? Math.max(1, Math.abs(Number(this.position.positionAmt || 0))) : 1,
+        price: Number(this.position.markPrice) || null,
+        timeInForce: 'GTC'
+      }
+      this.orderDialogVisible = true
+      this.$nextTick(() => this.$refs.orderForm && this.$refs.orderForm.clearValidate())
+    },
+    resetOrderForm() {
+      this.orderSubmitting = false
+      if (this.$refs.orderForm) this.$refs.orderForm.clearValidate()
+    },
+    validateOrderPrice(value, callback) {
+      if (this.orderForm.type === 'LIMIT' && !(Number(value) > 0)) callback(new Error('请输入大于 0 的委托价'))
+      else callback()
+    },
+    submitOrder() {
+      this.$refs.orderForm.validate(valid => {
+        if (!valid || this.orderSubmitting) return
+        const summary = `${this.selectedAccountName}：${this.orderDialogTitle} ${this.orderForm.quantity} 张，${this.orderForm.type === 'MARKET' ? '市价单' : `限价 ${this.orderForm.price} USD`}`
+        this.$confirm(`${summary}。订单将直接发送到币安，是否继续？`, '确认币本位下单', {
+          confirmButtonText: '确认下单',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.orderSubmitting = true
+          const data = {
+            uid: this.query.uid,
+            symbol: this.query.symbol,
+            action: this.orderForm.action,
+            positionSide: this.orderForm.positionSide,
+            type: this.orderForm.type,
+            quantity: this.orderForm.quantity,
+            timeInForce: this.orderForm.type === 'LIMIT' ? this.orderForm.timeInForce : null,
+            price: this.orderForm.type === 'LIMIT' ? this.orderForm.price : null
+          }
+          return coinFuturesApi.placeOrder(data).then(order => {
+            this.$notify.success({ title: `下单成功，订单 ID：${order.orderId}`, duration: 3500 })
+            this.orderDialogVisible = false
+            return Promise.all([this.doStats(), this.loadOpenOrders(false)])
+          }).finally(() => { this.orderSubmitting = false })
+        }).catch(() => {})
+      })
+    },
+    showOpenOrders() {
+      this.openOrdersVisible = true
+      this.loadOpenOrders(true)
+    },
+    loadOpenOrders(showLoading = true) {
+      if (!this.canQuery) return Promise.resolve()
+      if (showLoading) this.openOrdersLoading = true
+      return coinFuturesApi.openOrders({ uid: this.query.uid, symbol: this.query.symbol }).then(data => {
+        this.openOrderList = data || []
+      }).finally(() => { this.openOrdersLoading = false })
+    },
+    cancelOpenOrder(order) {
+      this.$confirm(`确认撤销订单 ${order.orderId}？已成交部分不会回退。`, '确认撤单', { type: 'warning' }).then(() => {
+        return coinFuturesApi.cancelOrder({ uid: this.query.uid, symbol: this.query.symbol, orderId: order.orderId })
+      }).then(() => {
+        this.$notify.success({ title: `订单 ${order.orderId} 已撤销`, duration: 2500 })
+        return this.loadOpenOrders(true)
+      }).catch(() => {})
+    },
     decimal(value, digits = 8) {
       const number = Number(value)
       return Number.isFinite(number) ? number.toLocaleString('en-US', { maximumFractionDigits: digits }) : '--'
@@ -204,6 +360,9 @@ export default {
 .account-select { width: 190px; }
 .symbol-select { width: 170px; }
 .side-select { width: 145px; }
+.order-buttons { margin-left: 2px; }
+.order-alert { margin-bottom: 18px; }
+.cancel-order { color: #f56c6c; }
 .warning { margin-top: 12px; }
 .position-panel { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; padding: 12px 18px 6px; overflow: hidden; }
 .position-metrics { display: grid; grid-template-columns: repeat(6, 1fr); border-bottom: 1px solid #ebeef5; }

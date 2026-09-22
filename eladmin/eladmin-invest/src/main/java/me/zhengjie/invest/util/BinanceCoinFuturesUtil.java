@@ -6,6 +6,7 @@ import cn.hutool.crypto.digest.HmacAlgorithm;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
+import cn.hutool.http.Method;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -13,6 +14,7 @@ import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
 import me.zhengjie.invest.domain.dto.BinanceFundingRate;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesOrderDto;
 import me.zhengjie.utils.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -91,6 +93,10 @@ public class BinanceCoinFuturesUtil {
     }
 
     private String doRequest(String url, Map<String, Object> params, Boolean signFlag, Boolean getFlag) {
+        return doRequest(url, params, signFlag, getFlag ? Method.GET : Method.POST);
+    }
+
+    private String doRequest(String url, Map<String, Object> params, Boolean signFlag, Method method) {
         log.info("入参：{}", JSON.toJSONString(params));
 
         // 过滤空值
@@ -103,6 +109,7 @@ public class BinanceCoinFuturesUtil {
 
         // 是否需要加签
         Map<String, String> headerMap = new HashMap<>();
+        String signature = null;
         if (signFlag) {
             BinanceAccountInfo binanceAccountInfo = BinanceAccountContextHolder.get();
             if (null == binanceAccountInfo) {
@@ -122,18 +129,20 @@ public class BinanceCoinFuturesUtil {
             String queryString = params.entrySet().stream()
                     .map(entry -> entry.getKey() + "=" + URLEncodeUtil.encode(entry.getValue().toString()))
                     .collect(Collectors.joining("&"));
-            String signature = new HMac(HmacAlgorithm.HmacSHA256, apiSecret.getBytes(StandardCharsets.UTF_8)).digestHex(queryString);
-            params.put("signature", signature);
+            signature = new HMac(HmacAlgorithm.HmacSHA256, apiSecret.getBytes(StandardCharsets.UTF_8)).digestHex(queryString);
         }
 
         // 拼接完整参数
         String finalQuery = params.entrySet().stream()
                 .map(entry -> entry.getKey() + "=" + URLEncodeUtil.encode(entry.getValue().toString()))
                 .collect(Collectors.joining("&"));
+        if (signature != null) {
+            finalQuery += "&signature=" + signature;
+        }
         String fullUrl = apiHost + url + "?" + finalQuery;
 
         // 发送请求
-        HttpRequest request = getFlag ? HttpUtil.createGet(fullUrl) : HttpUtil.createPost(fullUrl);
+        HttpRequest request = HttpUtil.createRequest(method, fullUrl);
         headerMap.forEach(request::header);
         request.setProxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort)));
         HttpResponse response = request.execute();
@@ -146,6 +155,48 @@ public class BinanceCoinFuturesUtil {
         }
 
         return body;
+    }
+
+    public boolean isHedgeMode() {
+        JSONObject result = JSON.parseObject(
+                this.doRequest("/dapi/v1/positionSide/dual", new HashMap<>(), true, Method.GET));
+        return result.getBooleanValue("dualSidePosition");
+    }
+
+    public BinanceCoinFuturesOrderDto placeOrder(Map<String, Object> params) {
+        return JSON.parseObject(this.doRequest("/dapi/v1/order", params, true, Method.POST),
+                BinanceCoinFuturesOrderDto.class);
+    }
+
+    public List<BinanceCoinFuturesOrderDto> listOpenOrders(String symbol) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("symbol", symbol);
+        return JSON.parseArray(this.doRequest("/dapi/v1/openOrders", params, true, Method.GET))
+                .toJavaList(BinanceCoinFuturesOrderDto.class);
+    }
+
+    public BinanceCoinFuturesOrderDto queryOrder(String symbol, Long orderId) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("symbol", symbol);
+        params.put("orderId", orderId);
+        return JSON.parseObject(this.doRequest("/dapi/v1/order", params, true, Method.GET),
+                BinanceCoinFuturesOrderDto.class);
+    }
+
+    public BinanceCoinFuturesOrderDto queryOrder(String symbol, String clientOrderId) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("symbol", symbol);
+        params.put("origClientOrderId", clientOrderId);
+        return JSON.parseObject(this.doRequest("/dapi/v1/order", params, true, Method.GET),
+                BinanceCoinFuturesOrderDto.class);
+    }
+
+    public BinanceCoinFuturesOrderDto cancelOrder(String symbol, Long orderId) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("symbol", symbol);
+        params.put("orderId", orderId);
+        return JSON.parseObject(this.doRequest("/dapi/v1/order", params, true, Method.DELETE),
+                BinanceCoinFuturesOrderDto.class);
     }
 
     public BigDecimal price(BinanceEnum.SYMBOL symbol) {
