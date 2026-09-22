@@ -474,4 +474,19 @@ describe('trade stats request lifecycle', () => {
     expect(window.localStorage.getItem('binanceTradeInfoStats.uid')).toBe('7')
     expect(vm.doStats).toHaveBeenCalledTimes(1)
   })
+
+  it('separates important mobile summary metrics from the detail grid', () => {
+    const tradeSummaryItems = [
+      { label: '买入总额' },
+      { label: '收益率' },
+      { label: '净盈亏' },
+      { label: '持仓总额' },
+      { label: '手续费' }
+    ]
+
+    expect(Stats.computed.mobileTradeSummaryHighlights.call({ tradeSummaryItems }).map(item => item.label))
+      .toEqual(['净盈亏', '收益率', '持仓总额'])
+    expect(Stats.computed.mobileTradeSummaryDetails.call({ tradeSummaryItems }).map(item => item.label))
+      .toEqual(['买入总额', '手续费'])
+  })
 })

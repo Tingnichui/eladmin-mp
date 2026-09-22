@@ -88,7 +88,7 @@
             </div>
             <el-button slot="reference" size="small" plain icon="el-icon-wallet">账户资产</el-button>
           </el-popover>
-          <el-popover placement="bottom-end" width="660" trigger="hover" :open-delay="150" :close-delay="200">
+          <el-popover class="desktop-trade-summary" placement="bottom-end" width="660" trigger="hover" :open-delay="150" :close-delay="200">
             <div class="trade-summary-popover">
               <div class="popover-heading">交易汇总</div>
               <div class="summary-grid">
@@ -105,6 +105,13 @@
             </div>
             <el-button slot="reference" size="small" plain icon="el-icon-s-grid">全部汇总</el-button>
           </el-popover>
+          <el-button
+            class="mobile-trade-summary-button"
+            size="small"
+            plain
+            icon="el-icon-s-grid"
+            @click="showMobileTradeSummary = true"
+          >全部汇总</el-button>
         </div>
       </div>
       <el-alert
@@ -134,6 +141,32 @@
         @select-bucket="openBucketCoreActions"
       />
     </section>
+
+    <el-drawer
+      title="交易汇总"
+      :visible.sync="showMobileTradeSummary"
+      direction="btt"
+      size="76%"
+      append-to-body
+      custom-class="mobile-trade-summary-drawer"
+    >
+      <div class="mobile-trade-summary-content">
+        <div class="mobile-summary-highlights">
+          <div v-for="item in mobileTradeSummaryHighlights" :key="item.label" class="mobile-summary-highlight">
+            <span>{{ item.label }}</span>
+            <strong :class="item.tone">{{ item.value }}</strong>
+            <small v-if="item.delta" :class="item.deltaTone">相对上次 {{ item.delta }}</small>
+          </div>
+        </div>
+        <div class="mobile-summary-grid">
+          <div v-for="item in mobileTradeSummaryDetails" :key="item.label" class="mobile-summary-item">
+            <span>{{ item.label }}</span>
+            <strong :class="item.tone">{{ item.value }}</strong>
+          </div>
+        </div>
+        <el-button class="mobile-summary-close" @click="showMobileTradeSummary = false">关闭</el-button>
+      </div>
+    </el-drawer>
 
     <el-dialog
       :title="spotOrderDialogTitle"
@@ -366,18 +399,16 @@
     >
       <div class="core-action-content">
         <div v-if="selectedCoreRange" class="core-range-summary">
-          <el-tag type="info">订单 {{ coreActionOrderGroups.length }} 个</el-tag>
-          <el-tag type="info">成交 {{ coreActionRows.length }} 笔</el-tag>
           <el-tag type="primary">当前价 {{ moneyValue(spotStats.currentSpotPrice) }}</el-tag>
-          <el-tag>底仓成交 {{ selectedCoreRange.coreCount || 0 }} 笔</el-tag>
-          <el-tag>底仓 {{ decimalValue(selectedCoreRange.coreQty || 0, 8) }} BTC</el-tag>
           <el-tag type="success">可撮合 {{ decimalValue(selectedCoreRange.availableQty || 0, 8) }} BTC</el-tag>
+          <el-tag v-if="selectedCoreRange.coreCount > 0">
+            底仓 {{ selectedCoreRange.coreCount }} 笔 · {{ decimalValue(selectedCoreRange.coreQty || 0, 8) }} BTC
+          </el-tag>
           <el-popconfirm
-            v-if="checkPer(['admin', 'binanceSpotCorePosition:add'])"
+            v-if="coreActionUnlockedRows.length > 0 && checkPer(['admin', 'binanceSpotCorePosition:add'])"
             title="确定将当前区间内所有未设置底仓的持仓数量全部设为底仓吗？"
             placement="bottom-end"
             :width="340"
-            :disabled="coreActionUnlockedRows.length === 0 || batchLockLoading || batchReleaseLoading"
             confirm-button-text="全部设置"
             cancel-button-text="取消"
             icon="el-icon-warning"
@@ -389,15 +420,15 @@
               type="primary"
               size="mini"
               plain
-              :disabled="coreActionUnlockedRows.length === 0 || batchReleaseLoading"
+              :disabled="batchReleaseLoading"
               :loading="batchLockLoading"
             >一键设置底仓</el-button>
           </el-popconfirm>
           <el-popconfirm
+            v-if="coreActionCoreRows.length > 0 && checkPer(['admin', 'binanceSpotCorePosition:edit'])"
             title="确定解除当前区间内的全部底仓吗？解除后将重新参与后续 FIFO 撮合。"
             placement="bottom-end"
             :width="320"
-            :disabled="coreActionCoreRows.length === 0 || batchReleaseLoading || batchLockLoading"
             confirm-button-text="全部解除"
             cancel-button-text="取消"
             icon="el-icon-warning"
@@ -409,7 +440,7 @@
               type="warning"
               size="mini"
               plain
-              :disabled="coreActionCoreRows.length === 0 || batchLockLoading"
+              :disabled="batchLockLoading"
               :loading="batchReleaseLoading"
             >一键解除</el-button>
           </el-popconfirm>
@@ -428,8 +459,8 @@
           class="core-action-view-switch"
           @change="handleCoreActionViewChange"
         >
-          <el-radio-button label="order">按订单</el-radio-button>
-          <el-radio-button label="trade">按成交</el-radio-button>
+          <el-radio-button label="order">按订单 {{ coreActionOrderGroups.length }}</el-radio-button>
+          <el-radio-button label="trade">按成交 {{ coreActionRows.length }}</el-radio-button>
         </el-radio-group>
         <el-table
           :data="coreActionDisplayRows"
@@ -439,7 +470,7 @@
           stripe
           class="core-action-table"
         >
-          <el-table-column v-if="isCoreOrderView" width="44" align="center">
+          <el-table-column v-if="isCoreOrderView" width="44" align="center" class-name="core-expand-column">
             <template slot-scope="scope">
               <el-button
                 v-if="scope.row._rowType === 'order'"
@@ -837,6 +868,7 @@ export default {
       statsDebounceTimer: null,
       statsRequestId: 0,
       showCoreActions: false,
+      showMobileTradeSummary: false,
       coreActionRows: [],
       coreActionView: 'order',
       expandedCoreOrderKeys: [],
@@ -990,6 +1022,14 @@ export default {
         { label: '持仓盈利', value: this.signedMoneyValue(this.spotStats.holdingProfit), tone: 'positive' },
         { label: '持仓亏损', value: this.signedMoneyValue(this.spotStats.holdingLoss), tone: 'negative' }
       ]
+    },
+    mobileTradeSummaryHighlights() {
+      const labels = ['净盈亏', '收益率', '持仓总额']
+      return labels.map(label => this.tradeSummaryItems.find(item => item.label === label)).filter(Boolean)
+    },
+    mobileTradeSummaryDetails() {
+      const highlightLabels = ['净盈亏', '收益率', '持仓总额']
+      return this.tradeSummaryItems.filter(item => !highlightLabels.includes(item.label))
     },
     netPnlDelta() {
       if (this.spotStats.netPnl == null || this.spotStats.lastNetPnl == null) return null
@@ -1657,6 +1697,7 @@ export default {
 .toolbar-main { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; min-width: 0; }
 .toolbar-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 10px; }
 .toolbar-actions .el-button + .el-button { margin-left: 0; }
+.mobile-trade-summary-button { display: none; }
 .field-label { color: #303133; font-weight: 500; }
 .account-select, .symbol-select { width: 210px; }
 .toolbar-main .el-button + .el-button { margin-left: 0; }
@@ -1689,12 +1730,31 @@ export default {
 .summary-delta { flex: 0 0 auto; padding: 1px 6px; background: #f4f4f5; border-radius: 9px; font-size: 12px; line-height: 18px; white-space: nowrap; }
 .summary-delta.positive { background: #ecf8f3; }
 .summary-delta.negative { background: #fef0f0; }
+.mobile-trade-summary-content { padding: 0 14px 18px; }
+.mobile-summary-highlights { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: hidden; margin-bottom: 12px; border: 1px solid #ebeef5; border-radius: 10px; background: #ebeef5; gap: 1px; }
+.mobile-summary-highlight { min-width: 0; padding: 12px; background: #fff; }
+.mobile-summary-highlight:first-child { grid-column: 1 / -1; padding-top: 14px; padding-bottom: 14px; text-align: center; }
+.mobile-summary-highlight span, .mobile-summary-highlight strong, .mobile-summary-highlight small { display: block; }
+.mobile-summary-highlight span { color: #8492a6; font-size: 12px; }
+.mobile-summary-highlight strong { overflow: hidden; margin-top: 5px; color: #17233d; font-size: 19px; text-overflow: ellipsis; white-space: nowrap; }
+.mobile-summary-highlight:first-child strong { font-size: 24px; }
+.mobile-summary-highlight small { margin-top: 4px; font-size: 11px; }
+.mobile-summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 14px; }
+.mobile-summary-item { min-width: 0; padding: 11px 12px; border-bottom: 1px solid #ebeef5; }
+.mobile-summary-item:nth-child(2n+1) { border-right: 1px solid #ebeef5; }
+.mobile-summary-item span, .mobile-summary-item strong { display: block; }
+.mobile-summary-item span { color: #8492a6; font-size: 12px; }
+.mobile-summary-item strong { overflow: hidden; margin-top: 5px; color: #17233d; font-size: 16px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.mobile-summary-close { width: 100%; }
+::v-deep .mobile-trade-summary-drawer .el-drawer__header { align-items: center; margin-bottom: 0; padding: 16px 16px 12px; border-bottom: 1px solid #ebeef5; }
+::v-deep .mobile-trade-summary-drawer .el-drawer__body { overflow-y: auto; padding-top: 12px; }
 .core-action-content { padding: 0 20px 24px; }
 .core-range-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
 .core-action-tip { margin-bottom: 14px; }
 .core-action-view-switch { margin-bottom: 12px; }
 .core-action-table { width: 100%; }
 .core-action-mobile-list { display: none; }
+::v-deep .core-action-table .core-expand-column .cell { overflow: visible; padding-right: 0; padding-left: 0; text-overflow: clip; }
 .core-cell-primary { color: #303133; white-space: nowrap; }
 .core-cell-meta { display: block; overflow: hidden; margin-top: 4px; color: #909399; font-size: 12px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
 .core-cell-pnl { display: block; white-space: nowrap; }
@@ -1754,6 +1814,8 @@ export default {
   .toolbar-actions { align-self: stretch; width: 100%; }
   .toolbar-actions > span { flex: 1 1 50%; }
   .toolbar-actions .el-button { width: 100%; }
+  .desktop-trade-summary { display: none; }
+  .mobile-trade-summary-button { display: inline-block; flex: 1 1 50%; }
   .position-panel { padding: 12px 10px 6px; }
   .position-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 0; }
   .metric-item { min-width: 0; padding: 10px 12px; border-bottom: 1px solid #ebeef5; }
