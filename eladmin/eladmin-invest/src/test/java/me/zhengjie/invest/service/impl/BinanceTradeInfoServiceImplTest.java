@@ -405,6 +405,7 @@ class BinanceTradeInfoServiceImplTest {
     @Test
     void shouldReturnStableEmptyStatsWithoutMutatingCriteria() {
         BinanceTradeInfoQueryCriteria criteria = criteria();
+        when(spotUtil.getPrice(BinanceEnum.SYMBOL.BTCUSDT)).thenReturn(new BigDecimal("140"));
 
         BinanceTradeStatsInfoVO result = service.stats(criteria);
 
@@ -412,13 +413,14 @@ class BinanceTradeInfoServiceImplTest {
         assertEquals(BigDecimal.ZERO, result.getPosAmount());
         assertNull(result.getPosAvgPrice());
         assertNull(result.getRoi());
+        assertEquals(new BigDecimal("140"), result.getCurrentSpotPrice());
         assertTrue(result.getTradeList().isEmpty());
         assertTrue(result.getWarnings().isEmpty());
         assertNull(criteria.getIsBuyer());
         assertNull(criteria.getHedgedFlag());
         assertEquals("time", criteria.getOrderColumn());
         assertEquals("desc", criteria.getOrderDirection());
-        verify(spotUtil, never()).getPrice(any(BinanceEnum.SYMBOL.class));
+        verify(spotUtil).getPrice(BinanceEnum.SYMBOL.BTCUSDT);
     }
 
     @Test
@@ -427,6 +429,7 @@ class BinanceTradeInfoServiceImplTest {
         when(redisUtils.get(cacheKey)).thenReturn(new BigDecimal("8.000"));
         when(matchMapper.aggregateStats(eq(1), eq("BTCUSDT")))
                 .thenReturn(aggregate("100", "110", "10", "0.210", "9.790"));
+        when(spotUtil.getPrice(BinanceEnum.SYMBOL.BTCUSDT)).thenReturn(new BigDecimal("140"));
 
         BinanceTradeStatsInfoVO result = service.stats(criteria());
 
@@ -438,9 +441,34 @@ class BinanceTradeInfoServiceImplTest {
         assertEquals(new BigDecimal("9.790"), result.getNetPnl());
         assertEquals(new BigDecimal("0.09790000"), result.getRoi());
         assertEquals(new BigDecimal("8.000"), result.getLastNetPnl());
+        assertEquals(new BigDecimal("140"), result.getCurrentSpotPrice());
         assertTrue(result.getTradeList().isEmpty());
         verify(redisUtils).set(cacheKey, new BigDecimal("9.790"));
+        verify(spotUtil).getPrice(BinanceEnum.SYMBOL.BTCUSDT);
+    }
+
+    @Test
+    void shouldUseProvidedRealtimePriceWithoutPositionOrAnotherHttpRequest() {
+        BinanceTradeStatsInfoVO result = service.stats(criteria(), new BigDecimal("140"));
+
+        assertEquals(BigDecimal.ZERO, result.getPosQty());
+        assertEquals(new BigDecimal("140"), result.getCurrentSpotPrice());
+        assertTrue(result.getTradeList().isEmpty());
+        assertTrue(result.getWarnings().isEmpty());
         verify(spotUtil, never()).getPrice(any(BinanceEnum.SYMBOL.class));
+    }
+
+    @Test
+    void shouldWarnWhenCurrentPriceFailsWithoutPosition() {
+        when(spotUtil.getPrice(BinanceEnum.SYMBOL.BTCUSDT))
+                .thenThrow(new RuntimeException("proxy unavailable"));
+
+        BinanceTradeStatsInfoVO result = service.stats(criteria());
+
+        assertEquals(BigDecimal.ZERO, result.getPosQty());
+        assertNull(result.getCurrentSpotPrice());
+        assertTrue(result.getTradeList().isEmpty());
+        assertTrue(result.getWarnings().contains("现货当前价格暂不可用"));
     }
 
     @Test

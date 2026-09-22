@@ -276,10 +276,6 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                 ? totalWaitSellAmount.divide(totalWaitSellQty, 8, RoundingMode.HALF_UP)
                 : null);
 
-        if (openList.isEmpty()) {
-            return statsInfoVO;
-        }
-
         try {
             BigDecimal currentPrice = loadRealtimePrice
                     ? binanceSpotUtil.getPrice(BinanceEnum.SYMBOL.valueOf(criteria.getSymbol()))
@@ -289,6 +285,9 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             }
             statsInfoVO.setCurrentSpotPrice(currentPrice);
 
+            if (openList.isEmpty()) {
+                return statsInfoVO;
+            }
 
             List<MatchedTradeInfo> matchedTradeInfos = openList.stream().map(position -> {
                 MatchedTradeInfo trade = new MatchedTradeInfo(side, feeRate);
@@ -320,8 +319,10 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         } catch (Exception e) {
             statsInfoVO.setCurrentSpotPrice(null);
             statsInfoVO.setTradeList(Collections.emptyList());
-            addWarning(statsInfoVO, "现货持仓实时估值暂不可用");
-            log.warn("现货持仓实时估值失败: uid={}, symbol={}, error={}",
+            String warning = openList.isEmpty()
+                    ? "现货当前价格暂不可用" : "现货持仓实时估值暂不可用";
+            addWarning(statsInfoVO, warning);
+            log.warn("{}: uid={}, symbol={}, error={}", warning,
                     criteria.getUid(), criteria.getSymbol(), e.getClass().getSimpleName());
         }
 
