@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class BinanceCoinFuturesStatsServiceTest {
@@ -75,6 +76,39 @@ class BinanceCoinFuturesStatsServiceTest {
         assertEquals(0, result.getTradeList().get(0).getContractQty().compareTo(new BigDecimal("2")));
         assertEquals(0, result.getTradeList().get(0).getBaseQty().compareTo(new BigDecimal("0.002")));
         assertTrue(result.getTradeList().get(0).getUnrealizedPnl().compareTo(BigDecimal.ZERO) > 0);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldLoadPremiumIndexWhenEmptyPositionHasZeroMarkPrice() {
+        BinanceCoinFuturesUtil futuresUtil = mock(BinanceCoinFuturesUtil.class);
+        BinanceCoinFuturesTradeInfoMapper mapper = mock(BinanceCoinFuturesTradeInfoMapper.class);
+        BinanceCoinFuturesTradeInfoServiceImpl service = new BinanceCoinFuturesTradeInfoServiceImpl();
+        ReflectionTestUtils.setField(service, "binanceCoinFuturesUtil", futuresUtil);
+        ReflectionTestUtils.setField(service, "binanceCoinFuturesTradeInfoMapper", mapper);
+
+        JSONObject contract = new JSONObject();
+        contract.put("symbol", "BTCUSD_PERP");
+        contract.put("contractSize", "100");
+        contract.put("marginAsset", "BTC");
+        JSONObject position = new JSONObject();
+        position.put("symbol", "BTCUSD_PERP");
+        position.put("positionSide", "SHORT");
+        position.put("positionAmt", "0");
+        position.put("markPrice", "0.00000000");
+        JSONObject premium = new JSONObject();
+        premium.put("markPrice", "85493.2");
+
+        when(futuresUtil.contractInfo("BTCUSD_PERP")).thenReturn(contract);
+        when(futuresUtil.positionRisk("BTCUSD_PERP")).thenReturn(Collections.singletonList(position));
+        when(futuresUtil.premiumIndex("BTCUSD_PERP")).thenReturn(premium);
+        when(futuresUtil.account()).thenReturn(new JSONObject());
+        when(mapper.selectList(any(Wrapper.class))).thenReturn(Collections.emptyList());
+
+        BinanceCoinFuturesStatsInfoVO result = service.queryStats(7, "BTCUSD_PERP", "SHORT");
+
+        assertEquals(0, result.getPositionInfo().getMarkPrice().compareTo(new BigDecimal("85493.2")));
+        verify(futuresUtil).premiumIndex("BTCUSD_PERP");
     }
 
     private JSONObject income(String value) {

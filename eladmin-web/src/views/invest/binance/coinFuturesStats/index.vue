@@ -21,10 +21,10 @@
           <el-button v-if="checkPer(['admin', 'binanceTradeInfo:sync'])" size="small" plain type="success" icon="el-icon-refresh" :loading="syncLoading" :disabled="!canQuery" @click="syncData">同步数据</el-button>
           <template v-if="checkPer(['admin', 'binanceCoinFuturesTradeInfo:order'])">
             <el-button-group class="order-buttons">
-              <el-button size="small" type="success" :disabled="!canQuery" @click="openOrderDialog('OPEN', 'LONG')">开多</el-button>
-              <el-button size="small" type="danger" :disabled="!canQuery" @click="openOrderDialog('OPEN', 'SHORT')">开空</el-button>
-              <el-button size="small" plain type="success" :disabled="!canQuery" @click="openOrderDialog('CLOSE', 'LONG')">平多</el-button>
-              <el-button size="small" plain type="danger" :disabled="!canQuery" @click="openOrderDialog('CLOSE', 'SHORT')">平空</el-button>
+              <el-button size="small" type="success" :disabled="!canPlaceOrder" @click="openOrderDialog('OPEN', 'LONG')">开多</el-button>
+              <el-button size="small" type="danger" :disabled="!canPlaceOrder" @click="openOrderDialog('OPEN', 'SHORT')">开空</el-button>
+              <el-button size="small" plain type="success" :disabled="!canPlaceOrder" @click="openOrderDialog('CLOSE', 'LONG')">平多</el-button>
+              <el-button size="small" plain type="danger" :disabled="!canPlaceOrder" @click="openOrderDialog('CLOSE', 'SHORT')">平空</el-button>
             </el-button-group>
             <el-button size="small" plain icon="el-icon-tickets" :disabled="!canQuery" @click="showOpenOrders">当前挂单</el-button>
           </template>
@@ -57,6 +57,7 @@
         <span>保证金模式 <strong>{{ marginTypeText }}</strong></span>
         <span>盈亏平衡价 <strong>{{ price(position.breakEvenPrice) }}</strong></span>
         <span>合约面值 <strong>{{ decimal(contract.contractSize) }} USD/张</strong></span>
+        <span>每张折合 <strong>{{ btcValue(markSingleContractBase) }}</strong></span>
       </div>
       <coin-futures-position-chart
         :row-data="statsInfo.tradeList || []"
@@ -92,7 +93,14 @@
             <el-option label="只做 Maker GTX" value="GTX" />
           </el-select>
         </el-form-item>
-        <el-form-item label="预估价值"><span>{{ estimatedOrderBase }} BTC（按当前/委托价格估算）</span></el-form-item>
+        <el-form-item label="换算价格"><span>{{ price(orderReferencePrice) }}</span></el-form-item>
+        <el-form-item label="每张折合"><strong>{{ btcValue(orderSingleContractBase) }}</strong></el-form-item>
+        <el-form-item label="委托价值"><span>{{ decimal(orderNotionalUsd, 2) }} USD</span></el-form-item>
+        <el-form-item label="预计数量"><strong class="primary">{{ btcValue(estimatedOrderBase) }}</strong></el-form-item>
+        <el-form-item label="预估保证金">
+          <strong>{{ btcValue(estimatedOrderMarginBase) }}</strong>
+          <span class="estimate-note">（{{ position.leverage || 1 }}x，未含手续费，最终以币安为准）</span>
+        </el-form-item>
       </el-form>
       <span slot="footer">
         <el-button @click="orderDialogVisible = false">取消</el-button>
@@ -108,8 +116,16 @@
         </el-table-column>
         <el-table-column prop="positionSide" label="持仓方向" width="95" />
         <el-table-column prop="type" label="类型" width="90" />
-        <el-table-column prop="origQty" label="委托张数" width="95" />
-        <el-table-column prop="executedQty" label="已成交" width="90" />
+        <el-table-column label="委托数量" min-width="145">
+          <template slot-scope="scope">
+            <div class="quantity-cell"><strong>{{ decimal(scope.row.origQty, 0) }} 张</strong><small>≈ {{ btcValue(orderEstimatedBase(scope.row, scope.row.origQty)) }}</small></div>
+          </template>
+        </el-table-column>
+        <el-table-column label="已成交" min-width="145">
+          <template slot-scope="scope">
+            <div class="quantity-cell"><strong>{{ decimal(scope.row.executedQty, 0) }} 张</strong><small>{{ filledBaseText(scope.row) }}</small></div>
+          </template>
+        </el-table-column>
         <el-table-column prop="price" label="委托价" min-width="110" />
         <el-table-column prop="status" label="状态" width="85" />
         <el-table-column label="操作" width="80" fixed="right">
@@ -123,9 +139,14 @@
 <script>
 import coinFuturesApi from '@/api/binanceCoinFuturesTradeInfo'
 import { listAllAccount } from '@/api/binanceAccountInfo'
+import { calculateCoinQuantity, calculateInitialMarginCoin } from '@/utils/coinFuturesOrder'
 import CoinFuturesPositionChart from './CoinFuturesPositionChart.vue'
 
 const ACCOUNT_STORAGE_KEY = 'invest.binance.stats.uid'
+
+function emptyStatsInfo(warnings = []) {
+  return { positionInfo: {}, tradeSummary: {}, accountInfo: {}, contractInfo: {}, tradeList: [], warnings }
+}
 
 export default {
   name: 'BinanceCoinFuturesStats',
@@ -134,7 +155,7 @@ export default {
     return {
       query: { uid: null, symbol: 'BTCUSD_PERP', positionSide: 'SHORT' },
       accountList: [],
-      statsInfo: { positionInfo: {}, tradeSummary: {}, accountInfo: {}, contractInfo: {}, tradeList: [], warnings: [] },
+      statsInfo: emptyStatsInfo(),
       statsLoading: false,
       syncLoading: false,
       orderDialogVisible: false,
@@ -153,6 +174,8 @@ export default {
   },
   computed: {
     canQuery() { return this.query.uid != null && this.query.symbol && this.query.positionSide },
+    statsReady() { return Number(this.contract.contractSize) > 0 && Number(this.position.markPrice) > 0 },
+    canPlaceOrder() { return this.canQuery && this.statsReady && !this.statsLoading },
     position() { return this.statsInfo.positionInfo || {} },
     summary() { return this.statsInfo.tradeSummary || {} },
     account() { return this.statsInfo.accountInfo || {} },
@@ -168,12 +191,19 @@ export default {
       const side = this.orderForm.positionSide === 'LONG' ? '多' : '空'
       return `${action}${side}`
     },
-    estimatedOrderBase() {
-      const quantity = Number(this.orderForm.quantity)
-      const contractSize = Number(this.contract.contractSize)
-      const orderPrice = this.orderForm.type === 'LIMIT' ? Number(this.orderForm.price) : Number(this.position.markPrice)
-      if (![quantity, contractSize, orderPrice].every(value => Number.isFinite(value) && value > 0)) return '--'
-      return this.decimal(quantity * contractSize / orderPrice)
+    orderReferencePrice() {
+      return this.orderForm.type === 'LIMIT' ? Number(this.orderForm.price) : Number(this.position.markPrice)
+    },
+    markSingleContractBase() { return calculateCoinQuantity(1, this.contract.contractSize, this.position.markPrice) },
+    orderSingleContractBase() { return calculateCoinQuantity(1, this.contract.contractSize, this.orderReferencePrice) },
+    estimatedOrderBase() { return calculateCoinQuantity(this.orderForm.quantity, this.contract.contractSize, this.orderReferencePrice) },
+    orderNotionalUsd() {
+      const value = Number(this.orderForm.quantity) * Number(this.contract.contractSize)
+      return Number.isFinite(value) && value > 0 ? value : null
+    },
+    estimatedOrderMarginBase() {
+      return calculateInitialMarginCoin(this.orderForm.quantity, this.contract.contractSize,
+        this.orderReferencePrice, this.position.leverage || 1)
     },
     marginTypeText() {
       const value = String(this.position.marginType || '').toLowerCase()
@@ -242,8 +272,11 @@ export default {
       if (!this.canQuery) return Promise.resolve()
       const requestId = ++this.requestId
       this.statsLoading = true
+      this.statsInfo = emptyStatsInfo()
       return coinFuturesApi.stats({ ...this.query }).then(data => {
         if (requestId === this.requestId) this.statsInfo = data || {}
+      }).catch(() => {
+        if (requestId === this.requestId) this.statsInfo = emptyStatsInfo(['实时合约数据加载失败，已禁止下单，请重新查询'])
       }).finally(() => {
         if (requestId === this.requestId) this.statsLoading = false
       })
@@ -257,6 +290,10 @@ export default {
       }).finally(() => { this.syncLoading = false })
     },
     openOrderDialog(action, positionSide) {
+      if (!this.canPlaceOrder) {
+        this.$message.warning('实时标记价格和合约面值尚未加载，暂不能下单')
+        return
+      }
       this.orderForm = {
         action,
         positionSide,
@@ -278,6 +315,10 @@ export default {
       else callback()
     },
     submitOrder() {
+      if (!this.canPlaceOrder) {
+        this.$message.warning('实时合约数据已失效，请重新查询后再下单')
+        return
+      }
       this.$refs.orderForm.validate(valid => {
         if (!valid || this.orderSubmitting) return
         const summary = `${this.selectedAccountName}：${this.orderDialogTitle} ${this.orderForm.quantity} 张，${this.orderForm.type === 'MARKET' ? '市价单' : `限价 ${this.orderForm.price} USD`}`
@@ -298,7 +339,11 @@ export default {
             price: this.orderForm.type === 'LIMIT' ? this.orderForm.price : null
           }
           return coinFuturesApi.placeOrder(data).then(order => {
-            this.$notify.success({ title: `下单成功，订单 ID：${order.orderId}`, duration: 3500 })
+            const actualBase = Number(order.cumBase)
+            const baseText = actualBase > 0
+              ? `实际成交 ${this.btcValue(actualBase)}`
+              : `预计数量 ${this.btcValue(this.estimatedOrderBase)}`
+            this.$notify.success({ title: '下单成功', message: `订单 ID：${order.orderId}；${baseText}`, duration: 4500 })
             this.orderDialogVisible = false
             return Promise.all([this.doStats(), this.loadOpenOrders(false)])
           }).finally(() => { this.orderSubmitting = false })
@@ -324,6 +369,16 @@ export default {
         return this.loadOpenOrders(true)
       }).catch(() => {})
     },
+    orderEstimatedBase(order, quantity) {
+      const price = Number(order.price) > 0 ? order.price : this.position.markPrice
+      return calculateCoinQuantity(quantity, this.contract.contractSize, price)
+    },
+    filledBaseText(order) {
+      const actualBase = Number(order.cumBase)
+      if (Number.isFinite(actualBase) && actualBase > 0) return this.btcValue(actualBase)
+      const estimated = this.orderEstimatedBase(order, order.executedQty)
+      return estimated == null ? '--' : `≈ ${this.btcValue(estimated)}`
+    },
     decimal(value, digits = 8) {
       const number = Number(value)
       return Number.isFinite(number) ? number.toLocaleString('en-US', { maximumFractionDigits: digits }) : '--'
@@ -339,6 +394,12 @@ export default {
     },
     assetValue(value) {
       return `${this.decimal(value)} ${this.marginAsset}`
+    },
+    btcValue(value) {
+      if (value == null || value === '') return '--'
+      const number = Number(value)
+      if (!Number.isFinite(number) || number < 0) return '--'
+      return `${number.toLocaleString('en-US', { minimumFractionDigits: 8, maximumFractionDigits: 8 })} BTC`
     },
     tone(value) {
       const number = Number(value)
@@ -362,6 +423,9 @@ export default {
 .side-select { width: 145px; }
 .order-buttons { margin-left: 2px; }
 .order-alert { margin-bottom: 18px; }
+.estimate-note { margin-left: 6px; color: #909399; font-size: 12px; }
+.quantity-cell { display: flex; flex-direction: column; line-height: 20px; }
+.quantity-cell small { color: #909399; white-space: nowrap; }
 .cancel-order { color: #f56c6c; }
 .warning { margin-top: 12px; }
 .position-panel { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; padding: 12px 18px 6px; overflow: hidden; }

@@ -413,17 +413,23 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
         JSONObject position = positions.stream()
                 .filter(item -> positionSide.equalsIgnoreCase(item.getString("positionSide")))
                 .findFirst().orElse(null);
+        BinanceCoinFuturesPositionInfo positionInfo;
         if (position == null) {
-            BinanceCoinFuturesPositionInfo emptyPosition = new BinanceCoinFuturesPositionInfo();
-            emptyPosition.setSymbol(symbol);
-            emptyPosition.setPositionSide(positionSide);
-            JSONObject premium = binanceCoinFuturesUtil.premiumIndex(symbol);
-            emptyPosition.setMarkPrice(decimal(premium, "markPrice"));
-            result.setPositionInfo(emptyPosition);
+            positionInfo = new BinanceCoinFuturesPositionInfo();
+            positionInfo.setSymbol(symbol);
+            positionInfo.setPositionSide(positionSide);
             result.getWarnings().add("币安未返回当前交易对和持仓方向的仓位信息");
         } else {
-            result.setPositionInfo(toPositionInfo(position));
+            positionInfo = toPositionInfo(position);
         }
+        if (!positive(positionInfo.getMarkPrice())) {
+            JSONObject premium = binanceCoinFuturesUtil.premiumIndex(symbol);
+            positionInfo.setMarkPrice(decimal(premium, "markPrice"));
+            if (!positive(positionInfo.getMarkPrice())) {
+                result.getWarnings().add("币安未返回当前合约的实时标记价格");
+            }
+        }
+        result.setPositionInfo(positionInfo);
 
         JSONObject account = binanceCoinFuturesUtil.account();
         result.setAccountInfo(toAccountInfo(account, result.getContractInfo().getMarginAsset()));
