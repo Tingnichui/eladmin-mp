@@ -242,7 +242,7 @@
         />
         <el-alert
           v-if="spotOrderSource"
-          title="成交后的成本归属仍按 FIFO 规则计算，不保证冲销当前所选订单。"
+          title="成交后只冲销当前所选成交或所选订单内的持仓，来源数量不足时不会改用其他持仓补足。"
           type="warning"
           :closable="false"
           show-icon

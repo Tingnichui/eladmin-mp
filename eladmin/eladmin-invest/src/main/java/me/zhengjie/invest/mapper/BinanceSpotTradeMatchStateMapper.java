@@ -50,6 +50,18 @@ public interface BinanceSpotTradeMatchStateMapper extends BaseMapper<BinanceSpot
                                                                 @Param("sellTime") Timestamp sellTime,
                                                                 @Param("sellTradeId") Long sellTradeId);
 
+    List<BinanceSpotTradeMatchState> findAvailableBuysByTradeIdForUpdate(@Param("uid") Integer uid,
+                                                                         @Param("symbol") String symbol,
+                                                                         @Param("sourceTradeId") Long sourceTradeId,
+                                                                         @Param("sellTime") Timestamp sellTime,
+                                                                         @Param("sellTradeId") Long sellTradeId);
+
+    List<BinanceSpotTradeMatchState> findAvailableBuysByOrderIdForUpdate(@Param("uid") Integer uid,
+                                                                         @Param("symbol") String symbol,
+                                                                         @Param("sourceOrderId") Long sourceOrderId,
+                                                                         @Param("sellTime") Timestamp sellTime,
+                                                                         @Param("sellTradeId") Long sellTradeId);
+
     int updateMatchProgress(@Param("id") Long id,
                             @Param("matchedQty") BigDecimal matchedQty,
                             @Param("remainingQty") BigDecimal remainingQty,

@@ -3,10 +3,12 @@ package me.zhengjie.invest.service.impl;
 import lombok.RequiredArgsConstructor;
 import me.zhengjie.invest.domain.BinanceSpotTradeMatch;
 import me.zhengjie.invest.domain.BinanceSpotTradeMatchState;
+import me.zhengjie.invest.domain.dto.BinanceSpotSellSourceDto;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeMatchResult;
 import me.zhengjie.invest.mapper.BinanceSpotTradeMatchMapper;
 import me.zhengjie.invest.mapper.BinanceSpotTradeMatchStateMapper;
 import me.zhengjie.invest.service.BinanceSpotTradeMatcherService;
+import me.zhengjie.invest.service.support.BinanceSpotSellSourceStore;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -25,10 +27,12 @@ public class BinanceSpotTradeMatcherServiceImpl implements BinanceSpotTradeMatch
     static final String STATUS_PARTIAL = "PARTIAL";
     static final String STATUS_COMPLETED = "COMPLETED";
     static final String STATUS_EXCEPTION = "EXCEPTION";
+    static final String STATUS_SOURCE_EXCEPTION = "SOURCE_EXCEPTION";
     static final BigDecimal FEE_RATE = new BigDecimal("0.001");
 
     private final BinanceSpotTradeMatchStateMapper stateMapper;
     private final BinanceSpotTradeMatchMapper matchMapper;
+    private final BinanceSpotSellSourceStore sellSourceStore;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -67,8 +71,13 @@ public class BinanceSpotTradeMatcherServiceImpl implements BinanceSpotTradeMatch
                            String symbol,
                            BinanceSpotTradeMatchState sell,
                            BinanceSpotTradeMatchResult result) {
-        List<BinanceSpotTradeMatchState> buys = stateMapper.findAvailableBuysForUpdate(
-                uid, symbol, sell.getTradeTime(), sell.getTradeId());
+        BinanceSpotSellSourceDto source = sell.getOrderId() == null
+                ? null : sellSourceStore.find(uid, symbol, sell.getOrderId());
+        if (source != null && !validSource(uid, symbol, sell.getOrderId(), source)) {
+            markSellException(sell, result, STATUS_SOURCE_EXCEPTION);
+            return;
+        }
+        List<BinanceSpotTradeMatchState> buys = findCandidateBuys(uid, symbol, sell, source);
         BigDecimal sellRemaining = positive(sell.getRemainingQty());
 
         for (BinanceSpotTradeMatchState buy : buys) {
@@ -102,11 +111,52 @@ public class BinanceSpotTradeMatcherServiceImpl implements BinanceSpotTradeMatch
             sellStatus = STATUS_COMPLETED;
             result.setCompletedSellCount(result.getCompletedSellCount() + 1);
         } else {
-            sellStatus = STATUS_EXCEPTION;
+            sellStatus = source == null ? STATUS_EXCEPTION : STATUS_SOURCE_EXCEPTION;
             result.setExceptionSellCount(result.getExceptionSellCount() + 1);
         }
         stateMapper.updateMatchProgress(
                 sell.getId(), positive(sell.getMatchedQty()), sellRemaining, sellStatus);
+    }
+
+    private List<BinanceSpotTradeMatchState> findCandidateBuys(Integer uid,
+                                                                String symbol,
+                                                                BinanceSpotTradeMatchState sell,
+                                                                BinanceSpotSellSourceDto source) {
+        if (source == null) {
+            return stateMapper.findAvailableBuysForUpdate(
+                    uid, symbol, sell.getTradeTime(), sell.getTradeId());
+        }
+        if (source.getSourceType() == BinanceSpotSellSourceDto.SourceType.TRADE) {
+            return stateMapper.findAvailableBuysByTradeIdForUpdate(
+                    uid, symbol, source.getSourceTradeId(), sell.getTradeTime(), sell.getTradeId());
+        }
+        return stateMapper.findAvailableBuysByOrderIdForUpdate(
+                uid, symbol, source.getSourceOrderId(), sell.getTradeTime(), sell.getTradeId());
+    }
+
+    private boolean validSource(Integer uid,
+                                String symbol,
+                                Long sellOrderId,
+                                BinanceSpotSellSourceDto source) {
+        if (!uid.equals(source.getUid())
+                || !symbol.equals(source.getSymbol())
+                || !sellOrderId.equals(source.getSellOrderId())
+                || source.getSourceType() == null) {
+            return false;
+        }
+        if (source.getSourceType() == BinanceSpotSellSourceDto.SourceType.TRADE) {
+            return source.getSourceTradeId() != null;
+        }
+        return source.getSourceType() == BinanceSpotSellSourceDto.SourceType.ORDER
+                && source.getSourceOrderId() != null;
+    }
+
+    private void markSellException(BinanceSpotTradeMatchState sell,
+                                   BinanceSpotTradeMatchResult result,
+                                   String status) {
+        stateMapper.updateMatchProgress(
+                sell.getId(), positive(sell.getMatchedQty()), positive(sell.getRemainingQty()), status);
+        result.setExceptionSellCount(result.getExceptionSellCount() + 1);
     }
 
     private BinanceSpotTradeMatch createMatch(Integer uid,

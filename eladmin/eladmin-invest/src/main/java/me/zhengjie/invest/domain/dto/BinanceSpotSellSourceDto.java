@@ -6,7 +6,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
- * 快捷卖出订单的操作来源，仅用于展示，不改变 FIFO 撮合关系。
+ * 快捷卖出订单的持仓来源，用于展示、可卖数量控制和成交后的限定范围撮合。
  */
 @Data
 public class BinanceSpotSellSourceDto implements Serializable {

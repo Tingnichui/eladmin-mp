@@ -79,7 +79,7 @@ public class BinanceSpotTradeMatchState implements Serializable {
     private BigDecimal remainingQty;
 
     @NotBlank
-    @ApiModelProperty(value = "撮合状态：PENDING、PARTIAL、COMPLETED、EXCEPTION")
+    @ApiModelProperty(value = "撮合状态：PENDING、PARTIAL、COMPLETED、EXCEPTION、SOURCE_EXCEPTION")
     private String matchStatus;
 
     @ApiModelProperty(value = "创建时间")

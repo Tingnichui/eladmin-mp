@@ -2,9 +2,11 @@ package me.zhengjie.invest.service.impl;
 
 import me.zhengjie.invest.domain.BinanceSpotTradeMatch;
 import me.zhengjie.invest.domain.BinanceSpotTradeMatchState;
+import me.zhengjie.invest.domain.dto.BinanceSpotSellSourceDto;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeMatchResult;
 import me.zhengjie.invest.mapper.BinanceSpotTradeMatchMapper;
 import me.zhengjie.invest.mapper.BinanceSpotTradeMatchStateMapper;
+import me.zhengjie.invest.service.support.BinanceSpotSellSourceStore;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -29,7 +31,9 @@ class BinanceSpotTradeMatcherServiceImplTest {
     void shouldInitializeAndPersistFifoMatches() {
         BinanceSpotTradeMatchStateMapper stateMapper = mock(BinanceSpotTradeMatchStateMapper.class);
         BinanceSpotTradeMatchMapper matchMapper = mock(BinanceSpotTradeMatchMapper.class);
-        BinanceSpotTradeMatcherServiceImpl service = new BinanceSpotTradeMatcherServiceImpl(stateMapper, matchMapper);
+        BinanceSpotSellSourceStore sourceStore = mock(BinanceSpotSellSourceStore.class);
+        BinanceSpotTradeMatcherServiceImpl service = new BinanceSpotTradeMatcherServiceImpl(
+                stateMapper, matchMapper, sourceStore);
         BinanceSpotTradeMatchState sell = state(30L, 3L, 0, "1.5", "150", 3_000L);
         BinanceSpotTradeMatchState firstBuy = state(10L, 1L, 1, "1", "120", 1_000L);
         BinanceSpotTradeMatchState secondBuy = state(20L, 2L, 1, "2", "100", 2_000L);
@@ -67,7 +71,9 @@ class BinanceSpotTradeMatcherServiceImplTest {
     void shouldMarkSellAsExceptionWhenNoEarlierBuyExists() {
         BinanceSpotTradeMatchStateMapper stateMapper = mock(BinanceSpotTradeMatchStateMapper.class);
         BinanceSpotTradeMatchMapper matchMapper = mock(BinanceSpotTradeMatchMapper.class);
-        BinanceSpotTradeMatcherServiceImpl service = new BinanceSpotTradeMatcherServiceImpl(stateMapper, matchMapper);
+        BinanceSpotSellSourceStore sourceStore = mock(BinanceSpotSellSourceStore.class);
+        BinanceSpotTradeMatcherServiceImpl service = new BinanceSpotTradeMatcherServiceImpl(
+                stateMapper, matchMapper, sourceStore);
         BinanceSpotTradeMatchState sell = state(30L, 3L, 0, "1", "150", 3_000L);
         when(stateMapper.findPendingSellsForUpdate(7, "BTCUSDT"))
                 .thenReturn(Collections.singletonList(sell));
@@ -86,7 +92,9 @@ class BinanceSpotTradeMatcherServiceImplTest {
     void shouldExcludeActiveCoreQtyWithoutChangingTotalRemainingQty() {
         BinanceSpotTradeMatchStateMapper stateMapper = mock(BinanceSpotTradeMatchStateMapper.class);
         BinanceSpotTradeMatchMapper matchMapper = mock(BinanceSpotTradeMatchMapper.class);
-        BinanceSpotTradeMatcherServiceImpl service = new BinanceSpotTradeMatcherServiceImpl(stateMapper, matchMapper);
+        BinanceSpotSellSourceStore sourceStore = mock(BinanceSpotSellSourceStore.class);
+        BinanceSpotTradeMatcherServiceImpl service = new BinanceSpotTradeMatcherServiceImpl(
+                stateMapper, matchMapper, sourceStore);
         BinanceSpotTradeMatchState sell = state(30L, 3L, 0, "0.5", "150", 3_000L);
         BinanceSpotTradeMatchState firstBuy = state(10L, 1L, 1, "1", "120", 1_000L);
         firstBuy.setActiveCoreQty(new BigDecimal("0.7"));
@@ -109,7 +117,9 @@ class BinanceSpotTradeMatcherServiceImplTest {
     void shouldBeIdempotentWhenNoPendingSellRemains() {
         BinanceSpotTradeMatchStateMapper stateMapper = mock(BinanceSpotTradeMatchStateMapper.class);
         BinanceSpotTradeMatchMapper matchMapper = mock(BinanceSpotTradeMatchMapper.class);
-        BinanceSpotTradeMatcherServiceImpl service = new BinanceSpotTradeMatcherServiceImpl(stateMapper, matchMapper);
+        BinanceSpotSellSourceStore sourceStore = mock(BinanceSpotSellSourceStore.class);
+        BinanceSpotTradeMatcherServiceImpl service = new BinanceSpotTradeMatcherServiceImpl(
+                stateMapper, matchMapper, sourceStore);
         when(stateMapper.findPendingSellsForUpdate(7, "BTCUSDT")).thenReturn(Collections.emptyList());
 
         BinanceSpotTradeMatchResult result = service.match(7, "BTCUSDT");
@@ -123,10 +133,134 @@ class BinanceSpotTradeMatcherServiceImplTest {
     void shouldRejectMissingScope() {
         BinanceSpotTradeMatchStateMapper stateMapper = mock(BinanceSpotTradeMatchStateMapper.class);
         BinanceSpotTradeMatchMapper matchMapper = mock(BinanceSpotTradeMatchMapper.class);
-        BinanceSpotTradeMatcherServiceImpl service = new BinanceSpotTradeMatcherServiceImpl(stateMapper, matchMapper);
+        BinanceSpotSellSourceStore sourceStore = mock(BinanceSpotSellSourceStore.class);
+        BinanceSpotTradeMatcherServiceImpl service = new BinanceSpotTradeMatcherServiceImpl(
+                stateMapper, matchMapper, sourceStore);
 
         assertThrows(IllegalArgumentException.class, () -> service.match(null, "BTCUSDT"));
         assertThrows(IllegalArgumentException.class, () -> service.match(7, " "));
+    }
+
+    @Test
+    void shouldMatchOnlyTheTradeReferencedBySellSource() {
+        BinanceSpotTradeMatchStateMapper stateMapper = mock(BinanceSpotTradeMatchStateMapper.class);
+        BinanceSpotTradeMatchMapper matchMapper = mock(BinanceSpotTradeMatchMapper.class);
+        BinanceSpotSellSourceStore sourceStore = mock(BinanceSpotSellSourceStore.class);
+        BinanceSpotTradeMatcherServiceImpl service = new BinanceSpotTradeMatcherServiceImpl(
+                stateMapper, matchMapper, sourceStore);
+        BinanceSpotTradeMatchState sell = state(30L, 3L, 0, "0.5", "150", 3_000L);
+        sell.setOrderId(300L);
+        BinanceSpotTradeMatchState referencedBuy = state(20L, 2L, 1, "1", "100", 2_000L);
+        BinanceSpotSellSourceDto source = tradeSource(300L, 2L);
+        when(stateMapper.findPendingSellsForUpdate(7, "BTCUSDT"))
+                .thenReturn(Collections.singletonList(sell));
+        when(sourceStore.find(7, "BTCUSDT", 300L)).thenReturn(source);
+        when(stateMapper.findAvailableBuysByTradeIdForUpdate(
+                7, "BTCUSDT", 2L, sell.getTradeTime(), sell.getTradeId()))
+                .thenReturn(Collections.singletonList(referencedBuy));
+
+        BinanceSpotTradeMatchResult result = service.match(7, "BTCUSDT");
+
+        assertEquals(1, result.getCompletedSellCount());
+        ArgumentCaptor<BinanceSpotTradeMatch> matchCaptor = ArgumentCaptor.forClass(BinanceSpotTradeMatch.class);
+        verify(matchMapper).insert(matchCaptor.capture());
+        assertEquals(2L, matchCaptor.getValue().getBuyTradeId());
+        verify(stateMapper, never()).findAvailableBuysForUpdate(
+                eq(7), eq("BTCUSDT"), any(), any());
+    }
+
+    @Test
+    void shouldKeepLinkedSellInsideSourceOrderAndMarkShortage() {
+        BinanceSpotTradeMatchStateMapper stateMapper = mock(BinanceSpotTradeMatchStateMapper.class);
+        BinanceSpotTradeMatchMapper matchMapper = mock(BinanceSpotTradeMatchMapper.class);
+        BinanceSpotSellSourceStore sourceStore = mock(BinanceSpotSellSourceStore.class);
+        BinanceSpotTradeMatcherServiceImpl service = new BinanceSpotTradeMatcherServiceImpl(
+                stateMapper, matchMapper, sourceStore);
+        BinanceSpotTradeMatchState sell = state(30L, 3L, 0, "1", "150", 3_000L);
+        sell.setOrderId(300L);
+        BinanceSpotTradeMatchState orderBuy = state(20L, 2L, 1, "0.4", "100", 2_000L);
+        BinanceSpotSellSourceDto source = orderSource(300L, 200L);
+        when(stateMapper.findPendingSellsForUpdate(7, "BTCUSDT"))
+                .thenReturn(Collections.singletonList(sell));
+        when(sourceStore.find(7, "BTCUSDT", 300L)).thenReturn(source);
+        when(stateMapper.findAvailableBuysByOrderIdForUpdate(
+                7, "BTCUSDT", 200L, sell.getTradeTime(), sell.getTradeId()))
+                .thenReturn(Collections.singletonList(orderBuy));
+
+        BinanceSpotTradeMatchResult result = service.match(7, "BTCUSDT");
+
+        assertEquals(1, result.getExceptionSellCount());
+        verify(stateMapper).updateMatchProgress(
+                30L, new BigDecimal("0.4"), new BigDecimal("0.6"), "SOURCE_EXCEPTION");
+        verify(stateMapper, never()).findAvailableBuysForUpdate(
+                eq(7), eq("BTCUSDT"), any(), any());
+    }
+
+    @Test
+    void shouldRejectInvalidSellSourceWithoutFallingBackToFifo() {
+        BinanceSpotTradeMatchStateMapper stateMapper = mock(BinanceSpotTradeMatchStateMapper.class);
+        BinanceSpotTradeMatchMapper matchMapper = mock(BinanceSpotTradeMatchMapper.class);
+        BinanceSpotSellSourceStore sourceStore = mock(BinanceSpotSellSourceStore.class);
+        BinanceSpotTradeMatcherServiceImpl service = new BinanceSpotTradeMatcherServiceImpl(
+                stateMapper, matchMapper, sourceStore);
+        BinanceSpotTradeMatchState sell = state(30L, 3L, 0, "1", "150", 3_000L);
+        sell.setOrderId(300L);
+        BinanceSpotSellSourceDto source = tradeSource(999L, 2L);
+        when(stateMapper.findPendingSellsForUpdate(7, "BTCUSDT"))
+                .thenReturn(Collections.singletonList(sell));
+        when(sourceStore.find(7, "BTCUSDT", 300L)).thenReturn(source);
+
+        BinanceSpotTradeMatchResult result = service.match(7, "BTCUSDT");
+
+        assertEquals(1, result.getExceptionSellCount());
+        verify(stateMapper).updateMatchProgress(
+                30L, BigDecimal.ZERO, new BigDecimal("1"), "SOURCE_EXCEPTION");
+        verify(stateMapper, never()).findAvailableBuysForUpdate(
+                eq(7), eq("BTCUSDT"), any(), any());
+        verify(matchMapper, never()).insert(any(BinanceSpotTradeMatch.class));
+    }
+
+    @Test
+    void shouldFailInsteadOfUsingFifoWhenRedisReadFails() {
+        BinanceSpotTradeMatchStateMapper stateMapper = mock(BinanceSpotTradeMatchStateMapper.class);
+        BinanceSpotTradeMatchMapper matchMapper = mock(BinanceSpotTradeMatchMapper.class);
+        BinanceSpotSellSourceStore sourceStore = mock(BinanceSpotSellSourceStore.class);
+        BinanceSpotTradeMatcherServiceImpl service = new BinanceSpotTradeMatcherServiceImpl(
+                stateMapper, matchMapper, sourceStore);
+        BinanceSpotTradeMatchState sell = state(30L, 3L, 0, "1", "150", 3_000L);
+        sell.setOrderId(300L);
+        when(stateMapper.findPendingSellsForUpdate(7, "BTCUSDT"))
+                .thenReturn(Collections.singletonList(sell));
+        when(sourceStore.find(7, "BTCUSDT", 300L))
+                .thenThrow(new IllegalStateException("redis unavailable"));
+
+        assertThrows(IllegalStateException.class, () -> service.match(7, "BTCUSDT"));
+
+        verify(stateMapper, never()).findAvailableBuysForUpdate(
+                eq(7), eq("BTCUSDT"), any(), any());
+        verify(stateMapper, never()).updateMatchProgress(any(), any(), any(), any());
+    }
+
+    private BinanceSpotSellSourceDto tradeSource(Long sellOrderId, Long sourceTradeId) {
+        BinanceSpotSellSourceDto source = source(sellOrderId);
+        source.setSourceType(BinanceSpotSellSourceDto.SourceType.TRADE);
+        source.setSourceTradeId(sourceTradeId);
+        return source;
+    }
+
+    private BinanceSpotSellSourceDto orderSource(Long sellOrderId, Long sourceOrderId) {
+        BinanceSpotSellSourceDto source = source(sellOrderId);
+        source.setSourceType(BinanceSpotSellSourceDto.SourceType.ORDER);
+        source.setSourceOrderId(sourceOrderId);
+        return source;
+    }
+
+    private BinanceSpotSellSourceDto source(Long sellOrderId) {
+        BinanceSpotSellSourceDto source = new BinanceSpotSellSourceDto();
+        source.setUid(7);
+        source.setSymbol("BTCUSDT");
+        source.setSellOrderId(sellOrderId);
+        return source;
     }
 
     private BinanceSpotTradeMatchState state(Long stateId,

@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS `binance_spot_trade_match_state` (
   `original_qty` decimal(32,16) NOT NULL COMMENT '原始成交数量',
   `matched_qty` decimal(32,16) NOT NULL DEFAULT '0.0000000000000000' COMMENT '已撮合数量',
   `remaining_qty` decimal(32,16) NOT NULL COMMENT '剩余未撮合数量',
-  `match_status` varchar(20) NOT NULL DEFAULT 'PENDING' COMMENT '撮合状态：PENDING、PARTIAL、COMPLETED、EXCEPTION',
+  `match_status` varchar(20) NOT NULL DEFAULT 'PENDING' COMMENT '撮合状态：PENDING、PARTIAL、COMPLETED、EXCEPTION、SOURCE_EXCEPTION',
   `create_time` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
   `update_time` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
   PRIMARY KEY (`id`),
