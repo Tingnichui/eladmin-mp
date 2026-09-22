@@ -1,7 +1,6 @@
 package me.zhengjie.invest.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
 import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
@@ -108,13 +107,13 @@ class BinanceTradeIncrementalSyncTest {
         BinanceCoinFuturesTradeInfo latest = new BinanceCoinFuturesTradeInfo();
         latest.setId(80L);
         doReturn(Collections.singletonList(latest)).when(service).list(any(Wrapper.class));
-        when(futuresUtil.userTradesFromId(BinanceEnum.SYMBOL.BTCUSD_PERP, 81L, 1000))
+        when(futuresUtil.userTradesFromId("BTCUSD_PERP", 81L, 1000))
                 .thenReturn(Collections.emptyList());
 
         int count = service.sync(account(7));
 
         assertEquals(0, count);
-        verify(futuresUtil).userTradesFromId(BinanceEnum.SYMBOL.BTCUSD_PERP, 81L, 1000);
+        verify(futuresUtil).userTradesFromId("BTCUSD_PERP", 81L, 1000);
         verify(service, times(0)).saveOrUpdateBatch(anyCollection());
         assertNull(BinanceAccountContextHolder.get());
     }

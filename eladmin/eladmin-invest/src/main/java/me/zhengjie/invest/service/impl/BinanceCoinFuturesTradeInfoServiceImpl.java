@@ -24,6 +24,12 @@ import lombok.RequiredArgsConstructor;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesAccountInfo;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesContractInfo;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesOpenTradeInfo;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesPositionInfo;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesStatsInfoVO;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesTradeSummary;
 import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceFuturesTradeStatsInfoVO;
@@ -140,9 +146,13 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
 
     @Override
     public int sync(BinanceAccountInfo accountInfo) {
+        return sync(accountInfo, BinanceEnum.SYMBOL.BTCUSD_PERP.name());
+    }
+
+    @Override
+    public int sync(BinanceAccountInfo accountInfo, String symbol) {
         int[] syncedCount = {0};
         BinanceAccountContextHolder.runWith(accountInfo, () -> {
-            String symbol = BinanceEnum.SYMBOL.BTCUSD_PERP.name();
             List<BinanceCoinFuturesTradeInfo> latestTrades = this.list(
                     Wrappers.<BinanceCoinFuturesTradeInfo>query()
                             .select("id")
@@ -154,7 +164,7 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
             long fromId = latestTrades.isEmpty() ? 0L : latestTrades.get(0).getId() + 1L;
             while (true) {
                 List<BinanceCoinFuturesTradeInfo> orderInfoList = binanceCoinFuturesUtil.userTradesFromId(
-                        BinanceEnum.SYMBOL.BTCUSD_PERP, fromId, SYNC_PAGE_SIZE);
+                        symbol, fromId, SYNC_PAGE_SIZE);
                 if (CollectionUtils.isEmpty(orderInfoList)) {
                     break;
                 }
@@ -189,6 +199,276 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
             }
         });
         return syncedCount[0];
+    }
+
+    @Override
+    public BinanceCoinFuturesStatsInfoVO queryStats(Integer uid, String symbol, String positionSide) {
+        BinanceCoinFuturesStatsInfoVO result = new BinanceCoinFuturesStatsInfoVO();
+
+        JSONObject contract = binanceCoinFuturesUtil.contractInfo(symbol);
+        result.setContractInfo(toContractInfo(contract, symbol));
+        if (contract == null) {
+            result.getWarnings().add("币安未返回当前合约规格，逐笔数量使用成交数据推算");
+        }
+
+        List<JSONObject> positions = binanceCoinFuturesUtil.positionRisk(symbol);
+        JSONObject position = positions.stream()
+                .filter(item -> positionSide.equalsIgnoreCase(item.getString("positionSide")))
+                .findFirst().orElse(null);
+        if (position == null) {
+            BinanceCoinFuturesPositionInfo emptyPosition = new BinanceCoinFuturesPositionInfo();
+            emptyPosition.setSymbol(symbol);
+            emptyPosition.setPositionSide(positionSide);
+            JSONObject premium = binanceCoinFuturesUtil.premiumIndex(symbol);
+            emptyPosition.setMarkPrice(decimal(premium, "markPrice"));
+            result.setPositionInfo(emptyPosition);
+            result.getWarnings().add("币安未返回当前交易对和持仓方向的仓位信息");
+        } else {
+            result.setPositionInfo(toPositionInfo(position));
+        }
+
+        JSONObject account = binanceCoinFuturesUtil.account();
+        result.setAccountInfo(toAccountInfo(account, result.getContractInfo().getMarginAsset()));
+
+        List<BinanceCoinFuturesTradeInfo> allTrades = binanceCoinFuturesTradeInfoMapper.selectList(
+                Wrappers.lambdaQuery(BinanceCoinFuturesTradeInfo.class)
+                        .eq(BinanceCoinFuturesTradeInfo::getUid, uid)
+                        .eq(BinanceCoinFuturesTradeInfo::getSymbol, symbol)
+                        .eq(BinanceCoinFuturesTradeInfo::getPositionSide, positionSide)
+                        .orderByAsc(BinanceCoinFuturesTradeInfo::getTime)
+                        .orderByAsc(BinanceCoinFuturesTradeInfo::getId)
+        );
+        List<BinanceCoinFuturesTradeInfo> trades = currentPositionCycle(allTrades, positionSide);
+        if (trades.isEmpty() && result.getPositionInfo().getPositionAmt().abs().compareTo(BigDecimal.ZERO) > 0) {
+            result.getWarnings().add("本地缺少当前持仓周期成交，请先同步数据");
+        }
+        BigDecimal fundingFee = loadFundingFee(symbol, trades, result);
+        result.setTradeSummary(createTradeSummary(trades, positionSide, fundingFee,
+                result.getContractInfo().getMarginAsset(), result));
+
+        if ("BOTH".equals(positionSide)) {
+            result.getWarnings().add("单向持仓模式暂不提供逐笔未平仓分布");
+        } else {
+            result.setTradeList(createOpenTradeList(trades, positionSide,
+                    result.getPositionInfo().getMarkPrice(), result.getContractInfo().getContractSize()));
+            result.getTradeSummary().setOpenTradeCount(result.getTradeList().size());
+            BigDecimal reconstructedQty = result.getTradeList().stream()
+                    .map(BinanceCoinFuturesOpenTradeInfo::getContractQty)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            if (reconstructedQty.compareTo(result.getPositionInfo().getPositionAmt().abs()) != 0) {
+                result.getWarnings().add("本地逐笔持仓与币安实时仓位不一致，请同步后复核");
+            }
+        }
+        return result;
+    }
+
+    private BinanceCoinFuturesContractInfo toContractInfo(JSONObject source, String symbol) {
+        BinanceCoinFuturesContractInfo target = new BinanceCoinFuturesContractInfo();
+        target.setSymbol(symbol);
+        if (source == null) {
+            if (BinanceEnum.SYMBOL.BTCUSD_PERP.name().equals(symbol)) {
+                target.setPair("BTCUSD");
+                target.setBaseAsset("BTC");
+                target.setQuoteAsset("USD");
+                target.setMarginAsset("BTC");
+            }
+            return target;
+        }
+        target.setPair(source.getString("pair"));
+        target.setContractType(source.getString("contractType"));
+        target.setContractSize(decimal(source, "contractSize"));
+        target.setBaseAsset(source.getString("baseAsset"));
+        target.setQuoteAsset(source.getString("quoteAsset"));
+        target.setMarginAsset(source.getString("marginAsset"));
+        target.setPricePrecision(source.getInteger("pricePrecision"));
+        target.setQuantityPrecision(source.getInteger("quantityPrecision"));
+        return target;
+    }
+
+    private BinanceCoinFuturesPositionInfo toPositionInfo(JSONObject source) {
+        BinanceCoinFuturesPositionInfo target = new BinanceCoinFuturesPositionInfo();
+        target.setSymbol(source.getString("symbol"));
+        target.setPositionSide(source.getString("positionSide"));
+        target.setPositionAmt(decimal(source, "positionAmt"));
+        target.setEntryPrice(decimal(source, "entryPrice"));
+        target.setBreakEvenPrice(decimal(source, "breakEvenPrice"));
+        target.setMarkPrice(decimal(source, "markPrice"));
+        target.setNotionalValue(decimal(source, "notionalValue"));
+        target.setUnrealizedPnl(decimal(source, "unRealizedProfit"));
+        target.setLiquidationPrice(decimal(source, "liquidationPrice"));
+        target.setLeverage(source.getInteger("leverage"));
+        target.setMarginType(source.getString("marginType"));
+        target.setAutoAddMargin(source.getBoolean("isAutoAddMargin"));
+        target.setIsolatedMargin(decimal(source, "isolatedMargin"));
+        target.setIsolatedWallet(decimal(source, "isolatedWallet"));
+        target.setMaxQty(decimal(source, "maxQty"));
+        target.setUpdateTime(source.getLong("updateTime"));
+        return target;
+    }
+
+    private BinanceCoinFuturesAccountInfo toAccountInfo(JSONObject source, String marginAsset) {
+        BinanceCoinFuturesAccountInfo target = new BinanceCoinFuturesAccountInfo();
+        target.setAsset(marginAsset);
+        if (source == null || source.getJSONArray("assets") == null) {
+            return target;
+        }
+        JSONObject asset = source.getJSONArray("assets").stream()
+                .map(JSONObject.class::cast)
+                .filter(item -> marginAsset != null && marginAsset.equalsIgnoreCase(item.getString("asset")))
+                .findFirst().orElse(null);
+        if (asset == null) {
+            return target;
+        }
+        target.setWalletBalance(decimal(asset, "walletBalance"));
+        target.setUnrealizedProfit(decimal(asset, "unrealizedProfit"));
+        target.setMarginBalance(decimal(asset, "marginBalance"));
+        target.setAvailableBalance(decimal(asset, "availableBalance"));
+        target.setMaxWithdrawAmount(decimal(asset, "maxWithdrawAmount"));
+        target.setInitialMargin(decimal(asset, "initialMargin"));
+        target.setMaintMargin(decimal(asset, "maintMargin"));
+        target.setPositionInitialMargin(decimal(asset, "positionInitialMargin"));
+        target.setOpenOrderInitialMargin(decimal(asset, "openOrderInitialMargin"));
+        return target;
+    }
+
+    private List<BinanceCoinFuturesTradeInfo> currentPositionCycle(List<BinanceCoinFuturesTradeInfo> source,
+                                                                    String positionSide) {
+        if (source == null || source.isEmpty()) {
+            return Collections.emptyList();
+        }
+        BigDecimal position = BigDecimal.ZERO;
+        int lastFlatIndex = -1;
+        for (int index = 0; index < source.size(); index++) {
+            BinanceCoinFuturesTradeInfo trade = source.get(index);
+            boolean increase = "LONG".equals(positionSide)
+                    ? "BUY".equals(trade.getSide()) : "SELL".equals(trade.getSide());
+            position = increase ? position.add(zeroIfNull(trade.getQty()))
+                    : position.subtract(zeroIfNull(trade.getQty()));
+            if (position.compareTo(BigDecimal.ZERO) == 0) {
+                lastFlatIndex = index;
+            }
+        }
+        return source.subList(lastFlatIndex + 1, source.size());
+    }
+
+    private BigDecimal loadFundingFee(String symbol, List<BinanceCoinFuturesTradeInfo> trades,
+                                      BinanceCoinFuturesStatsInfoVO result) {
+        if (trades.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        try {
+            long startTime = trades.get(0).getTime().getTime();
+            return binanceCoinFuturesUtil.listIncome(symbol, startTime, "FUNDING_FEE").stream()
+                    .map(item -> decimal(item, "income"))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        } catch (RuntimeException e) {
+            result.getWarnings().add("当前持仓周期资金费暂不可用");
+            return BigDecimal.ZERO;
+        }
+    }
+
+    private BinanceCoinFuturesTradeSummary createTradeSummary(List<BinanceCoinFuturesTradeInfo> trades,
+                                                                String positionSide,
+                                                                BigDecimal fundingFee,
+                                                                String marginAsset,
+                                                                BinanceCoinFuturesStatsInfoVO result) {
+        BinanceCoinFuturesTradeSummary summary = new BinanceCoinFuturesTradeSummary();
+        BigDecimal realizedPnl = trades.stream().map(BinanceCoinFuturesTradeInfo::getRealizedPnl)
+                .filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal commission = trades.stream()
+                .filter(trade -> marginAsset == null || trade.getCommissionAsset() == null
+                        || marginAsset.equalsIgnoreCase(trade.getCommissionAsset()))
+                .map(BinanceCoinFuturesTradeInfo::getCommission)
+                .filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add).abs();
+        boolean otherCommissionAsset = trades.stream().anyMatch(trade -> trade.getCommissionAsset() != null
+                && marginAsset != null && !marginAsset.equalsIgnoreCase(trade.getCommissionAsset()));
+        if (otherCommissionAsset) {
+            result.getWarnings().add("存在非保证金币种手续费，未计入净盈亏");
+        }
+        summary.setRealizedPnl(realizedPnl);
+        summary.setCommission(commission);
+        summary.setFundingFee(fundingFee);
+        summary.setNetPnl(realizedPnl.add(fundingFee).subtract(commission));
+        summary.setTotalTradeCount(trades.size());
+        if (!"BOTH".equals(positionSide)) {
+            String closeSide = "LONG".equals(positionSide) ? "SELL" : "BUY";
+            summary.setClosedTradeCount((int) trades.stream()
+                    .filter(trade -> closeSide.equals(trade.getSide())).count());
+        }
+        return summary;
+    }
+
+    private List<BinanceCoinFuturesOpenTradeInfo> createOpenTradeList(
+            List<BinanceCoinFuturesTradeInfo> trades, String positionSide,
+            BigDecimal markPrice, BigDecimal contractSize) {
+        boolean longSide = "LONG".equals(positionSide);
+        String openSide = longSide ? "BUY" : "SELL";
+        List<BinanceCoinFuturesTradeInfo> openTrades = trades.stream()
+                .filter(trade -> openSide.equals(trade.getSide()))
+                .map(this::copyTrade).collect(Collectors.toCollection(ArrayList::new));
+        List<BinanceCoinFuturesTradeInfo> closeTrades = trades.stream()
+                .filter(trade -> !openSide.equals(trade.getSide()))
+                .map(this::copyTrade).collect(Collectors.toCollection(ArrayList::new));
+        TradeMatcherUtil.matchTradesFifo(
+                longSide, "0", openTrades, closeTrades,
+                BinanceCoinFuturesTradeInfo::getQty,
+                BinanceCoinFuturesTradeInfo::setQty,
+                BinanceCoinFuturesTradeInfo::getPrice,
+                BinanceCoinFuturesTradeInfo::getTime,
+                BinanceCoinFuturesTradeInfo::getId
+        );
+        List<BinanceCoinFuturesOpenTradeInfo> result = new ArrayList<>();
+        for (BinanceCoinFuturesTradeInfo trade : openTrades) {
+            if (!positive(trade.getQty()) || !positive(trade.getPrice())) {
+                continue;
+            }
+            BinanceCoinFuturesOpenTradeInfo item = new BinanceCoinFuturesOpenTradeInfo();
+            item.setTradeId(trade.getId());
+            item.setOrderId(trade.getOrderId());
+            item.setContractQty(trade.getQty());
+            item.setOpenPrice(trade.getPrice());
+            item.setOpenTime(trade.getTime());
+            item.setMarkPrice(zeroIfNull(markPrice));
+            BigDecimal effectiveContractSize = positive(contractSize)
+                    ? contractSize : inferContractSize(trade);
+            BigDecimal baseQty = effectiveContractSize.multiply(trade.getQty())
+                    .divide(trade.getPrice(), 16, RoundingMode.HALF_UP);
+            item.setBaseQty(baseQty);
+            if (positive(markPrice) && positive(effectiveContractSize)) {
+                BigDecimal openInverse = BigDecimal.ONE.divide(trade.getPrice(), 16, RoundingMode.HALF_UP);
+                BigDecimal markInverse = BigDecimal.ONE.divide(markPrice, 16, RoundingMode.HALF_UP);
+                BigDecimal pnl = effectiveContractSize.multiply(trade.getQty())
+                        .multiply(longSide ? openInverse.subtract(markInverse)
+                                : markInverse.subtract(openInverse));
+                item.setUnrealizedPnl(pnl);
+                item.setRoi(baseQty.compareTo(BigDecimal.ZERO) == 0 ? null
+                        : pnl.divide(baseQty, 8, RoundingMode.HALF_UP));
+            }
+            result.add(item);
+        }
+        result.sort(Comparator.comparing(BinanceCoinFuturesOpenTradeInfo::getOpenPrice).reversed());
+        return result;
+    }
+
+    private BigDecimal inferContractSize(BinanceCoinFuturesTradeInfo trade) {
+        if (!positive(trade.getBaseQty()) || !positive(trade.getQty()) || !positive(trade.getPrice())) {
+            return BigDecimal.ZERO;
+        }
+        return trade.getBaseQty().multiply(trade.getPrice())
+                .divide(trade.getQty(), 8, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal decimal(JSONObject source, String key) {
+        BigDecimal value = source == null ? null : source.getBigDecimal(key);
+        return zeroIfNull(value);
+    }
+
+    private BigDecimal zeroIfNull(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private boolean positive(BigDecimal value) {
+        return value != null && value.compareTo(BigDecimal.ZERO) > 0;
     }
 
     @Override

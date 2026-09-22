@@ -7,6 +7,7 @@ import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
@@ -77,6 +78,10 @@ public class BinanceCoinFuturesUtil {
     }
 
     public List<BinanceCoinFuturesTradeInfo> userTradesFromId(BinanceEnum.SYMBOL symbol, Long fromId, int limit) {
+        return userTradesFromId(symbol.name(), fromId, limit);
+    }
+
+    public List<BinanceCoinFuturesTradeInfo> userTradesFromId(String symbol, Long fromId, int limit) {
         Map<String, Object> params = new HashMap<>();
         params.put("symbol", symbol);
         params.put("fromId", fromId);
@@ -149,7 +154,45 @@ public class BinanceCoinFuturesUtil {
         return JSON.parseArray(this.doRequest("/dapi/v1/ticker/price", parmasMap, false, true)).getJSONObject(0).getBigDecimal("price");
     }
 
+    public List<JSONObject> positionRisk(String symbol) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("symbol", symbol);
+        return JSON.parseArray(this.doRequest("/dapi/v1/positionRisk", params, true, true), JSONObject.class);
+    }
+
+    public JSONObject account() {
+        return JSON.parseObject(this.doRequest("/dapi/v1/account", new HashMap<>(), true, true));
+    }
+
+    public JSONObject contractInfo(String symbol) {
+        JSONObject exchangeInfo = JSON.parseObject(
+                this.doRequest("/dapi/v1/exchangeInfo", new HashMap<>(), false, true));
+        JSONArray symbols = exchangeInfo.getJSONArray("symbols");
+        if (symbols == null) {
+            return null;
+        }
+        return symbols.stream()
+                .map(JSONObject.class::cast)
+                .filter(item -> symbol.equalsIgnoreCase(item.getString("symbol")))
+                .findFirst().orElse(null);
+    }
+
+    public JSONObject premiumIndex(String symbol) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("symbol", symbol);
+        String body = this.doRequest("/dapi/v1/premiumIndex", params, false, true);
+        if (body != null && body.trim().startsWith("[")) {
+            JSONArray values = JSON.parseArray(body);
+            return values.isEmpty() ? null : values.getJSONObject(0);
+        }
+        return JSON.parseObject(body);
+    }
+
     public List<JSONObject> listIncome(BinanceEnum.SYMBOL symbol, Long startTime, String incomeType) {
+        return listIncome(symbol.name(), startTime, incomeType);
+    }
+
+    public List<JSONObject> listIncome(String symbol, Long startTime, String incomeType) {
         Map<String, Object> params = new HashMap<>();
         params.put("symbol", symbol);
         params.put("incomeType", incomeType);

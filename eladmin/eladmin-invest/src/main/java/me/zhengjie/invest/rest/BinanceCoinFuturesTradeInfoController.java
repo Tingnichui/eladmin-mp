@@ -16,11 +16,19 @@
 package me.zhengjie.invest.rest;
 
 import me.zhengjie.annotation.Log;
+import me.zhengjie.exception.BadRequestException;
+import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesStatsInfoVO;
+import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.service.BinanceCoinFuturesTradeInfoService;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesTradeInfoQueryCriteria;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
+import java.util.Collections;
+import java.util.Locale;
+import java.util.Map;
+import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -43,6 +51,36 @@ import me.zhengjie.utils.PageResult;
 public class BinanceCoinFuturesTradeInfoController {
 
     private final BinanceCoinFuturesTradeInfoService binanceCoinFuturesTradeInfoService;
+    private final BinanceAccountInfoService binanceAccountInfoService;
+
+    @GetMapping("/stats")
+    @Log("查询币本位合约统计")
+    @ApiOperation("查询币本位合约统计")
+    @PreAuthorize("@el.check('binanceCoinFuturesTradeInfo:list')")
+    public ResponseEntity<BinanceCoinFuturesStatsInfoVO> queryStats(@RequestParam Integer uid,
+                                                                    @RequestParam String symbol,
+                                                                    @RequestParam String positionSide) {
+        String normalizedSymbol = normalizeSymbol(symbol);
+        String normalizedPositionSide = normalizePositionSide(positionSide);
+        BinanceAccountInfo accountInfo = requireAvailableAccount(uid);
+        BinanceCoinFuturesStatsInfoVO[] result = new BinanceCoinFuturesStatsInfoVO[1];
+        BinanceAccountContextHolder.runWith(accountInfo,
+                () -> result[0] = binanceCoinFuturesTradeInfoService.queryStats(
+                        uid, normalizedSymbol, normalizedPositionSide));
+        return ResponseEntity.ok(result[0]);
+    }
+
+    @PutMapping("/syncSelected")
+    @Log("同步当前账户币本位成交")
+    @ApiOperation("同步当前账户币本位成交")
+    @PreAuthorize("@el.check('binanceTradeInfo:sync')")
+    public ResponseEntity<Map<String, Integer>> syncSelected(@RequestParam Integer uid,
+                                                              @RequestParam String symbol) {
+        String normalizedSymbol = normalizeSymbol(symbol);
+        BinanceAccountInfo accountInfo = requireAvailableAccount(uid);
+        int tradeCount = binanceCoinFuturesTradeInfoService.sync(accountInfo, normalizedSymbol);
+        return ResponseEntity.ok(Collections.singletonMap("tradeCount", tradeCount));
+    }
 
     @Log("导出数据")
     @ApiOperation("导出数据")
@@ -86,5 +124,29 @@ public class BinanceCoinFuturesTradeInfoController {
     public ResponseEntity<Object> deleteBinanceCoinFuturesTradeInfo(@RequestBody List<Long> ids) {
         binanceCoinFuturesTradeInfoService.deleteAll(ids);
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    private BinanceAccountInfo requireAvailableAccount(Integer uid) {
+        BinanceAccountInfo accountInfo = binanceAccountInfoService.getAccountByUid(uid);
+        if (accountInfo == null || !Integer.valueOf(1).equals(accountInfo.getApiValidFlag())) {
+            throw new BadRequestException("当前账户 API 不可用");
+        }
+        return accountInfo;
+    }
+
+    private String normalizeSymbol(String symbol) {
+        String normalized = symbol == null ? "" : symbol.trim().toUpperCase(Locale.ROOT);
+        if (!"BTCUSD_PERP".equals(normalized)) {
+            throw new BadRequestException("当前仅支持 BTCUSD_PERP");
+        }
+        return normalized;
+    }
+
+    private String normalizePositionSide(String positionSide) {
+        String normalized = positionSide == null ? "" : positionSide.trim().toUpperCase(Locale.ROOT);
+        if (!"LONG".equals(normalized) && !"SHORT".equals(normalized) && !"BOTH".equals(normalized)) {
+            throw new BadRequestException("持仓方向必须是 LONG、SHORT 或 BOTH");
+        }
+        return normalized;
     }
 }
