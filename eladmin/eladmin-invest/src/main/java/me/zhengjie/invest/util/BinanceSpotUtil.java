@@ -1,21 +1,13 @@
 package me.zhengjie.invest.util;
 
-import cn.hutool.core.net.URLEncodeUtil;
-import cn.hutool.crypto.digest.HMac;
-import cn.hutool.crypto.digest.HmacAlgorithm;
-import cn.hutool.http.HttpRequest;
-import cn.hutool.http.HttpResponse;
-import cn.hutool.http.HttpUtil;
 import cn.hutool.http.Method;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import me.zhengjie.invest.constants.BinanceEnum;
-import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.domain.InvestKlinesRecord;
 import me.zhengjie.invest.domain.dto.BinanceOrderApiDto;
 import me.zhengjie.invest.domain.dto.BinanceSpotOpenOrderDto;
-import me.zhengjie.utils.DingdingUtil;
 import me.zhengjie.utils.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,25 +16,17 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Component
 public class BinanceSpotUtil {
 
     private static final Logger log = LoggerFactory.getLogger(BinanceSpotUtil.class);
 
-    @Value("${proxy.host}")
-    private String proxyHost;
-    @Value("${proxy.port}")
-    private Integer proxyPort;
     @Value("${binance.spot.api_host}")
     private String apiHost;
     @Resource
-    private DingdingUtil dingdingUtil;
+    private BinanceHttpClient binanceHttpClient;
     public List<BinanceTradeInfo> getMyTrades(String symbol) {
         return getMyTrades(symbol, null, 1000);
     }
@@ -66,9 +50,10 @@ public class BinanceSpotUtil {
     }
 
     public BigDecimal getAvgPrice(BinanceEnum.SYMBOL symbol) {
-        HttpRequest request = HttpUtil.createGet(apiHost + "/api/v3/avgPrice?symbol=" + symbol);
-        request.setProxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort)));
-        return JSON.parseObject(request.execute().body()).getBigDecimal("price");
+        Map<String, Object> params = new HashMap<>();
+        params.put("symbol", symbol);
+        return JSON.parseObject(this.doRequest("/api/v3/avgPrice", params, false, true))
+                .getBigDecimal("price");
     }
 
     /**
@@ -120,13 +105,28 @@ public class BinanceSpotUtil {
     }
 
     public Long order(BinanceOrderApiDto apiDto) {
-        Map<String, Object> map = apiDto.toMap();
-        JSONObject resultJson = JSON.parseObject(this.doRequest("/api/v3/order", map, true, false));
-        String orderIdStr = resultJson.getString("orderId");
-        if (StringUtils.isBlank(orderIdStr)) {
-            throw new RuntimeException("币安下单未获取到交易订单号");
+        if (StringUtils.isBlank(apiDto.getNewClientOrderId())) {
+            apiDto.setNewClientOrderId("el_" + UUID.randomUUID().toString().replace("-", ""));
         }
-        return Long.parseLong(orderIdStr);
+        Map<String, Object> map = apiDto.toMap();
+        try {
+            JSONObject resultJson = JSON.parseObject(this.doRequest("/api/v3/order", map, true, false));
+            String orderIdStr = resultJson.getString("orderId");
+            if (StringUtils.isBlank(orderIdStr)) {
+                throw new RuntimeException("币安下单未获取到交易订单号");
+            }
+            return Long.parseLong(orderIdStr);
+        } catch (RuntimeException placeError) {
+            try {
+                BinanceSpotOpenOrderDto reconciled = queryOrder(apiDto.getSymbol(), apiDto.getNewClientOrderId());
+                if (reconciled != null && reconciled.getOrderId() != null) {
+                    return reconciled.getOrderId();
+                }
+            } catch (RuntimeException queryError) {
+                placeError.addSuppressed(queryError);
+            }
+            throw placeError;
+        }
     }
 
     public List<BinanceSpotOpenOrderDto> listOpenOrders(String symbol) {
@@ -140,6 +140,14 @@ public class BinanceSpotUtil {
         Map<String, Object> params = new HashMap<>();
         params.put("symbol", symbol);
         params.put("orderId", orderId);
+        return JSON.parseObject(this.doRequest("/api/v3/order", params, true, true),
+                BinanceSpotOpenOrderDto.class);
+    }
+
+    public BinanceSpotOpenOrderDto queryOrder(String symbol, String clientOrderId) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("symbol", symbol);
+        params.put("origClientOrderId", clientOrderId);
         return JSON.parseObject(this.doRequest("/api/v3/order", params, true, true),
                 BinanceSpotOpenOrderDto.class);
     }
@@ -158,14 +166,12 @@ public class BinanceSpotUtil {
     }
 
     public Long order(BinanceOrderApiDto apiDto, int maxRetries) {
-        for (int i = 0; i < maxRetries ; i++) {
-            try {
-                return this.order(apiDto);
-            } catch (Exception e) {
-                log.error("下单失败，第 {} 次尝试", i + 1, e);
-            }
+        try {
+            return this.order(apiDto);
+        } catch (Exception e) {
+            log.error("下单失败，已按客户端订单号查单确认，不再盲目重试", e);
+            return null;
         }
-        return null;
     }
 
     private String doRequest(String url, Map<String, Object> params, Boolean signFlag, Boolean getFlag) {
@@ -173,61 +179,7 @@ public class BinanceSpotUtil {
     }
 
     private String doRequest(String url, Map<String, Object> params, Boolean signFlag, Method method) {
-        log.info("入参：{}", JSON.toJSONString(params));
-
-        // 过滤空值
-        params = params.entrySet().stream()
-                .filter(entry -> null != entry.getValue() && StringUtils.isNotBlank(entry.getValue().toString()))
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue
-                ));
-
-        // 是否需要加签
-        Map<String, String> headerMap = new HashMap<>();
-        if (signFlag) {
-            BinanceAccountInfo binanceAccountInfo = BinanceAccountContextHolder.get();
-            if (null == binanceAccountInfo) {
-                throw new RuntimeException("币安账户信息为空");
-            }
-            final String apiKey = binanceAccountInfo.getApiKey();
-            final String apiSecret = binanceAccountInfo.getApiSecret();
-            if (StringUtils.isAnyBlank(apiKey, apiSecret)) {
-                throw new RuntimeException(binanceAccountInfo.getIdCardName() + "-币安账户API配置为空");
-            }
-            headerMap.put("X-MBX-APIKEY", apiKey);
-
-            // 增加时间戳
-            params.put("timestamp", System.currentTimeMillis());
-
-            // 加签
-            String queryString = params.entrySet().stream()
-                    .map(entry -> entry.getKey() + "=" + URLEncodeUtil.encode(entry.getValue().toString()))
-                    .collect(Collectors.joining("&"));
-            String signature = new HMac(HmacAlgorithm.HmacSHA256, apiSecret.getBytes(StandardCharsets.UTF_8)).digestHex(queryString);
-            params.put("signature", signature);
-        }
-
-        // 拼接完整参数
-        String finalQuery = params.entrySet().stream()
-                .map(entry -> entry.getKey() + "=" + URLEncodeUtil.encode(entry.getValue().toString()))
-                .collect(Collectors.joining("&"));
-        String fullUrl = apiHost + url + "?" + finalQuery;
-
-        // 发送请求
-        HttpRequest request = HttpUtil.createRequest(method, fullUrl);
-        headerMap.forEach(request::header);
-        request.setProxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort)));
-        HttpResponse response = request.execute();
-        String body = response.body();
-        log.info("出参：{}", body);
-
-        // 判断响应状态
-        if (200 != response.getStatus()) {
-            throw new RuntimeException("币安接口调用失败" + response);
-        }
-
-        return body;
+        return binanceHttpClient.request(apiHost, url, params, signFlag, method);
     }
 
 

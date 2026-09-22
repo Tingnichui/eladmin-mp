@@ -163,6 +163,14 @@ proxy:
   host: 127.0.0.1
   port: 7890
 
+# 本地开发默认使用本机代理，可通过环境变量覆盖
+binance:
+  proxy:
+    nodes:
+      - name: local
+        host: ${BINANCE_PROXY_LOCAL_HOST:127.0.0.1}
+        port: ${BINANCE_PROXY_LOCAL_PORT:7890}
+
 # 爬虫服务器配置
 media:
   crawler:

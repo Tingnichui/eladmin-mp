@@ -159,6 +159,17 @@ proxy:
   host: 127.0.0.1
   port: 7890
 
+# 币安专用固定主备代理；查询失败自动切换，写请求不会盲目重发
+binance:
+  proxy:
+    nodes:
+      - name: g3
+        host: ${BINANCE_PROXY_G3_HOST:100.67.168.78}
+        port: ${BINANCE_PROXY_G3_PORT:7890}
+      - name: m6
+        host: ${BINANCE_PROXY_M6_HOST:100.90.6.57}
+        port: ${BINANCE_PROXY_M6_PORT:7890}
+
 # 爬虫服务器配置
 media:
   crawler:

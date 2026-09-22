@@ -115,12 +115,37 @@ SYNC_KLINES:BTCUSDT:4h
 排查顺序建议：
 
 1. 查看 Redis 锁是否残留。
-2. 确认代理配置 `proxy.host`、`proxy.port` 可访问币安接口。
+2. 确认 `binance.proxy.nodes` 中至少一个代理节点可访问币安接口。
 3. 查看数据库中该 `symbol + intervalCode` 最新 `open_time`。
 4. 直接请求币安 `/api/v3/klines` 核对对应时间段是否有原始数据。
 5. 检查是否存在重复 `open_time`。
 
-## 7. 后续优化
+## 7. 币安主备代理
+
+生产环境按配置顺序使用固定代理节点，当前顺序为：
+
+1. `g3`：`100.67.168.78:7890`
+2. `m6`：`100.90.6.57:7890`
+
+现货、U 本位和币本位共用同一套节点健康状态。查询类请求发生连接异常或读取超时时，会切换到下一个节点；失败节点进入 60 秒冷却，冷却期内后续请求优先使用健康节点。冷却结束后会重新尝试首选节点。
+
+下单和撤单等写请求不会在同一次调用中跨代理盲目重发。写请求发生网络异常时，当前节点同样进入冷却，后续查询会通过健康节点确认订单状态。现货和币本位下单均使用客户端订单号进行结果确认，避免响应丢失时重复创建订单。
+
+代理相关环境变量：
+
+```text
+BINANCE_PROXY_G3_HOST
+BINANCE_PROXY_G3_PORT
+BINANCE_PROXY_M6_HOST
+BINANCE_PROXY_M6_PORT
+BINANCE_PROXY_CONNECT_TIMEOUT_MS
+BINANCE_PROXY_READ_TIMEOUT_MS
+BINANCE_PROXY_FAILURE_COOLDOWN_MS
+```
+
+通用的 `proxy.host`、`proxy.port` 仍供其他模块使用，不再控制币安请求。
+
+## 8. 后续优化
 
 当前可暂缓，但后续若提高稳定性或实时性，建议补充：
 

@@ -84,6 +84,10 @@ data:
 
 # 币安密钥
 binance:
+  proxy:
+    connect-timeout-ms: ${BINANCE_PROXY_CONNECT_TIMEOUT_MS:3000}
+    read-timeout-ms: ${BINANCE_PROXY_READ_TIMEOUT_MS:10000}
+    failure-cooldown-ms: ${BINANCE_PROXY_FAILURE_COOLDOWN_MS:60000}
   spot:
     api_host: https://api.binance.com
   usd_futures:
