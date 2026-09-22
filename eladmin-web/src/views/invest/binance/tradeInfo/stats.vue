@@ -427,6 +427,34 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column
+          v-if="checkPer(['admin', 'binanceTradeInfo:createPos'])"
+          label="操作"
+          width="100"
+          align="center"
+          fixed="right"
+        >
+          <template slot-scope="scope">
+            <el-popconfirm
+              :title="`确定撤销挂单 ${scope.row.orderId} 吗？`"
+              placement="top-end"
+              :width="280"
+              confirm-button-text="确认撤单"
+              cancel-button-text="取消"
+              icon="el-icon-warning"
+              icon-color="#f56c6c"
+              @confirm="cancelSpotOpenOrder(scope.row)"
+            >
+              <el-button
+                slot="reference"
+                type="warning"
+                plain
+                size="mini"
+                :loading="isSpotOrderCancelling(scope.row.orderId)"
+              >撤单</el-button>
+            </el-popconfirm>
+          </template>
+        </el-table-column>
       </el-table>
       <div v-loading="spotOpenOrdersLoading" class="spot-open-orders-mobile-list">
         <div v-if="!spotOpenOrders.length && !spotOpenOrdersLoading" class="spot-open-orders-empty">
@@ -457,6 +485,27 @@
             <span>订单 {{ order.orderId }}</span>
             <span>{{ formatSpotOrderTime(order.time) }}</span>
           </div>
+          <el-popconfirm
+            v-if="checkPer(['admin', 'binanceTradeInfo:createPos'])"
+            class="spot-open-order-cancel-wrap"
+            :title="`确定撤销挂单 ${order.orderId} 吗？`"
+            placement="top"
+            :width="280"
+            confirm-button-text="确认撤单"
+            cancel-button-text="取消"
+            icon="el-icon-warning"
+            icon-color="#f56c6c"
+            @confirm="cancelSpotOpenOrder(order)"
+          >
+            <el-button
+              slot="reference"
+              class="spot-open-order-cancel"
+              type="warning"
+              plain
+              size="small"
+              :loading="isSpotOrderCancelling(order.orderId)"
+            >撤单</el-button>
+          </el-popconfirm>
         </article>
       </div>
       <span slot="footer">
@@ -1557,8 +1606,28 @@ export default {
     },
     isRowSpotOrderCancelling(row) {
       return this.rowSpotOpenOrders(row).some(order =>
-        this.spotOrderCancellingIds.some(orderId => this.sameId(orderId, order.orderId))
+        this.isSpotOrderCancelling(order.orderId)
       )
+    },
+    isSpotOrderCancelling(orderId) {
+      return this.spotOrderCancellingIds.some(cancellingId => this.sameId(cancellingId, orderId))
+    },
+    cancelSpotOpenOrder(order) {
+      if (!order || order.orderId == null || this.isSpotOrderCancelling(order.orderId)) return Promise.resolve()
+      this.spotOrderCancellingIds.push(order.orderId)
+      return crudBinanceTradeInfo.cancelSpotOrder({
+        uid: this.query.uid,
+        symbol: this.query.symbol,
+        orderId: order.orderId
+      }).then(() => {
+        this.$message.success(`挂单 ${order.orderId} 已撤销`)
+        return this.loadSpotOpenOrders()
+      }).catch(() => {
+        // 请求错误由全局拦截器提示；重新查询确认挂单状态
+        return this.loadSpotOpenOrders()
+      }).then(() => {
+        this.spotOrderCancellingIds = this.spotOrderCancellingIds.filter(orderId => !this.sameId(orderId, order.orderId))
+      })
     },
     cancelRowSpotOrders(row) {
       const orders = this.rowSpotOpenOrders(row)
@@ -1926,6 +1995,8 @@ export default {
   .spot-open-order-card-main .is-primary strong { color: #17233d; font-size: 15px; }
   .spot-open-order-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding-top: 10px; border-top: 1px solid #ebeef5; color: #909399; font-size: 11px; }
   .spot-open-order-card-footer span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .spot-open-order-cancel-wrap { display: block; margin-top: 12px; }
+  .spot-open-order-cancel { width: 100%; }
   ::v-deep .core-action-drawer { width: 100% !important; }
   ::v-deep .core-action-drawer .el-drawer__header { align-items: center; margin-bottom: 0; padding: 16px 14px 12px; border-bottom: 1px solid #ebeef5; }
   ::v-deep .core-action-drawer .el-drawer__body { overflow-y: auto; }

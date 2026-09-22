@@ -9,7 +9,8 @@ jest.mock('@/api/binanceTradeInfo', () => ({
   default: {
     stats: jest.fn(),
     syncSpotTradeInfo: jest.fn(),
-    syncSelected: jest.fn()
+    syncSelected: jest.fn(),
+    cancelSpotOrder: jest.fn()
   }
 }))
 jest.mock('@/api/binanceAccountInfo', () => ({
@@ -495,5 +496,28 @@ describe('trade stats request lifecycle', () => {
       .toBe(0.006)
     expect(Stats.methods.spotOpenOrderRemainingQty({ origQty: '0.00400000', executedQty: '0.00600000' }))
       .toBe(0)
+  })
+
+  it('cancels an order directly from the current open-orders panel', async() => {
+    crudBinanceTradeInfo.cancelSpotOrder.mockResolvedValue({})
+    const vm = {
+      query: { uid: 7, symbol: 'BTCUSDT' },
+      spotOrderCancellingIds: [],
+      sameId: Stats.methods.sameId,
+      isSpotOrderCancelling: Stats.methods.isSpotOrderCancelling,
+      loadSpotOpenOrders: jest.fn().mockResolvedValue(),
+      $message: { success: jest.fn() }
+    }
+
+    await Stats.methods.cancelSpotOpenOrder.call(vm, { orderId: '66813689167' })
+
+    expect(crudBinanceTradeInfo.cancelSpotOrder).toHaveBeenCalledWith({
+      uid: 7,
+      symbol: 'BTCUSDT',
+      orderId: '66813689167'
+    })
+    expect(vm.$message.success).toHaveBeenCalledWith('挂单 66813689167 已撤销')
+    expect(vm.loadSpotOpenOrders).toHaveBeenCalledTimes(1)
+    expect(vm.spotOrderCancellingIds).toEqual([])
   })
 })
