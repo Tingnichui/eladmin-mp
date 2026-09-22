@@ -66,7 +66,7 @@
           >当前挂单</el-button>
         </div>
         <div class="toolbar-actions">
-          <el-popover placement="bottom-end" width="260" trigger="hover" :open-delay="150" :close-delay="200">
+          <el-popover class="desktop-account-summary" placement="bottom-end" width="260" trigger="hover" :open-delay="150" :close-delay="200">
             <div class="account-popover-content">
               <div class="account-popover-header">
                 <span class="popover-heading">账户统计</span>
@@ -88,6 +88,13 @@
             </div>
             <el-button slot="reference" size="small" plain icon="el-icon-wallet">账户资产</el-button>
           </el-popover>
+          <el-button
+            class="mobile-account-summary-button"
+            size="small"
+            plain
+            icon="el-icon-wallet"
+            @click="showMobileAccountSummary = true"
+          >账户资产</el-button>
           <el-popover class="desktop-trade-summary" placement="bottom-end" width="660" trigger="hover" :open-delay="150" :close-delay="200">
             <div class="trade-summary-popover">
               <div class="popover-heading">交易汇总</div>
@@ -141,6 +148,38 @@
         @select-bucket="openBucketCoreActions"
       />
     </section>
+
+    <el-drawer
+      title="账户资产"
+      :visible.sync="showMobileAccountSummary"
+      direction="btt"
+      size="48%"
+      append-to-body
+      custom-class="mobile-account-summary-drawer"
+    >
+      <div class="mobile-account-summary-content">
+        <div class="mobile-account-context">
+          <span>当前账户</span>
+          <strong>{{ selectedAccountName }}</strong>
+        </div>
+        <div class="mobile-account-summary-grid">
+          <div v-for="item in accountSummaryItems" :key="item.label" class="mobile-account-summary-item">
+            <span>{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
+          </div>
+        </div>
+        <el-button
+          type="primary"
+          plain
+          class="mobile-account-sync"
+          icon="el-icon-refresh"
+          :loading="accountSyncLoading"
+          :disabled="query.uid == null"
+          @click="syncAccountAssets"
+        >同步账户资产</el-button>
+        <el-button class="mobile-account-close" @click="showMobileAccountSummary = false">关闭</el-button>
+      </div>
+    </el-drawer>
 
     <el-drawer
       title="交易汇总"
@@ -542,22 +581,15 @@
           <el-table-column label="操作" min-width="320" align="center" fixed="right">
             <template slot-scope="scope">
               <div v-if="scope.row._rowType === 'order'" class="core-action-buttons">
-                <el-tooltip
-                  v-if="checkPer(['admin', 'binanceTradeInfo:createPos'])"
-                  :disabled="coreAvailableQty(scope.row) > 0"
-                  content="该订单没有可卖数量；如已设置底仓，请先调整或解除底仓"
-                  placement="top"
+                <el-button
+                  v-if="coreAvailableQty(scope.row) > 0 && checkPer(['admin', 'binanceTradeInfo:createPos'])"
+                  type="danger"
+                  plain
+                  size="mini"
+                  @click="openPositionSellDialog(scope.row)"
                 >
-                  <span>
-                    <el-button
-                      type="danger"
-                      plain
-                      size="mini"
-                      :disabled="coreAvailableQty(scope.row) <= 0"
-                      @click="openPositionSellDialog(scope.row)"
-                    >卖出</el-button>
-                  </span>
-                </el-tooltip>
+                  卖出
+                </el-button>
                 <el-popconfirm
                   v-if="rowSpotOpenOrders(scope.row).length && checkPer(['admin', 'binanceTradeInfo:createPos'])"
                   :title="`确定撤销该来源关联的 ${rowSpotOpenOrders(scope.row).length} 个币安卖出挂单吗？`"
@@ -619,22 +651,15 @@
                 </el-popconfirm>
               </div>
               <div v-else class="core-action-buttons">
-                <el-tooltip
-                  v-if="checkPer(['admin', 'binanceTradeInfo:createPos'])"
-                  :disabled="coreAvailableQty(scope.row) > 0"
-                  content="该成交没有可卖数量；如已设置底仓，请先调整或解除底仓"
-                  placement="top"
+                <el-button
+                  v-if="coreAvailableQty(scope.row) > 0 && checkPer(['admin', 'binanceTradeInfo:createPos'])"
+                  type="danger"
+                  plain
+                  size="mini"
+                  @click="openPositionSellDialog(scope.row)"
                 >
-                  <span>
-                    <el-button
-                      type="danger"
-                      plain
-                      size="mini"
-                      :disabled="coreAvailableQty(scope.row) <= 0"
-                      @click="openPositionSellDialog(scope.row)"
-                    >卖出</el-button>
-                  </span>
-                </el-tooltip>
+                  卖出
+                </el-button>
                 <el-popconfirm
                   v-if="rowSpotOpenOrders(scope.row).length && checkPer(['admin', 'binanceTradeInfo:createPos'])"
                   :title="`确定撤销该来源关联的 ${rowSpotOpenOrders(scope.row).length} 个币安卖出挂单吗？`"
@@ -744,11 +769,10 @@
 
             <div v-if="row._rowType === 'order'" class="core-mobile-actions">
               <el-button
-                v-if="checkPer(['admin', 'binanceTradeInfo:createPos'])"
+                v-if="coreAvailableQty(row) > 0 && checkPer(['admin', 'binanceTradeInfo:createPos'])"
                 type="danger"
                 plain
                 size="small"
-                :disabled="coreAvailableQty(row) <= 0"
                 @click="openPositionSellDialog(row)"
               >卖出</el-button>
               <el-popconfirm
@@ -788,11 +812,10 @@
 
             <div v-else class="core-mobile-actions">
               <el-button
-                v-if="checkPer(['admin', 'binanceTradeInfo:createPos'])"
+                v-if="coreAvailableQty(row) > 0 && checkPer(['admin', 'binanceTradeInfo:createPos'])"
                 type="danger"
                 plain
                 size="small"
-                :disabled="coreAvailableQty(row) <= 0"
                 @click="openPositionSellDialog(row)"
               >卖出</el-button>
               <el-popconfirm
@@ -868,6 +891,7 @@ export default {
       statsDebounceTimer: null,
       statsRequestId: 0,
       showCoreActions: false,
+      showMobileAccountSummary: false,
       showMobileTradeSummary: false,
       coreActionRows: [],
       coreActionView: 'order',
@@ -1697,7 +1721,7 @@ export default {
 .toolbar-main { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; min-width: 0; }
 .toolbar-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 10px; }
 .toolbar-actions .el-button + .el-button { margin-left: 0; }
-.mobile-trade-summary-button { display: none; }
+.mobile-account-summary-button, .mobile-trade-summary-button { display: none; }
 .field-label { color: #303133; font-weight: 500; }
 .account-select, .symbol-select { width: 210px; }
 .toolbar-main .el-button + .el-button { margin-left: 0; }
@@ -1730,6 +1754,18 @@ export default {
 .summary-delta { flex: 0 0 auto; padding: 1px 6px; background: #f4f4f5; border-radius: 9px; font-size: 12px; line-height: 18px; white-space: nowrap; }
 .summary-delta.positive { background: #ecf8f3; }
 .summary-delta.negative { background: #fef0f0; }
+.mobile-account-summary-content { padding: 0 14px 18px; }
+.mobile-account-context { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; padding: 11px 12px; border-radius: 8px; background: #f5f7fa; }
+.mobile-account-context span { color: #8492a6; font-size: 12px; }
+.mobile-account-context strong { overflow: hidden; color: #303133; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.mobile-account-summary-grid { margin-bottom: 14px; border-top: 1px solid #ebeef5; }
+.mobile-account-summary-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 2px; border-bottom: 1px solid #ebeef5; }
+.mobile-account-summary-item span { color: #8492a6; font-size: 13px; }
+.mobile-account-summary-item strong { color: #17233d; font-size: 17px; font-weight: 500; }
+.mobile-account-sync, .mobile-account-close { width: 100%; }
+.mobile-account-close { margin: 8px 0 0; }
+::v-deep .mobile-account-summary-drawer .el-drawer__header { align-items: center; margin-bottom: 0; padding: 16px 16px 12px; border-bottom: 1px solid #ebeef5; }
+::v-deep .mobile-account-summary-drawer .el-drawer__body { overflow-y: auto; padding-top: 12px; }
 .mobile-trade-summary-content { padding: 0 14px 18px; }
 .mobile-summary-highlights { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: hidden; margin-bottom: 12px; border: 1px solid #ebeef5; border-radius: 10px; background: #ebeef5; gap: 1px; }
 .mobile-summary-highlight { min-width: 0; padding: 12px; background: #fff; }
@@ -1814,8 +1850,8 @@ export default {
   .toolbar-actions { align-self: stretch; width: 100%; }
   .toolbar-actions > span { flex: 1 1 50%; }
   .toolbar-actions .el-button { width: 100%; }
-  .desktop-trade-summary { display: none; }
-  .mobile-trade-summary-button { display: inline-block; flex: 1 1 50%; }
+  .desktop-account-summary, .desktop-trade-summary { display: none; }
+  .mobile-account-summary-button, .mobile-trade-summary-button { display: inline-block; flex: 1 1 50%; }
   .position-panel { padding: 12px 10px 6px; }
   .position-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 0; }
   .metric-item { min-width: 0; padding: 10px 12px; border-bottom: 1px solid #ebeef5; }
