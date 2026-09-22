@@ -373,10 +373,15 @@
       custom-class="spot-open-orders-dialog"
     >
       <div class="spot-open-orders-header">
-        <div class="spot-order-context">
-          <span>{{ selectedAccountName }}</span>
-          <el-divider direction="vertical" />
-          <strong>{{ query.symbol }}</strong>
+        <div>
+          <div class="spot-order-context">
+            <span>{{ selectedAccountName }}</span>
+            <el-divider direction="vertical" />
+            <strong>{{ query.symbol }}</strong>
+          </div>
+          <small v-if="spotOpenOrdersLastUpdatedAt" class="spot-open-orders-updated">
+            更新于 {{ formatSpotOrderTime(spotOpenOrdersLastUpdatedAt) }}
+          </small>
         </div>
         <el-button
           size="mini"
@@ -385,7 +390,7 @@
           @click="loadSpotOpenOrders"
         >刷新</el-button>
       </div>
-      <el-table v-loading="spotOpenOrdersLoading" :data="spotOpenOrders" border empty-text="当前交易对没有挂单">
+      <el-table v-loading="spotOpenOrdersLoading" :data="spotOpenOrders" border empty-text="当前交易对没有挂单" class="spot-open-orders-table">
         <el-table-column label="订单 / 时间" min-width="185">
           <template slot-scope="scope">
             <div class="spot-open-order-main">{{ scope.row.orderId }}</div>
@@ -423,6 +428,37 @@
           </template>
         </el-table-column>
       </el-table>
+      <div v-loading="spotOpenOrdersLoading" class="spot-open-orders-mobile-list">
+        <div v-if="!spotOpenOrders.length && !spotOpenOrdersLoading" class="spot-open-orders-empty">
+          <i class="el-icon-document" />
+          <span>当前交易对没有挂单</span>
+        </div>
+        <article v-for="order in spotOpenOrders" :key="order.orderId" class="spot-open-order-card">
+          <div class="spot-open-order-card-header">
+            <div class="spot-open-order-tags">
+              <el-tag size="mini" :type="order.side === 'BUY' ? 'success' : 'danger'">
+                {{ order.side === 'BUY' ? '买入' : '卖出' }}
+              </el-tag>
+              <el-tag size="mini" type="info">{{ spotOpenOrderTypeLabel(order.type) }}</el-tag>
+            </div>
+            <el-tag size="mini" :type="order.status === 'PARTIALLY_FILLED' ? 'warning' : 'info'">
+              {{ spotOpenOrderStatusLabel(order.status) }}
+            </el-tag>
+          </div>
+          <div class="spot-open-order-card-main">
+            <div class="is-primary"><span>剩余数量</span><strong>{{ decimalValue(spotOpenOrderRemainingQty(order), 8) }} {{ spotBaseAsset }}</strong></div>
+            <div class="is-primary"><span>触发价</span><strong>{{ decimalValue(order.stopPrice, 8) }}</strong></div>
+            <div><span>原始数量</span><strong>{{ decimalValue(order.origQty, 8) }}</strong></div>
+            <div><span>已成交</span><strong>{{ decimalValue(order.executedQty, 8) }}</strong></div>
+            <div><span>委托价格</span><strong>{{ spotOpenOrderPriceLabel(order) }}</strong></div>
+            <div><span>卖出来源</span><strong>{{ spotOpenOrderSourceLabel(order) }}</strong></div>
+          </div>
+          <div class="spot-open-order-card-footer">
+            <span>订单 {{ order.orderId }}</span>
+            <span>{{ formatSpotOrderTime(order.time) }}</span>
+          </div>
+        </article>
+      </div>
       <span slot="footer">
         <el-button @click="showSpotOpenOrdersDialog = false">关闭</el-button>
       </span>
@@ -904,6 +940,7 @@ export default {
       showSpotOpenOrdersDialog: false,
       spotOpenOrdersLoading: false,
       spotOpenOrders: [],
+      spotOpenOrdersLastUpdatedAt: null,
       spotOpenOrdersPollingTimer: null,
       spotOrderCancellingIds: [],
       spotOrderStep: 'form',
@@ -1169,6 +1206,7 @@ export default {
     openSpotOpenOrdersDialog() {
       if (this.query.uid == null || !this.query.symbol) return
       this.spotOpenOrders = []
+      this.spotOpenOrdersLastUpdatedAt = null
       this.showSpotOpenOrdersDialog = true
       this.loadSpotOpenOrders()
     },
@@ -1179,6 +1217,7 @@ export default {
       crudBinanceTradeInfo.listSpotOpenOrders(query).then(data => {
         if (this.query.uid === query.uid && this.query.symbol === query.symbol) {
           this.spotOpenOrders = data || []
+          this.spotOpenOrdersLastUpdatedAt = Date.now()
         }
       }).catch(() => {
         // 请求错误由全局拦截器提示
@@ -1230,6 +1269,10 @@ export default {
       }
       if (order.pegPriceType === 'PRIMARY_PEG') return '本方价1'
       return this.decimalValue(order.price, 8)
+    },
+    spotOpenOrderRemainingQty(order) {
+      const remainingQty = numberUtil.subAmount(order.origQty || 0, order.executedQty || 0, 8)
+      return Math.max(Number(remainingQty) || 0, 0)
     },
     formatSpotOrderTime(timestamp) {
       if (timestamp == null) return '--'
@@ -1829,8 +1872,10 @@ export default {
 .spot-order-summary dd.negative { color: #f56c6c; }
 .spot-open-orders-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .spot-open-orders-header .spot-order-context { margin-bottom: 0; }
+.spot-open-orders-updated { display: none; margin-top: 4px; color: #909399; font-size: 11px; }
 .spot-open-order-main { color: #303133; white-space: nowrap; }
 .spot-open-order-secondary { margin-top: 4px; color: #909399; font-size: 12px; white-space: nowrap; }
+.spot-open-orders-mobile-list { display: none; }
 ::v-deep .spot-open-orders-dialog .el-dialog__body { padding-top: 12px; }
 @media (max-width: 1200px) {
   .stats-page { height: auto; min-height: calc(100vh - 117px); overflow: visible; }
@@ -1861,7 +1906,26 @@ export default {
   .metric-value { overflow: hidden; font-size: 19px; text-overflow: ellipsis; white-space: nowrap; }
   .position-panel .position-chart { min-height: 0; }
   ::v-deep .spot-order-dialog { width: 94% !important; }
-  ::v-deep .spot-open-orders-dialog { width: 96% !important; }
+  ::v-deep .spot-open-orders-dialog { display: flex; width: 100% !important; height: 100vh; flex-direction: column; margin: 0 !important; border-radius: 0; }
+  ::v-deep .spot-open-orders-dialog .el-dialog__header { flex: 0 0 auto; padding: 16px 16px 12px; border-bottom: 1px solid #ebeef5; }
+  ::v-deep .spot-open-orders-dialog .el-dialog__body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 12px 10px; }
+  ::v-deep .spot-open-orders-dialog .el-dialog__footer { flex: 0 0 auto; padding: 10px 12px 12px; border-top: 1px solid #ebeef5; }
+  .spot-open-orders-header { position: sticky; z-index: 2; top: -12px; margin: -12px -10px 10px; padding: 10px; background: #fff; border-bottom: 1px solid #ebeef5; }
+  .spot-open-orders-updated { display: block; }
+  .spot-open-orders-table { display: none; }
+  .spot-open-orders-mobile-list { display: grid; gap: 10px; min-height: 120px; }
+  .spot-open-orders-empty { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px; min-height: 220px; color: #909399; }
+  .spot-open-orders-empty i { font-size: 30px; }
+  .spot-open-order-card { padding: 12px; border: 1px solid #ebeef5; border-radius: 10px; background: #fff; box-shadow: 0 3px 10px rgba(31, 45, 61, 0.05); }
+  .spot-open-order-card-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .spot-open-order-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .spot-open-order-card-main { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px 14px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #ebeef5; }
+  .spot-open-order-card-main span, .spot-open-order-card-main strong { display: block; }
+  .spot-open-order-card-main span { color: #909399; font-size: 11px; }
+  .spot-open-order-card-main strong { overflow: hidden; margin-top: 3px; color: #303133; font-size: 13px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+  .spot-open-order-card-main .is-primary strong { color: #17233d; font-size: 15px; }
+  .spot-open-order-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding-top: 10px; border-top: 1px solid #ebeef5; color: #909399; font-size: 11px; }
+  .spot-open-order-card-footer span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   ::v-deep .core-action-drawer { width: 100% !important; }
   ::v-deep .core-action-drawer .el-drawer__header { align-items: center; margin-bottom: 0; padding: 16px 14px 12px; border-bottom: 1px solid #ebeef5; }
   ::v-deep .core-action-drawer .el-drawer__body { overflow-y: auto; }

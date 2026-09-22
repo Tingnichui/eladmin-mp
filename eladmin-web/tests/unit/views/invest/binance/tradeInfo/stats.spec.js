@@ -489,4 +489,11 @@ describe('trade stats request lifecycle', () => {
     expect(Stats.computed.mobileTradeSummaryDetails.call({ tradeSummaryItems }).map(item => item.label))
       .toEqual(['买入总额', '手续费'])
   })
+
+  it('calculates the remaining quantity displayed on mobile open-order cards', () => {
+    expect(Stats.methods.spotOpenOrderRemainingQty({ origQty: '0.01000000', executedQty: '0.00400000' }))
+      .toBe(0.006)
+    expect(Stats.methods.spotOpenOrderRemainingQty({ origQty: '0.00400000', executedQty: '0.00600000' }))
+      .toBe(0)
+  })
 })
