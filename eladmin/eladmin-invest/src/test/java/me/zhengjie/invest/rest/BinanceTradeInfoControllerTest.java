@@ -93,18 +93,13 @@ class BinanceTradeInfoControllerTest {
         account.setApiValidFlag(1);
         when(accountService.getAccountByUid(7)).thenReturn(account);
         when(spotService.syncTradeInfo(account, "BTCUSDT")).thenReturn(2);
-        when(usdFuturesService.sync(account)).thenReturn(1);
-        when(coinFuturesService.sync(account)).thenReturn(0);
 
-        ResponseEntity<Map<String, Object>> response = controller.syncSelected(7, "BTCUSDT");
+        ResponseEntity<Map<String, Integer>> response = controller.syncSelected(7, "BTCUSDT");
 
         assertEquals(2, response.getBody().get("spotCount"));
-        assertEquals(1, response.getBody().get("usdFuturesCount"));
-        assertEquals(0, response.getBody().get("coinFuturesCount"));
-        assertFalse(response.getBody().containsKey("c2cOrderCount"));
+        assertEquals(1, response.getBody().size());
         verify(spotService).syncTradeInfo(account, "BTCUSDT");
-        verify(usdFuturesService).sync(account);
-        verify(coinFuturesService).sync(account);
+        verifyNoInteractions(usdFuturesService, coinFuturesService);
         verifyNoInteractions(c2cOrderService);
         assertNull(BinanceAccountContextHolder.get());
     }

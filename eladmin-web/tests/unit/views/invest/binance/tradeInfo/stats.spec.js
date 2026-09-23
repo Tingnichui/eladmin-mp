@@ -411,9 +411,7 @@ describe('trade stats request lifecycle', () => {
 
   it('syncs only the selected account and symbol before refreshing stats', async() => {
     crudBinanceTradeInfo.syncSelected.mockResolvedValue({
-      spotCount: 2,
-      usdFuturesCount: 1,
-      coinFuturesCount: 0
+      spotCount: 2
     })
     const vm = {
       query: { uid: 7, symbol: 'BTCUSDT' },
@@ -433,7 +431,7 @@ describe('trade stats request lifecycle', () => {
     })
     expect(vm.doStats).toHaveBeenCalledTimes(1)
     expect(vm.$notify).toHaveBeenCalledWith(expect.objectContaining({
-      title: '同步成功：现货 2 条'
+      title: '现货同步成功：新增 2 条成交'
     }))
     expect(vm.syncLoading).toBe(false)
   })
@@ -496,6 +494,26 @@ describe('trade stats request lifecycle', () => {
       .toBe(0.006)
     expect(Stats.methods.spotOpenOrderRemainingQty({ origQty: '0.00400000', executedQty: '0.00600000' }))
       .toBe(0)
+  })
+
+  it('shows the trigger and commission prices for a position sell order', () => {
+    const vm = {
+      decimalValue: Stats.methods.decimalValue,
+      spotOpenOrderTypeLabel: Stats.methods.spotOpenOrderTypeLabel,
+      spotOpenOrderPriceLabel: Stats.methods.spotOpenOrderPriceLabel
+    }
+
+    expect(Stats.methods.spotPendingOrderPriceLabel.call(vm, {
+      type: 'TAKE_PROFIT_LIMIT',
+      stopPrice: '92000',
+      pegPriceType: 'MARKET_PEG',
+      peggedPrice: '91998.5'
+    })).toBe('限价止盈 92,000.00 → 对手价1（91,998.50000000）')
+    expect(Stats.methods.spotPendingOrderPriceLabel.call(vm, {
+      type: 'STOP_LOSS_LIMIT',
+      stopPrice: '78000',
+      price: '77950'
+    })).toBe('限价止损 78,000.00 → 77,950.00000000')
   })
 
   it('cancels an order directly from the current open-orders panel', async() => {

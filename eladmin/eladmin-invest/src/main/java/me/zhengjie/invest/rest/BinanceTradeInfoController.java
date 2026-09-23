@@ -169,11 +169,11 @@ public class BinanceTradeInfoController {
     }
 
     @PutMapping("/syncSelected")
-    @Log("同步当前账户交易")
-    @ApiOperation("同步当前账户交易")
+    @Log("同步当前账户现货成交")
+    @ApiOperation("同步当前账户现货成交并执行 FIFO 撮合")
     @PreAuthorize("@el.check('binanceTradeInfo:sync')")
-    public ResponseEntity<Map<String, Object>> syncSelected(@RequestParam Integer uid,
-                                                            @RequestParam String symbol) {
+    public ResponseEntity<Map<String, Integer>> syncSelected(@RequestParam Integer uid,
+                                                             @RequestParam String symbol) {
         BinanceEnum.SYMBOL spotSymbol;
         try {
             spotSymbol = BinanceEnum.SYMBOL.valueOf(symbol);
@@ -189,27 +189,14 @@ public class BinanceTradeInfoController {
             throw new BadRequestException("当前账户 API 不可用");
         }
 
-        Map<String, Object> result = new HashMap<>();
         try {
-            result.put("spotCount", binanceTradeInfoService.syncTradeInfo(accountInfo, spotSymbol.name()));
+            int spotCount = binanceTradeInfoService.syncTradeInfo(accountInfo, spotSymbol.name());
+            return ResponseEntity.ok(Collections.singletonMap("spotCount", spotCount));
         } catch (Exception e) {
             log.warn("当前账户现货同步失败: uid={}, symbol={}, error={}", uid, symbol,
                     e.getClass().getSimpleName());
             throw new BadRequestException("现货同步失败，请稍后重试");
         }
-        try {
-            result.put("usdFuturesCount", binanceFuturesTradeInfoService.sync(accountInfo));
-        } catch (Exception e) {
-            log.warn("当前账户 U 本位同步失败: uid={}, error={}", uid, e.getClass().getSimpleName());
-            throw new BadRequestException("U 本位同步失败，请稍后重试");
-        }
-        try {
-            result.put("coinFuturesCount", binanceCoinFuturesTradeInfoService.sync(accountInfo));
-        } catch (Exception e) {
-            log.warn("当前账户币本位同步失败: uid={}, error={}", uid, e.getClass().getSimpleName());
-            throw new BadRequestException("币本位同步失败，请稍后重试");
-        }
-        return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
     @PutMapping("/matchSpotTradeInfo")

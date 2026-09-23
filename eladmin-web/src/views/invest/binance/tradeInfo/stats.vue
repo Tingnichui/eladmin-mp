@@ -46,7 +46,7 @@
             :loading="syncLoading"
             :disabled="query.uid == null || !query.symbol"
             @click="syncSpotTradeInfo"
-          >同步数据</el-button>
+          >同步现货</el-button>
           <el-button
             v-if="checkPer(['admin', 'binanceTradeInfo:createPos'])"
             size="small"
@@ -635,11 +635,19 @@
           <el-table-column label="持仓数量" width="125">
             <template slot-scope="scope">{{ decimalValue(scope.row.remainingQty, 8) }}</template>
           </el-table-column>
-          <el-table-column label="可撮合数量" width="125">
+          <el-table-column label="可撮合 / 挂单卖价" width="220">
             <template slot-scope="scope">
               <div>{{ decimalValue(coreAvailableQty(scope.row), 8) }}</div>
               <small v-if="spotPendingQty(scope.row) > 0" class="core-cell-meta negative">
                 已挂单 {{ decimalValue(spotPendingQty(scope.row), 8) }}
+              </small>
+              <small
+                v-for="order in rowSpotOpenOrders(scope.row)"
+                :key="order.orderId"
+                class="core-cell-meta core-pending-price"
+                :title="spotPendingOrderPriceLabel(order)"
+              >
+                {{ spotPendingOrderPriceLabel(order) }}
               </small>
             </template>
           </el-table-column>
@@ -843,6 +851,11 @@
               <div>
                 <span>可撮合数量</span><strong>{{ decimalValue(coreAvailableQty(row), 8) }}</strong>
                 <small v-if="spotPendingQty(row) > 0" class="negative">已挂单 {{ decimalValue(spotPendingQty(row), 8) }}</small>
+                <small
+                  v-for="order in rowSpotOpenOrders(row)"
+                  :key="order.orderId"
+                  class="core-pending-price"
+                >{{ spotPendingOrderPriceLabel(order) }}</small>
               </div>
               <div><span>保本价</span><strong>{{ decimalValue(row.breakEvenPrice, 2) }}</strong></div>
               <div>
@@ -1231,7 +1244,7 @@ export default {
         this.refreshSpotOpenOrdersIfVisible()
         if (showSuccess !== false) {
           this.$notify({
-            title: `同步成功：现货 ${res.spotCount || 0} 条`,
+            title: `现货同步成功：新增 ${res.spotCount || 0} 条成交`,
             type: CRUD.NOTIFICATION_TYPE.SUCCESS,
             duration: 2500
           })
@@ -1318,6 +1331,11 @@ export default {
       }
       if (order.pegPriceType === 'PRIMARY_PEG') return '本方价1'
       return this.decimalValue(order.price, 8)
+    },
+    spotPendingOrderPriceLabel(order) {
+      const type = this.spotOpenOrderTypeLabel(order.type)
+      const triggerPrice = this.decimalValue(order.stopPrice, 2)
+      return `${type} ${triggerPrice} → ${this.spotOpenOrderPriceLabel(order)}`
     },
     spotOpenOrderRemainingQty(order) {
       const remainingQty = numberUtil.subAmount(order.origQty || 0, order.executedQty || 0, 8)
@@ -1905,6 +1923,7 @@ export default {
 ::v-deep .core-action-table .core-expand-column .cell { overflow: visible; padding-right: 0; padding-left: 0; text-overflow: clip; }
 .core-cell-primary { color: #303133; white-space: nowrap; }
 .core-cell-meta { display: block; overflow: hidden; margin-top: 4px; color: #909399; font-size: 12px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+.core-pending-price { color: #e6a23c !important; }
 .core-cell-pnl { display: block; white-space: nowrap; }
 .core-action-buttons { display: flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; }
 .core-action-buttons .el-button + .el-button { margin-left: 0; }
