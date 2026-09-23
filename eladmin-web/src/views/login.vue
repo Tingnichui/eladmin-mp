@@ -56,7 +56,7 @@ export default {
       loginForm: {
         username: '',
         password: '',
-        rememberMe: false,
+        rememberMe: true,
         code: '',
         uuid: ''
       },
@@ -105,7 +105,9 @@ export default {
       // 密码交由浏览器密码管理器保存，清理旧版本遗留的密码 Cookie
       Cookies.remove('password')
       this.loginForm.username = username === undefined ? this.loginForm.username : username
-      this.loginForm.rememberMe = rememberMe === 'true'
+      if (rememberMe !== undefined) {
+        this.loginForm.rememberMe = rememberMe === 'true'
+      }
     },
     handleLogin() {
       this.$refs.loginForm.validate(valid => {
