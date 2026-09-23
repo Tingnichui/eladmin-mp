@@ -100,12 +100,12 @@
               <div class="popover-heading">交易汇总</div>
               <div class="summary-grid">
                 <div v-for="item in tradeSummaryItems" :key="item.label" class="summary-item">
-                  <span class="summary-label">{{ item.label }}</span>
+                  <div class="summary-label-row">
+                    <span class="summary-label">{{ item.label }}</span>
+                    <span v-if="item.delta" :class="['summary-delta', item.deltaTone]">{{ item.delta }}</span>
+                  </div>
                   <div class="summary-value-row">
                     <strong :class="['summary-value', item.tone]">{{ item.value }}</strong>
-                    <el-tooltip v-if="item.delta" content="相对上次查询" placement="top">
-                      <span :class="['summary-delta', item.deltaTone]">{{ item.delta }}</span>
-                    </el-tooltip>
                   </div>
                 </div>
               </div>
@@ -192,9 +192,11 @@
       <div class="mobile-trade-summary-content">
         <div class="mobile-summary-highlights">
           <div v-for="item in mobileTradeSummaryHighlights" :key="item.label" class="mobile-summary-highlight">
-            <span>{{ item.label }}</span>
+            <div class="mobile-summary-label-row">
+              <span>{{ item.label }}</span>
+              <small v-if="item.delta" :class="item.deltaTone">{{ item.delta }}</small>
+            </div>
             <strong :class="item.tone">{{ item.value }}</strong>
-            <small v-if="item.delta" :class="item.deltaTone">相对上次 {{ item.delta }}</small>
           </div>
         </div>
         <div class="mobile-summary-grid">
@@ -1137,7 +1139,9 @@ export default {
           label: '净盈亏',
           value: this.signedMoneyValue(this.spotStats.netPnl),
           tone: this.valueTone(this.spotStats.netPnl),
-          delta: netPnlDelta == null || Number(netPnlDelta) === 0 ? '' : this.signedMoneyValue(netPnlDelta),
+          delta: netPnlDelta == null || Number(netPnlDelta) === 0
+            ? ''
+            : `${Number(netPnlDelta) > 0 ? '↑' : '↓'}${this.moneyValue(Math.abs(Number(netPnlDelta)))}`,
           deltaTone: this.valueTone(netPnlDelta)
         },
         { label: '未匹配卖出', value: this.quantityValue(this.spotStats.unmatchedSellQty, false) },
@@ -1879,11 +1883,11 @@ export default {
 .trade-summary-popover .summary-grid { display: grid; grid-template-columns: repeat(5, minmax(110px, 1fr)); }
 .summary-item { min-width: 0; padding: 9px 10px; border-right: 1px solid #ebeef5; border-top: 1px solid #f1f3f7; }
 .summary-item:nth-child(5n) { border-right: 0; }
+.summary-label-row { display: flex; align-items: center; gap: 5px; min-width: 0; margin-bottom: 6px; }
+.summary-label-row .summary-label { overflow: hidden; margin-bottom: 0; text-overflow: ellipsis; white-space: nowrap; }
 .summary-value-row { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .summary-value { display: block; color: #17233d; font-size: 16px; white-space: nowrap; }
-.summary-delta { flex: 0 0 auto; padding: 1px 6px; background: #f4f4f5; border-radius: 9px; font-size: 12px; line-height: 18px; white-space: nowrap; }
-.summary-delta.positive { background: #ecf8f3; }
-.summary-delta.negative { background: #fef0f0; }
+.summary-delta { flex: 0 0 auto; font-size: 11px; font-weight: 600; line-height: 1; white-space: nowrap; }
 .mobile-account-summary-content { padding: 0 14px 18px; }
 .mobile-account-context { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; padding: 11px 12px; border-radius: 8px; background: #f5f7fa; }
 .mobile-account-context span { color: #8492a6; font-size: 12px; }
@@ -1900,6 +1904,9 @@ export default {
 .mobile-summary-highlights { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: hidden; margin-bottom: 12px; border: 1px solid #ebeef5; border-radius: 10px; background: #ebeef5; gap: 1px; }
 .mobile-summary-highlight { min-width: 0; padding: 12px; background: #fff; }
 .mobile-summary-highlight:first-child { grid-column: 1 / -1; padding-top: 14px; padding-bottom: 14px; text-align: center; }
+.mobile-summary-label-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.mobile-summary-highlight:first-child .mobile-summary-label-row { justify-content: center; }
+.mobile-summary-highlight .mobile-summary-label-row small { margin-top: 0; font-size: 11px; font-weight: 600; white-space: nowrap; }
 .mobile-summary-highlight span, .mobile-summary-highlight strong, .mobile-summary-highlight small { display: block; }
 .mobile-summary-highlight span { color: #8492a6; font-size: 12px; }
 .mobile-summary-highlight strong { overflow: hidden; margin-top: 5px; color: #17233d; font-size: 19px; text-overflow: ellipsis; white-space: nowrap; }

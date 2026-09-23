@@ -133,7 +133,11 @@ describe('trade stats request lifecycle', () => {
 
     vm.netPnlDelta = 12.34
     netPnlItem = Stats.computed.tradeSummaryItems.call(vm).find(item => item.label === '净盈亏')
-    expect(netPnlItem).toEqual(expect.objectContaining({ delta: '+$12.34', deltaTone: 'positive' }))
+    expect(netPnlItem).toEqual(expect.objectContaining({ delta: '↑$12.34', deltaTone: 'positive' }))
+
+    vm.netPnlDelta = -5.67
+    netPnlItem = Stats.computed.tradeSummaryItems.call(vm).find(item => item.label === '净盈亏')
+    expect(netPnlItem).toEqual(expect.objectContaining({ delta: '↓$5.67', deltaTone: 'negative' }))
   })
 
   it('hides futures warnings from the spot page', () => {
