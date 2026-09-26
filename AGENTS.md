@@ -36,6 +36,7 @@ Java 代码目标版本为 Java 8，并沿用现有 `me.zhengjie` 包结构。Sp
 
 每个新聊天开始处理代码任务前，先确认以下本机开发环境路径是否存在：
 
+- 先执行 `git fetch --prune origin` 刷新远端引用，并检查当前分支、上游分支及工作区状态。工作区干净且可安全快进时，必须使用 `git pull --ff-only`（或等价的仅快进操作）更新到对应远端分支的最新代码后再开始工作。若存在未提交改动、分支分叉或未配置上游，不得自动暂存、变基、合并或覆盖本地内容；必须先说明情况并询问用户如何处理。
 - 快速查看 `docs/README.md`，了解 `docs/` 下有哪些文档分类；只需确认目录用途，不需要细读每份文档。
 - Maven 安装目录：`C:\MyProgram\develop\Maven\apache-maven-3.5.4`
 - Maven 配置文件：`C:\MyProgram\develop\Maven\apache-maven-3.5.4\conf\settings.xml`
