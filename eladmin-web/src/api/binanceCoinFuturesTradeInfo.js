@@ -8,6 +8,33 @@ export function stats(params) {
   })
 }
 
+export function positionStats(params) {
+  return request({
+    url: 'api/binanceCoinFuturesTradeInfo/stats/position',
+    method: 'get',
+    params,
+    timeout: 15000
+  })
+}
+
+export function accountAssets(params) {
+  return request({
+    url: 'api/binanceCoinFuturesTradeInfo/stats/account',
+    method: 'get',
+    params,
+    timeout: 15000
+  })
+}
+
+export function closedSummary(params) {
+  return request({
+    url: 'api/binanceCoinFuturesTradeInfo/stats/closed-summary',
+    method: 'get',
+    params,
+    timeout: 15000
+  })
+}
+
 export function syncSelected(params) {
   return request({
     url: 'api/binanceCoinFuturesTradeInfo/syncSelected',
@@ -48,4 +75,4 @@ export function cancelOrder(params) {
   })
 }
 
-export default { stats, syncSelected, placeOrder, openOrders, queryOrder, cancelOrder }
+export default { stats, positionStats, accountAssets, closedSummary, syncSelected, placeOrder, openOrders, queryOrder, cancelOrder }

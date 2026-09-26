@@ -31,13 +31,17 @@
         </div>
         <div class="toolbar-actions">
           <el-popover placement="bottom-end" width="300" trigger="hover">
-            <div class="popover-title">账户资产（{{ marginAsset }}）</div>
-            <div v-for="item in accountItems" :key="item.label" class="popover-row"><span>{{ item.label }}</span><strong>{{ item.value }}</strong></div>
+            <div v-loading="accountLoading" class="popover-content">
+              <div class="popover-title">账户资产（{{ marginAsset }}）</div>
+              <div v-for="item in accountItems" :key="item.label" class="popover-row"><span>{{ item.label }}</span><strong>{{ item.value }}</strong></div>
+            </div>
             <el-button slot="reference" size="small" plain icon="el-icon-wallet">账户资产</el-button>
           </el-popover>
-          <el-popover placement="bottom-end" width="360" trigger="hover">
-            <div class="popover-title">当前持仓周期汇总</div>
-            <div v-for="item in summaryItems" :key="item.label" class="popover-row"><span>{{ item.label }}</span><strong :class="item.tone">{{ item.value }}</strong></div>
+          <el-popover placement="bottom-end" width="360" trigger="hover" @show="loadClosedSummary">
+            <div v-loading="summaryLoading" class="popover-content">
+              <div class="popover-title">全部已平仓周期汇总</div>
+              <div v-for="item in summaryItems" :key="item.label" class="popover-row"><span>{{ item.label }}</span><strong :class="item.tone">{{ item.value }}</strong></div>
+            </div>
             <el-button slot="reference" size="small" plain icon="el-icon-s-grid">全部汇总</el-button>
           </el-popover>
         </div>
@@ -158,7 +162,11 @@ export default {
       accountList: [],
       statsInfo: emptyStatsInfo(),
       statsLoading: false,
+      accountLoading: false,
+      summaryLoading: false,
       syncLoading: false,
+      summaryLoadedKey: null,
+      summaryWarnings: [],
       orderDialogVisible: false,
       orderSubmitting: false,
       openOrdersVisible: false,
@@ -176,13 +184,15 @@ export default {
   computed: {
     canQuery() { return this.query.uid != null && this.query.symbol && this.query.positionSide },
     statsReady() { return Number(this.contract.contractSize) > 0 && Number(this.position.markPrice) > 0 },
-    canPlaceOrder() { return this.canQuery && this.statsReady && !this.statsLoading },
+    canPlaceOrder() { return this.canQuery && this.statsReady && this.statsInfo.realtime !== false && !this.statsLoading },
     position() { return this.statsInfo.positionInfo || {} },
     summary() { return this.statsInfo.tradeSummary || {} },
     account() { return this.statsInfo.accountInfo || {} },
     contract() { return this.statsInfo.contractInfo || {} },
     marginAsset() { return this.contract.marginAsset || this.account.asset || 'BTC' },
-    warningText() { return (this.statsInfo.warnings || []).join('；') },
+    warningText() {
+      return [...new Set([...(this.statsInfo.warnings || []), ...this.summaryWarnings])].join('；')
+    },
     selectedAccountName() {
       const account = this.accountList.find(item => item.uid === this.query.uid)
       return account ? account.idCardName : '--'
@@ -239,8 +249,8 @@ export default {
         { label: '手续费', value: this.assetValue(this.summary.commission) },
         { label: '资金费', value: this.assetValue(this.summary.fundingFee), tone: this.tone(this.summary.fundingFee) },
         { label: '净盈亏', value: this.assetValue(this.summary.netPnl), tone: this.tone(this.summary.netPnl) },
-        { label: '成交笔数', value: this.summary.totalTradeCount == null ? '--' : this.summary.totalTradeCount },
-        { label: '未平仓批次', value: this.summary.openTradeCount == null ? '--' : this.summary.openTradeCount }
+        { label: '已平仓周期', value: this.summary.closedPositionCount == null ? '--' : this.summary.closedPositionCount },
+        { label: '成交笔数', value: this.summary.totalTradeCount == null ? '--' : this.summary.totalTradeCount }
       ]
     }
   },
@@ -272,14 +282,51 @@ export default {
     doStats() {
       if (!this.canQuery) return Promise.resolve()
       const requestId = ++this.requestId
+      const query = { ...this.query }
       this.statsLoading = true
+      this.accountLoading = true
+      this.summaryLoading = false
+      this.summaryLoadedKey = null
+      this.summaryWarnings = []
       this.statsInfo = emptyStatsInfo()
-      return coinFuturesApi.stats({ ...this.query }).then(data => {
-        if (requestId === this.requestId) this.statsInfo = data || {}
+      const positionRequest = coinFuturesApi.positionStats(query).then(data => {
+        if (requestId === this.requestId) this.statsInfo = { ...this.statsInfo, ...(data || {}) }
       }).catch(() => {
-        if (requestId === this.requestId) this.statsInfo = emptyStatsInfo(['实时合约数据加载失败，已禁止下单，请重新查询'])
+        if (requestId === this.requestId) {
+          this.statsInfo = { ...this.statsInfo, warnings: ['实时仓位加载失败，已禁止下单，请重新查询'] }
+        }
       }).finally(() => {
         if (requestId === this.requestId) this.statsLoading = false
+      })
+      const accountRequest = coinFuturesApi.accountAssets({ uid: query.uid, symbol: query.symbol }).then(data => {
+        const accountInfo = data || {}
+        if (requestId === this.requestId) this.statsInfo = { ...this.statsInfo, accountInfo }
+      }).catch(() => {
+        if (requestId === this.requestId) {
+          this.statsInfo = { ...this.statsInfo, warnings: [...(this.statsInfo.warnings || []), '账户资产加载失败'] }
+        }
+      }).finally(() => {
+        if (requestId === this.requestId) this.accountLoading = false
+      })
+      return Promise.all([positionRequest, accountRequest])
+    },
+    loadClosedSummary() {
+      if (!this.canQuery || this.summaryLoading) return Promise.resolve()
+      const query = { ...this.query }
+      const key = `${query.uid}:${query.symbol}:${query.positionSide}`
+      if (this.summaryLoadedKey === key) return Promise.resolve()
+      const requestId = this.requestId
+      this.summaryLoading = true
+      this.summaryWarnings = []
+      return coinFuturesApi.closedSummary(query).then(data => {
+        if (requestId === this.requestId && key === `${this.query.uid}:${this.query.symbol}:${this.query.positionSide}`) {
+          const tradeSummary = (data && data.tradeSummary) || {}
+          this.statsInfo = { ...this.statsInfo, tradeSummary }
+          this.summaryWarnings = (data && data.warnings) || []
+          this.summaryLoadedKey = key
+        }
+      }).finally(() => {
+        if (requestId === this.requestId) this.summaryLoading = false
       })
     },
     syncData() {
@@ -438,6 +485,7 @@ export default {
 .risk-strip { display: flex; flex-wrap: wrap; gap: 28px; padding: 10px 16px; color: #909399; font-size: 12px; }
 .risk-strip strong { margin-left: 5px; color: #606266; }
 .popover-title { margin-bottom: 10px; color: #303133; font-weight: 600; }
+.popover-content { min-height: 120px; }
 .popover-row { display: flex; justify-content: space-between; padding: 6px 0; color: #606266; }
 .popover-row strong { color: #303133; }
 .primary { color: #409eff !important; }

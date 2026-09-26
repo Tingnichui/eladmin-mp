@@ -21,15 +21,18 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import me.zhengjie.invest.constants.BinanceEnum;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesAccountInfo;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesClosedSummaryVO;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesContractInfo;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesOpenTradeInfo;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesOrderDto;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesOrderRequest;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesPositionInfo;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesPositionStatsVO;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesStatsInfoVO;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesTradeSummary;
 import me.zhengjie.invest.domain.dto.MatchedTradeInfo;
@@ -49,6 +52,8 @@ import me.zhengjie.utils.PageResult;
 import me.zhengjie.utils.PageUtil;
 import me.zhengjie.utils.RedisUtils;
 import org.apache.commons.collections4.CollectionUtils;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,6 +63,11 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 /**
@@ -67,9 +77,20 @@ import java.util.stream.Collectors;
  **/
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceCoinFuturesTradeInfoMapper, BinanceCoinFuturesTradeInfo> implements BinanceCoinFuturesTradeInfoService {
 
     private static final int SYNC_PAGE_SIZE = 1000;
+    private static final int INCOME_PAGE_SIZE = 1000;
+    private static final long INCOME_MAX_INTERVAL_MILLIS = 365L * 24 * 60 * 60 * 1000;
+    private static final long CLOSED_SUMMARY_CACHE_MINUTES = 30L;
+    private static final String CLOSED_SUMMARY_CACHE_PREFIX = "BINANCE:COIN_FUTURES:CLOSED_SUMMARY:";
+    private static final long POSITION_REQUEST_TIMEOUT_MILLIS = 5_000L;
+    private static final long CONTRACT_CACHE_MINUTES = 60L;
+    private static final long POSITION_STALE_CACHE_MINUTES = 10L;
+    private static final String CONTRACT_CACHE_PREFIX = "BINANCE:COIN_FUTURES:CONTRACT:";
+    private static final String POSITION_CACHE_PREFIX = "BINANCE:COIN_FUTURES:POSITION:";
+    private static final String MARK_PRICE_CACHE_PREFIX = "BINANCE:COIN_FUTURES:MARK_PRICE:";
     private static final Set<String> ORDER_ACTIONS = new HashSet<>(Arrays.asList("OPEN", "CLOSE"));
     private static final Set<String> ORDER_POSITION_SIDES = new HashSet<>(Arrays.asList("LONG", "SHORT"));
     private static final Set<String> ORDER_TYPES = new HashSet<>(Arrays.asList("MARKET", "LIMIT"));
@@ -85,6 +106,9 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
     private RedisUtils redisUtils;
     @Resource
     private BinanceTradeInfoService binanceTradeInfoService;
+    @Resource
+    @Qualifier("binanceStatsExecutor")
+    private AsyncTaskExecutor binanceStatsExecutor;
 
     @Override
     public PageResult<BinanceCoinFuturesTradeInfo> queryAll(BinanceCoinFuturesTradeInfoQueryCriteria criteria, Page<Object> page) {
@@ -401,61 +425,107 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
 
     @Override
     public BinanceCoinFuturesStatsInfoVO queryStats(Integer uid, String symbol, String positionSide) {
+        BinanceCoinFuturesPositionStatsVO positionStats = queryPositionStats(uid, symbol, positionSide);
+        BinanceCoinFuturesClosedSummaryVO closedSummary = queryClosedSummary(uid, symbol, positionSide);
         BinanceCoinFuturesStatsInfoVO result = new BinanceCoinFuturesStatsInfoVO();
+        result.setPositionInfo(positionStats.getPositionInfo());
+        result.setContractInfo(positionStats.getContractInfo());
+        result.setTradeList(positionStats.getTradeList());
+        result.setAccountInfo(queryAccountAssets(symbol));
+        result.setTradeSummary(closedSummary.getTradeSummary());
+        result.getTradeSummary().setOpenTradeCount(positionStats.getTradeList().size());
+        result.getWarnings().addAll(positionStats.getWarnings());
+        closedSummary.getWarnings().stream()
+                .filter(warning -> !result.getWarnings().contains(warning))
+                .forEach(result.getWarnings()::add);
+        return result;
+    }
 
-        JSONObject contract = binanceCoinFuturesUtil.contractInfo(symbol);
-        result.setContractInfo(toContractInfo(contract, symbol));
-        if (contract == null) {
-            result.getWarnings().add("币安未返回当前合约规格，逐笔数量使用成交数据推算");
+    @Override
+    public BinanceCoinFuturesPositionStatsVO queryPositionStats(Integer uid, String symbol, String positionSide) {
+        BinanceCoinFuturesPositionStatsVO result = new BinanceCoinFuturesPositionStatsVO();
+        long deadlineNanos = System.nanoTime()
+                + TimeUnit.MILLISECONDS.toNanos(POSITION_REQUEST_TIMEOUT_MILLIS);
+        BinanceAccountInfo accountInfo = BinanceAccountContextHolder.get();
+        String contractCacheKey = CONTRACT_CACHE_PREFIX + symbol;
+        String positionCacheKey = POSITION_CACHE_PREFIX + uid + ":" + symbol + ":" + positionSide;
+        String markPriceCacheKey = MARK_PRICE_CACHE_PREFIX + symbol;
+
+        BinanceCoinFuturesContractInfo cachedContract = getRealtimeCache(
+                contractCacheKey, BinanceCoinFuturesContractInfo.class, "合约规格");
+        Future<JSONObject> contractFuture = cachedContract == null
+                ? submitRealtime(accountInfo, () -> binanceCoinFuturesUtil.contractInfo(symbol)) : null;
+        Future<List<JSONObject>> positionFuture = submitRealtime(
+                accountInfo, () -> binanceCoinFuturesUtil.positionRisk(symbol));
+        Future<JSONObject> premiumFuture = submitRealtime(
+                accountInfo, () -> binanceCoinFuturesUtil.premiumIndex(symbol));
+
+        BinanceCoinFuturesContractInfo contractInfo = cachedContract;
+        if (contractInfo == null) {
+            RealtimeResult<JSONObject> contractResult = awaitRealtime(
+                    contractFuture, deadlineNanos, "合约规格", result.getWarnings());
+            if (contractResult.getValue() != null) {
+                contractInfo = toContractInfo(contractResult.getValue(), symbol);
+                setRealtimeCache(contractCacheKey, contractInfo, CONTRACT_CACHE_MINUTES, "合约规格");
+            }
         }
+        if (contractInfo == null) {
+            contractInfo = toContractInfo(null, symbol);
+            result.getWarnings().add("合约规格暂不可用，逐笔数量使用默认规格推算");
+        }
+        result.setContractInfo(contractInfo);
 
-        List<JSONObject> positions = binanceCoinFuturesUtil.positionRisk(symbol);
-        JSONObject position = positions.stream()
+        RealtimeResult<List<JSONObject>> positionResult = awaitRealtime(
+                positionFuture, deadlineNanos, "实时仓位", result.getWarnings());
+        JSONObject position = positionResult.getValue() == null ? null : positionResult.getValue().stream()
                 .filter(item -> positionSide.equalsIgnoreCase(item.getString("positionSide")))
                 .findFirst().orElse(null);
-        BinanceCoinFuturesPositionInfo positionInfo;
-        if (position == null) {
-            positionInfo = new BinanceCoinFuturesPositionInfo();
-            positionInfo.setSymbol(symbol);
-            positionInfo.setPositionSide(positionSide);
-            result.getWarnings().add("币安未返回当前交易对和持仓方向的仓位信息");
+        BinanceCoinFuturesPositionInfo positionInfo = position == null ? null : toPositionInfo(position);
+        if (positionInfo != null) {
+            setRealtimeCache(positionCacheKey, positionInfo, POSITION_STALE_CACHE_MINUTES, "实时仓位");
         } else {
-            positionInfo = toPositionInfo(position);
+            positionInfo = getRealtimeCache(positionCacheKey, BinanceCoinFuturesPositionInfo.class, "实时仓位");
+            if (positionInfo != null) {
+                result.setRealtime(false);
+                result.getWarnings().add("实时仓位暂不可用，当前展示最近一次缓存数据，已禁止下单");
+            } else {
+                positionInfo = emptyPosition(symbol, positionSide);
+                result.setRealtime(false);
+                result.getWarnings().add("实时仓位暂不可用，已禁止下单");
+            }
         }
-        if (!positive(positionInfo.getMarkPrice())) {
-            JSONObject premium = binanceCoinFuturesUtil.premiumIndex(symbol);
-            positionInfo.setMarkPrice(decimal(premium, "markPrice"));
-            if (!positive(positionInfo.getMarkPrice())) {
-                result.getWarnings().add("币安未返回当前合约的实时标记价格");
+
+        RealtimeResult<JSONObject> premiumResult = awaitRealtime(
+                premiumFuture, deadlineNanos, "标记价格", result.getWarnings());
+        BigDecimal liveMarkPrice = decimal(premiumResult.getValue(), "markPrice");
+        if (positive(liveMarkPrice)) {
+            positionInfo.setMarkPrice(liveMarkPrice);
+            setRealtimeCache(markPriceCacheKey, liveMarkPrice, POSITION_STALE_CACHE_MINUTES, "标记价格");
+        } else if (!positive(positionInfo.getMarkPrice())) {
+            BigDecimal cachedMarkPrice = getRealtimeCache(markPriceCacheKey, BigDecimal.class, "标记价格");
+            if (positive(cachedMarkPrice)) {
+                positionInfo.setMarkPrice(cachedMarkPrice);
+                result.setRealtime(false);
+                result.getWarnings().add("实时标记价格暂不可用，当前展示最近一次缓存数据，已禁止下单");
+            } else {
+                result.setRealtime(false);
+                result.getWarnings().add("实时标记价格暂不可用，已禁止下单");
             }
         }
         result.setPositionInfo(positionInfo);
 
-        JSONObject account = binanceCoinFuturesUtil.account();
-        result.setAccountInfo(toAccountInfo(account, result.getContractInfo().getMarginAsset()));
-
-        List<BinanceCoinFuturesTradeInfo> allTrades = binanceCoinFuturesTradeInfoMapper.selectList(
-                Wrappers.lambdaQuery(BinanceCoinFuturesTradeInfo.class)
-                        .eq(BinanceCoinFuturesTradeInfo::getUid, uid)
-                        .eq(BinanceCoinFuturesTradeInfo::getSymbol, symbol)
-                        .eq(BinanceCoinFuturesTradeInfo::getPositionSide, positionSide)
-                        .orderByAsc(BinanceCoinFuturesTradeInfo::getTime)
-                        .orderByAsc(BinanceCoinFuturesTradeInfo::getId)
-        );
-        List<BinanceCoinFuturesTradeInfo> trades = currentPositionCycle(allTrades, positionSide);
-        if (trades.isEmpty() && result.getPositionInfo().getPositionAmt().abs().compareTo(BigDecimal.ZERO) > 0) {
+        List<BinanceCoinFuturesTradeInfo> allTrades = loadStatsTrades(uid, symbol, positionSide);
+        PositionCycles positionCycles = splitPositionCycles(allTrades, positionSide);
+        List<BinanceCoinFuturesTradeInfo> currentTrades = positionCycles.getCurrentTrades();
+        if (!"BOTH".equals(positionSide) && currentTrades.isEmpty()
+                && result.getPositionInfo().getPositionAmt().abs().compareTo(BigDecimal.ZERO) > 0) {
             result.getWarnings().add("本地缺少当前持仓周期成交，请先同步数据");
         }
-        BigDecimal fundingFee = loadFundingFee(symbol, trades, result);
-        result.setTradeSummary(createTradeSummary(trades, positionSide, fundingFee,
-                result.getContractInfo().getMarginAsset(), result));
-
         if ("BOTH".equals(positionSide)) {
             result.getWarnings().add("单向持仓模式暂不提供逐笔未平仓分布");
         } else {
-            result.setTradeList(createOpenTradeList(trades, positionSide,
+            result.setTradeList(createOpenTradeList(currentTrades, positionSide,
                     result.getPositionInfo().getMarkPrice(), result.getContractInfo().getContractSize()));
-            result.getTradeSummary().setOpenTradeCount(result.getTradeList().size());
             BigDecimal reconstructedQty = result.getTradeList().stream()
                     .map(BinanceCoinFuturesOpenTradeInfo::getContractQty)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -464,6 +534,168 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
             }
         }
         return result;
+    }
+
+    private BinanceCoinFuturesPositionInfo emptyPosition(String symbol, String positionSide) {
+        BinanceCoinFuturesPositionInfo positionInfo = new BinanceCoinFuturesPositionInfo();
+        positionInfo.setSymbol(symbol);
+        positionInfo.setPositionSide(positionSide);
+        return positionInfo;
+    }
+
+    private <T> Future<T> submitRealtime(BinanceAccountInfo accountInfo, Callable<T> callable) {
+        Callable<T> task = () -> {
+            try {
+                BinanceAccountContextHolder.set(accountInfo);
+                return callable.call();
+            } finally {
+                BinanceAccountContextHolder.clear();
+            }
+        };
+        if (binanceStatsExecutor != null) {
+            return binanceStatsExecutor.submit(task);
+        }
+        CompletableFuture<T> future = new CompletableFuture<>();
+        try {
+            future.complete(task.call());
+        } catch (Exception e) {
+            future.completeExceptionally(e);
+        }
+        return future;
+    }
+
+    private <T> RealtimeResult<T> awaitRealtime(Future<T> future, long deadlineNanos,
+                                                  String label, List<String> warnings) {
+        long remainingNanos = deadlineNanos - System.nanoTime();
+        if (remainingNanos <= 0) {
+            future.cancel(true);
+            warnings.add(label + "请求超时");
+            return new RealtimeResult<>(null);
+        }
+        try {
+            return new RealtimeResult<>(future.get(remainingNanos, TimeUnit.NANOSECONDS));
+        } catch (TimeoutException e) {
+            future.cancel(true);
+            warnings.add(label + "请求超时");
+        } catch (Exception e) {
+            warnings.add(label + "获取失败");
+            log.warn("币本位实时统计获取失败: item={}, error={}", label, e.getClass().getSimpleName());
+        }
+        return new RealtimeResult<>(null);
+    }
+
+    private <T> T getRealtimeCache(String key, Class<T> type, String label) {
+        if (redisUtils == null) {
+            return null;
+        }
+        try {
+            return redisUtils.get(key, type);
+        } catch (RuntimeException e) {
+            log.warn("读取币本位实时缓存失败: item={}, error={}", label, e.getClass().getSimpleName());
+            return null;
+        }
+    }
+
+    private void setRealtimeCache(String key, Object value, long minutes, String label) {
+        if (redisUtils == null || value == null) {
+            return;
+        }
+        try {
+            redisUtils.set(key, value, minutes, TimeUnit.MINUTES);
+        } catch (RuntimeException e) {
+            log.warn("写入币本位实时缓存失败: item={}, error={}", label, e.getClass().getSimpleName());
+        }
+    }
+
+    private static class RealtimeResult<T> {
+        private final T value;
+
+        private RealtimeResult(T value) {
+            this.value = value;
+        }
+
+        private T getValue() {
+            return value;
+        }
+    }
+
+    @Override
+    public BinanceCoinFuturesAccountInfo queryAccountAssets(String symbol) {
+        return toAccountInfo(binanceCoinFuturesUtil.account(), marginAsset(symbol));
+    }
+
+    @Override
+    public BinanceCoinFuturesClosedSummaryVO queryClosedSummary(Integer uid, String symbol, String positionSide) {
+        BinanceCoinFuturesClosedSummaryVO result = new BinanceCoinFuturesClosedSummaryVO();
+        PositionCycles positionCycles = splitPositionCycles(
+                loadStatsTrades(uid, symbol, positionSide), positionSide);
+        List<BinanceCoinFuturesTradeInfo> closedTrades = positionCycles.getClosedTrades();
+        String cacheKey = closedSummaryCacheKey(uid, symbol, positionSide, closedTrades);
+        BinanceCoinFuturesClosedSummaryVO cached = getClosedSummaryCache(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+        BigDecimal fundingFee = loadFundingFee(symbol, closedTrades, result.getWarnings());
+        result.setTradeSummary(createTradeSummary(
+                closedTrades, positionSide, fundingFee, marginAsset(symbol), result.getWarnings()));
+        result.getTradeSummary().setClosedPositionCount(positionCycles.getClosedPositionCount());
+        if (!closedTrades.isEmpty()) {
+            result.setFirstTradeTime(closedTrades.get(0).getTime());
+            result.setLastClosedTradeTime(closedTrades.get(closedTrades.size() - 1).getTime());
+        }
+        if ("BOTH".equals(positionSide)) {
+            result.getWarnings().add("单向持仓模式暂不提供已平仓周期汇总");
+        }
+        if (result.getWarnings().isEmpty()) {
+            setClosedSummaryCache(cacheKey, result);
+        }
+        return result;
+    }
+
+    private String closedSummaryCacheKey(Integer uid, String symbol, String positionSide,
+                                         List<BinanceCoinFuturesTradeInfo> closedTrades) {
+        Long lastClosedTradeId = closedTrades.isEmpty()
+                ? 0L : closedTrades.get(closedTrades.size() - 1).getId();
+        return CLOSED_SUMMARY_CACHE_PREFIX + uid + ":" + symbol + ":" + positionSide + ":" + lastClosedTradeId;
+    }
+
+    private BinanceCoinFuturesClosedSummaryVO getClosedSummaryCache(String cacheKey) {
+        if (redisUtils == null) {
+            return null;
+        }
+        try {
+            return redisUtils.get(cacheKey, BinanceCoinFuturesClosedSummaryVO.class);
+        } catch (RuntimeException e) {
+            log.warn("读取币本位已平仓汇总缓存失败: key={}, error={}", cacheKey, e.getClass().getSimpleName());
+            return null;
+        }
+    }
+
+    private void setClosedSummaryCache(String cacheKey, BinanceCoinFuturesClosedSummaryVO value) {
+        if (redisUtils == null) {
+            return;
+        }
+        try {
+            redisUtils.set(cacheKey, value, CLOSED_SUMMARY_CACHE_MINUTES, TimeUnit.MINUTES);
+        } catch (RuntimeException e) {
+            log.warn("写入币本位已平仓汇总缓存失败: key={}, error={}", cacheKey, e.getClass().getSimpleName());
+        }
+    }
+
+    private List<BinanceCoinFuturesTradeInfo> loadStatsTrades(
+            Integer uid, String symbol, String positionSide) {
+        return binanceCoinFuturesTradeInfoMapper.selectList(
+                Wrappers.lambdaQuery(BinanceCoinFuturesTradeInfo.class)
+                        .eq(BinanceCoinFuturesTradeInfo::getUid, uid)
+                        .eq(BinanceCoinFuturesTradeInfo::getSymbol, symbol)
+                        .eq(BinanceCoinFuturesTradeInfo::getPositionSide, positionSide)
+                        .orderByAsc(BinanceCoinFuturesTradeInfo::getTime)
+                        .orderByAsc(BinanceCoinFuturesTradeInfo::getId)
+        );
+    }
+
+    private String marginAsset(String symbol) {
+        return symbol != null && symbol.startsWith("BTCUSD") ? "BTC" : null;
     }
 
     private BinanceCoinFuturesContractInfo toContractInfo(JSONObject source, String symbol) {
@@ -535,13 +767,13 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
         return target;
     }
 
-    private List<BinanceCoinFuturesTradeInfo> currentPositionCycle(List<BinanceCoinFuturesTradeInfo> source,
-                                                                    String positionSide) {
-        if (source == null || source.isEmpty()) {
-            return Collections.emptyList();
+    private PositionCycles splitPositionCycles(List<BinanceCoinFuturesTradeInfo> source, String positionSide) {
+        if (source == null || source.isEmpty() || "BOTH".equals(positionSide)) {
+            return PositionCycles.empty();
         }
         BigDecimal position = BigDecimal.ZERO;
         int lastFlatIndex = -1;
+        int closedPositionCount = 0;
         for (int index = 0; index < source.size(); index++) {
             BinanceCoinFuturesTradeInfo trade = source.get(index);
             boolean increase = "LONG".equals(positionSide)
@@ -550,23 +782,49 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
                     : position.subtract(zeroIfNull(trade.getQty()));
             if (position.compareTo(BigDecimal.ZERO) == 0) {
                 lastFlatIndex = index;
+                closedPositionCount++;
             }
         }
-        return source.subList(lastFlatIndex + 1, source.size());
+        List<BinanceCoinFuturesTradeInfo> closedTrades = lastFlatIndex < 0
+                ? Collections.emptyList() : new ArrayList<>(source.subList(0, lastFlatIndex + 1));
+        List<BinanceCoinFuturesTradeInfo> currentTrades = new ArrayList<>(
+                source.subList(lastFlatIndex + 1, source.size()));
+        return new PositionCycles(closedTrades, currentTrades, closedPositionCount);
     }
 
     private BigDecimal loadFundingFee(String symbol, List<BinanceCoinFuturesTradeInfo> trades,
-                                      BinanceCoinFuturesStatsInfoVO result) {
+                                      List<String> warnings) {
         if (trades.isEmpty()) {
             return BigDecimal.ZERO;
         }
         try {
             long startTime = trades.get(0).getTime().getTime();
-            return binanceCoinFuturesUtil.listIncome(symbol, startTime, "FUNDING_FEE").stream()
-                    .map(item -> decimal(item, "income"))
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            long endTime = trades.get(trades.size() - 1).getTime().getTime();
+            BigDecimal fundingFee = BigDecimal.ZERO;
+            Set<Long> transactionIds = new HashSet<>();
+            long windowStart = startTime;
+            while (windowStart <= endTime) {
+                long windowEnd = Math.min(endTime, windowStart + INCOME_MAX_INTERVAL_MILLIS - 1);
+                int page = 1;
+                while (true) {
+                    List<JSONObject> incomes = binanceCoinFuturesUtil.listIncome(
+                            symbol, windowStart, windowEnd, "FUNDING_FEE", page, INCOME_PAGE_SIZE);
+                    for (JSONObject income : incomes) {
+                        Long transactionId = income.getLong("tranId");
+                        if (transactionId == null || transactionIds.add(transactionId)) {
+                            fundingFee = fundingFee.add(decimal(income, "income"));
+                        }
+                    }
+                    if (incomes.size() < INCOME_PAGE_SIZE) {
+                        break;
+                    }
+                    page++;
+                }
+                windowStart = windowEnd + 1;
+            }
+            return fundingFee;
         } catch (RuntimeException e) {
-            result.getWarnings().add("当前持仓周期资金费暂不可用");
+            warnings.add("全部已平仓周期资金费暂不可用");
             return BigDecimal.ZERO;
         }
     }
@@ -575,7 +833,7 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
                                                                 String positionSide,
                                                                 BigDecimal fundingFee,
                                                                 String marginAsset,
-                                                                BinanceCoinFuturesStatsInfoVO result) {
+                                                                List<String> warnings) {
         BinanceCoinFuturesTradeSummary summary = new BinanceCoinFuturesTradeSummary();
         BigDecimal realizedPnl = trades.stream().map(BinanceCoinFuturesTradeInfo::getRealizedPnl)
                 .filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -587,7 +845,7 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
         boolean otherCommissionAsset = trades.stream().anyMatch(trade -> trade.getCommissionAsset() != null
                 && marginAsset != null && !marginAsset.equalsIgnoreCase(trade.getCommissionAsset()));
         if (otherCommissionAsset) {
-            result.getWarnings().add("存在非保证金币种手续费，未计入净盈亏");
+            warnings.add("存在非保证金币种手续费，未计入净盈亏");
         }
         summary.setRealizedPnl(realizedPnl);
         summary.setCommission(commission);
@@ -600,6 +858,36 @@ public class BinanceCoinFuturesTradeInfoServiceImpl extends ServiceImpl<BinanceC
                     .filter(trade -> closeSide.equals(trade.getSide())).count());
         }
         return summary;
+    }
+
+    private static class PositionCycles {
+        private final List<BinanceCoinFuturesTradeInfo> closedTrades;
+        private final List<BinanceCoinFuturesTradeInfo> currentTrades;
+        private final int closedPositionCount;
+
+        private PositionCycles(List<BinanceCoinFuturesTradeInfo> closedTrades,
+                               List<BinanceCoinFuturesTradeInfo> currentTrades,
+                               int closedPositionCount) {
+            this.closedTrades = closedTrades;
+            this.currentTrades = currentTrades;
+            this.closedPositionCount = closedPositionCount;
+        }
+
+        private static PositionCycles empty() {
+            return new PositionCycles(Collections.emptyList(), Collections.emptyList(), 0);
+        }
+
+        private List<BinanceCoinFuturesTradeInfo> getClosedTrades() {
+            return closedTrades;
+        }
+
+        private List<BinanceCoinFuturesTradeInfo> getCurrentTrades() {
+            return currentTrades;
+        }
+
+        private int getClosedPositionCount() {
+            return closedPositionCount;
+        }
     }
 
     private List<BinanceCoinFuturesOpenTradeInfo> createOpenTradeList(

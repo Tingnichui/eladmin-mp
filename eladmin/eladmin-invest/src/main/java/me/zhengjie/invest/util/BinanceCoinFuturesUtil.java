@@ -171,13 +171,24 @@ public class BinanceCoinFuturesUtil {
     }
 
     public List<JSONObject> listIncome(String symbol, Long startTime, String incomeType) {
+        return listIncome(symbol, startTime, null, incomeType, null, 1000);
+    }
+
+    public List<JSONObject> listIncome(String symbol, Long startTime, Long endTime,
+                                       String incomeType, Integer page, Integer limit) {
         Map<String, Object> params = new HashMap<>();
         params.put("symbol", symbol);
         params.put("incomeType", incomeType);
         if (null != startTime) {
             params.put("startTime", startTime);
         }
-        params.put("limit", 1000);
+        if (null != endTime) {
+            params.put("endTime", endTime);
+        }
+        if (null != page) {
+            params.put("page", page);
+        }
+        params.put("limit", null == limit ? 1000 : limit);
         return JSON.parseArray(this.doRequest("/dapi/v1/income", params, true, true), JSONObject.class);
     }
 

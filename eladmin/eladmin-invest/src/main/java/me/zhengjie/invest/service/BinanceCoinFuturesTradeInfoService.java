@@ -20,6 +20,9 @@ import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesStatsInfoVO;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesAccountInfo;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesClosedSummaryVO;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesPositionStatsVO;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesOrderDto;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesOrderRequest;
 
@@ -90,6 +93,12 @@ public interface BinanceCoinFuturesTradeInfoService extends IService<BinanceCoin
     int sync(BinanceAccountInfo accountInfo, String symbol);
 
     BinanceCoinFuturesStatsInfoVO queryStats(Integer uid, String symbol, String positionSide);
+
+    BinanceCoinFuturesPositionStatsVO queryPositionStats(Integer uid, String symbol, String positionSide);
+
+    BinanceCoinFuturesAccountInfo queryAccountAssets(String symbol);
+
+    BinanceCoinFuturesClosedSummaryVO queryClosedSummary(Integer uid, String symbol, String positionSide);
 
     BinanceCoinFuturesOrderDto placeOrder(BinanceCoinFuturesOrderRequest request);
 

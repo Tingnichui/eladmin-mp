@@ -20,6 +20,9 @@ import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.invest.domain.BinanceAccountInfo;
 import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesStatsInfoVO;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesAccountInfo;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesClosedSummaryVO;
+import me.zhengjie.invest.domain.dto.BinanceCoinFuturesPositionStatsVO;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesOrderDto;
 import me.zhengjie.invest.domain.dto.BinanceCoinFuturesOrderRequest;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
@@ -69,6 +72,49 @@ public class BinanceCoinFuturesTradeInfoController {
         BinanceCoinFuturesStatsInfoVO[] result = new BinanceCoinFuturesStatsInfoVO[1];
         BinanceAccountContextHolder.runWith(accountInfo,
                 () -> result[0] = binanceCoinFuturesTradeInfoService.queryStats(
+                        uid, normalizedSymbol, normalizedPositionSide));
+        return ResponseEntity.ok(result[0]);
+    }
+
+    @GetMapping("/stats/position")
+    @ApiOperation("查询币本位实时仓位统计")
+    @PreAuthorize("@el.check('binanceCoinFuturesTradeInfo:list')")
+    public ResponseEntity<BinanceCoinFuturesPositionStatsVO> queryPositionStats(
+            @RequestParam Integer uid, @RequestParam String symbol, @RequestParam String positionSide) {
+        String normalizedSymbol = normalizeSymbol(symbol);
+        String normalizedPositionSide = normalizePositionSide(positionSide);
+        BinanceAccountInfo accountInfo = requireAvailableAccount(uid);
+        BinanceCoinFuturesPositionStatsVO[] result = new BinanceCoinFuturesPositionStatsVO[1];
+        BinanceAccountContextHolder.runWith(accountInfo,
+                () -> result[0] = binanceCoinFuturesTradeInfoService.queryPositionStats(
+                        uid, normalizedSymbol, normalizedPositionSide));
+        return ResponseEntity.ok(result[0]);
+    }
+
+    @GetMapping("/stats/account")
+    @ApiOperation("查询币本位账户资产")
+    @PreAuthorize("@el.check('binanceCoinFuturesTradeInfo:list')")
+    public ResponseEntity<BinanceCoinFuturesAccountInfo> queryAccountAssets(
+            @RequestParam Integer uid, @RequestParam String symbol) {
+        String normalizedSymbol = normalizeSymbol(symbol);
+        BinanceAccountInfo accountInfo = requireAvailableAccount(uid);
+        BinanceCoinFuturesAccountInfo[] result = new BinanceCoinFuturesAccountInfo[1];
+        BinanceAccountContextHolder.runWith(accountInfo,
+                () -> result[0] = binanceCoinFuturesTradeInfoService.queryAccountAssets(normalizedSymbol));
+        return ResponseEntity.ok(result[0]);
+    }
+
+    @GetMapping("/stats/closed-summary")
+    @ApiOperation("查询币本位全部已平仓周期汇总")
+    @PreAuthorize("@el.check('binanceCoinFuturesTradeInfo:list')")
+    public ResponseEntity<BinanceCoinFuturesClosedSummaryVO> queryClosedSummary(
+            @RequestParam Integer uid, @RequestParam String symbol, @RequestParam String positionSide) {
+        String normalizedSymbol = normalizeSymbol(symbol);
+        String normalizedPositionSide = normalizePositionSide(positionSide);
+        BinanceAccountInfo accountInfo = requireAvailableAccount(uid);
+        BinanceCoinFuturesClosedSummaryVO[] result = new BinanceCoinFuturesClosedSummaryVO[1];
+        BinanceAccountContextHolder.runWith(accountInfo,
+                () -> result[0] = binanceCoinFuturesTradeInfoService.queryClosedSummary(
                         uid, normalizedSymbol, normalizedPositionSide));
         return ResponseEntity.ok(result[0]);
     }

@@ -15,4 +15,5 @@ public class BinanceCoinFuturesTradeSummary implements Serializable {
     private int totalTradeCount;
     private int openTradeCount;
     private int closedTradeCount;
+    private int closedPositionCount;
 }
