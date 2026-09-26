@@ -11,6 +11,14 @@ export function formatPercent(val) {
   return val != null ? (val * 100).toFixed(2) + '%' : '--'
 }
 
+export function formatQuantity(value, digits = 8) {
+  if (value === null || value === undefined || value === '') return '--'
+  const number = Number(value)
+  return Number.isFinite(number)
+    ? number.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: digits })
+    : '--'
+}
+
 export function addAmount(a, b, fixed = null) {
   const result = new Decimal(a || 0).plus(new Decimal(b || 0))
   return fixed != null ? Number(result.toFixed(fixed)) : Number(result)

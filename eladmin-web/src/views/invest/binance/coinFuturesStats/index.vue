@@ -140,6 +140,7 @@
 import coinFuturesApi from '@/api/binanceCoinFuturesTradeInfo'
 import { listAllAccount } from '@/api/binanceAccountInfo'
 import { calculateCoinQuantity, calculateInitialMarginCoin } from '@/utils/coinFuturesOrder'
+import { formatQuantity } from '@/utils/numberUtil'
 import CoinFuturesPositionChart from './CoinFuturesPositionChart.vue'
 
 const ACCOUNT_STORAGE_KEY = 'invest.binance.stats.uid'
@@ -399,7 +400,7 @@ export default {
       if (value == null || value === '') return '--'
       const number = Number(value)
       if (!Number.isFinite(number) || number < 0) return '--'
-      return `${number.toLocaleString('en-US', { minimumFractionDigits: 8, maximumFractionDigits: 8 })} BTC`
+      return `${formatQuantity(number)} BTC`
     },
     tone(value) {
       const number = Number(value)

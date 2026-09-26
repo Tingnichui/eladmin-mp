@@ -108,6 +108,12 @@ describe('trade position distribution core position aggregation', () => {
     expect(Chart.methods.compactBucketRange('500-1000')).toBe('500-1k')
   })
 
+  it('removes trailing zeroes from chart quantities', () => {
+    expect(Chart.methods.quantityNumber(0.00400000)).toBe('0.004')
+    expect(Chart.methods.quantityNumber('0.01600000')).toBe('0.016')
+    expect(Chart.methods.quantityNumber(0)).toBe('0')
+  })
+
   it('hides the chart tooltip before opening a price bucket', () => {
     const bucket = { trades: [{ tradeId: '1' }] }
     const vm = {

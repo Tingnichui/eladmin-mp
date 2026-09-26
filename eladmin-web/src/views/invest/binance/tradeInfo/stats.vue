@@ -246,7 +246,7 @@
           </div>
           <div>
             <span>可卖数量</span>
-            <strong>{{ decimalValue(spotOrderSource.maxQuantity, 8) }} {{ spotBaseAsset }}</strong>
+            <strong>{{ quantityValue(spotOrderSource.maxQuantity, false) }} {{ spotBaseAsset }}</strong>
           </div>
           <div>
             <span>买入均价</span>
@@ -336,7 +336,7 @@
           <div><dt>交易对</dt><dd>{{ query.symbol }}</dd></div>
           <div><dt>方向</dt><dd :class="spotOrderForm.side === 'BUY' ? 'positive' : 'negative'">{{ spotOrderSideLabel }}</dd></div>
           <div><dt>订单类型</dt><dd>{{ spotOrderTypeLabel }}</dd></div>
-          <div><dt>数量</dt><dd>{{ decimalValue(spotOrderForm.quantity, 8) }} {{ spotBaseAsset }}</dd></div>
+          <div><dt>数量</dt><dd>{{ quantityValue(spotOrderForm.quantity, false) }} {{ spotBaseAsset }}</dd></div>
           <div><dt>触发价</dt><dd>{{ decimalValue(spotOrderForm.stopPrice, 8) }} USDT</dd></div>
           <div><dt>委托价格</dt><dd>{{ spotOrderPriceLabel }}</dd></div>
           <div v-if="spotOrderSource"><dt>卖出来源</dt><dd>{{ spotOrderSourceLabel }}</dd></div>
@@ -409,8 +409,8 @@
         </el-table-column>
         <el-table-column label="数量 / 已成交" min-width="170" align="right">
           <template slot-scope="scope">
-            <div class="spot-open-order-main">{{ decimalValue(scope.row.origQty, 8) }} {{ spotBaseAsset }}</div>
-            <div class="spot-open-order-secondary">已成交 {{ decimalValue(scope.row.executedQty, 8) }}</div>
+            <div class="spot-open-order-main">{{ quantityValue(scope.row.origQty, false) }} {{ spotBaseAsset }}</div>
+            <div class="spot-open-order-secondary">已成交 {{ quantityValue(scope.row.executedQty, false) }}</div>
           </template>
         </el-table-column>
         <el-table-column label="触发价" min-width="130" align="right">
@@ -476,10 +476,10 @@
             </el-tag>
           </div>
           <div class="spot-open-order-card-main">
-            <div class="is-primary"><span>剩余数量</span><strong>{{ decimalValue(spotOpenOrderRemainingQty(order), 8) }} {{ spotBaseAsset }}</strong></div>
+            <div class="is-primary"><span>剩余数量</span><strong>{{ quantityValue(spotOpenOrderRemainingQty(order), false) }} {{ spotBaseAsset }}</strong></div>
             <div class="is-primary"><span>触发价</span><strong>{{ decimalValue(order.stopPrice, 8) }}</strong></div>
-            <div><span>原始数量</span><strong>{{ decimalValue(order.origQty, 8) }}</strong></div>
-            <div><span>已成交</span><strong>{{ decimalValue(order.executedQty, 8) }}</strong></div>
+            <div><span>原始数量</span><strong>{{ quantityValue(order.origQty, false) }}</strong></div>
+            <div><span>已成交</span><strong>{{ quantityValue(order.executedQty, false) }}</strong></div>
             <div><span>委托价格</span><strong>{{ spotOpenOrderPriceLabel(order) }}</strong></div>
             <div><span>卖出来源</span><strong>{{ spotOpenOrderSourceLabel(order) }}</strong></div>
           </div>
@@ -526,9 +526,9 @@
       <div class="core-action-content">
         <div v-if="selectedCoreRange" class="core-range-summary">
           <el-tag type="primary">当前价 {{ moneyValue(spotStats.currentSpotPrice) }}</el-tag>
-          <el-tag type="success">可撮合 {{ decimalValue(selectedCoreRange.availableQty || 0, 8) }} BTC</el-tag>
+          <el-tag type="success">可撮合 {{ quantityValue(selectedCoreRange.availableQty || 0, false) }} BTC</el-tag>
           <el-tag v-if="selectedCoreRange.coreCount > 0">
-            底仓 {{ selectedCoreRange.coreCount }} 笔 · {{ decimalValue(selectedCoreRange.coreQty || 0, 8) }} BTC
+            底仓 {{ selectedCoreRange.coreCount }} 笔 · {{ quantityValue(selectedCoreRange.coreQty || 0, false) }} BTC
           </el-tag>
           <el-popconfirm
             v-if="coreActionUnlockedRows.length > 0 && checkPer(['admin', 'binanceSpotCorePosition:add'])"
@@ -634,14 +634,25 @@
               <small class="core-cell-meta">金额 {{ moneyValue(scope.row.openAmount) }}</small>
             </template>
           </el-table-column>
-          <el-table-column label="持仓数量" width="125">
-            <template slot-scope="scope">{{ decimalValue(scope.row.remainingQty, 8) }}</template>
+          <el-table-column label="持仓数量" width="175">
+            <template slot-scope="scope">
+              <div class="core-cell-primary">{{ quantityValue(scope.row.remainingQty, false) }}</div>
+              <div class="core-position-core">
+                <el-tag
+                  :type="scope.row._rowType === 'order' ? coreOrderStatusType(scope.row) : (hasCorePosition(scope.row) ? '' : 'info')"
+                  size="mini"
+                >
+                  {{ scope.row._rowType === 'order' ? scope.row.coreStatus : (hasCorePosition(scope.row) ? '已设置' : '未设置') }}
+                </el-tag>
+                <small v-if="Number(scope.row.coreQty) > 0">底仓 {{ quantityValue(scope.row.coreQty, false) }}</small>
+              </div>
+            </template>
           </el-table-column>
           <el-table-column label="可撮合 / 挂单卖价" width="220">
             <template slot-scope="scope">
-              <div>{{ decimalValue(coreAvailableQty(scope.row), 8) }}</div>
+              <div>{{ quantityValue(coreAvailableQty(scope.row), false) }}</div>
               <small v-if="spotPendingQty(scope.row) > 0" class="core-cell-meta negative">
-                已挂单 {{ decimalValue(spotPendingQty(scope.row), 8) }}
+                已挂单 {{ quantityValue(spotPendingQty(scope.row), false) }}
               </small>
               <small
                 v-for="order in rowSpotOpenOrders(scope.row)"
@@ -660,17 +671,6 @@
               </strong>
               <small class="core-cell-meta">收益率 {{ signedPercentValue(scope.row.roi) }}</small>
               <small class="core-cell-meta">保本价 {{ decimalValue(scope.row.breakEvenPrice, 2) }}</small>
-            </template>
-          </el-table-column>
-          <el-table-column label="底仓" width="125" align="center">
-            <template slot-scope="scope">
-              <el-tag
-                :type="scope.row._rowType === 'order' ? coreOrderStatusType(scope.row) : (hasCorePosition(scope.row) ? '' : 'info')"
-                size="mini"
-              >
-                {{ scope.row._rowType === 'order' ? scope.row.coreStatus : (hasCorePosition(scope.row) ? '已设置' : '未设置') }}
-              </el-tag>
-              <small class="core-cell-meta">数量 {{ decimalValue(scope.row.coreQty || 0, 8) }}</small>
             </template>
           </el-table-column>
           <el-table-column label="操作" min-width="320" align="center" fixed="right">
@@ -849,10 +849,16 @@
             <div class="core-mobile-metrics">
               <div><span>{{ row._rowType === 'order' ? '买入均价' : '买入价格' }}</span><strong>{{ decimalValue(row.price, 2) }}</strong></div>
               <div><span>买入金额</span><strong>{{ moneyValue(row.openAmount) }}</strong></div>
-              <div><span>持仓数量</span><strong>{{ decimalValue(row.remainingQty, 8) }}</strong></div>
               <div>
-                <span>可撮合数量</span><strong>{{ decimalValue(coreAvailableQty(row), 8) }}</strong>
-                <small v-if="spotPendingQty(row) > 0" class="negative">已挂单 {{ decimalValue(spotPendingQty(row), 8) }}</small>
+                <span>持仓数量</span><strong>{{ quantityValue(row.remainingQty, false) }}</strong>
+                <small>
+                  {{ row._rowType === 'order' ? row.coreStatus : (hasCorePosition(row) ? '已设置' : '未设置') }}
+                  <template v-if="Number(row.coreQty) > 0"> · 底仓 {{ quantityValue(row.coreQty, false) }}</template>
+                </small>
+              </div>
+              <div>
+                <span>可撮合数量</span><strong>{{ quantityValue(coreAvailableQty(row), false) }}</strong>
+                <small v-if="spotPendingQty(row) > 0" class="negative">已挂单 {{ quantityValue(spotPendingQty(row), false) }}</small>
                 <small
                   v-for="order in rowSpotOpenOrders(row)"
                   :key="order.orderId"
@@ -860,11 +866,6 @@
                 >{{ spotPendingOrderPriceLabel(order) }}</small>
               </div>
               <div><span>保本价</span><strong>{{ decimalValue(row.breakEvenPrice, 2) }}</strong></div>
-              <div>
-                <span>底仓状态</span>
-                <strong>{{ row._rowType === 'order' ? row.coreStatus : (hasCorePosition(row) ? '已设置' : '未设置') }}</strong>
-                <small>数量 {{ decimalValue(row.coreQty || 0, 8) }}</small>
-              </div>
             </div>
 
             <div v-if="row._rowType === 'order'" class="core-mobile-actions">
@@ -1060,7 +1061,7 @@ export default {
     spotOrderRemainingQuantity() {
       if (!this.spotOrderSource) return '--'
       const remaining = numberUtil.subAmount(this.spotOrderSource.maxQuantity, this.spotOrderForm.quantity || 0, 8)
-      return this.decimalValue(Math.max(Number(remaining) || 0, 0), 8)
+      return this.quantityValue(Math.max(Number(remaining) || 0, 0), false)
     },
     spotOrderTypeLabel() {
       return this.spotOrderForm.type === 'TAKE_PROFIT_LIMIT' ? '限价止盈' : '限价止损'
@@ -1704,10 +1705,7 @@ export default {
       return `${number > 0 ? '+' : ''}${numberUtil.formatPercent(number)}`
     },
     quantityValue(value, withSymbol = true) {
-      if (value === null || value === undefined || value === '') return '--'
-      const number = Number(value)
-      if (!Number.isFinite(number)) return '--'
-      const formatted = number.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 8 })
+      const formatted = numberUtil.formatQuantity(value)
       if (formatted === '--' || !withSymbol || !this.query.symbol) return formatted
       const asset = this.query.symbol.replace(/USDT$|BUSD$|USDC$/, '')
       return `${formatted} ${asset}`
@@ -1930,6 +1928,8 @@ export default {
 ::v-deep .core-action-table .core-expand-column .cell { overflow: visible; padding-right: 0; padding-left: 0; text-overflow: clip; }
 .core-cell-primary { color: #303133; white-space: nowrap; }
 .core-cell-meta { display: block; overflow: hidden; margin-top: 4px; color: #909399; font-size: 12px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+.core-position-core { display: flex; align-items: center; gap: 6px; min-width: 0; margin-top: 4px; color: #909399; white-space: nowrap; }
+.core-position-core small { overflow: hidden; font-size: 12px; text-overflow: ellipsis; }
 .core-pending-price { color: #e6a23c !important; }
 .core-cell-pnl { display: block; white-space: nowrap; }
 .core-action-buttons { display: flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; }

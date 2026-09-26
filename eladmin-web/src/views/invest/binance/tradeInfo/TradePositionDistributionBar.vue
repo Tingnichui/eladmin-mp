@@ -46,7 +46,7 @@
 import echarts from 'echarts'
 require('echarts/theme/macarons')
 import { debounce } from '@/utils'
-import { addAmount, divAmount, formatPercent, mulAmount, subAmount } from '@/utils/numberUtil'
+import { addAmount, divAmount, formatPercent, formatQuantity, mulAmount, subAmount } from '@/utils/numberUtil'
 
 const PRICE_INTERVALS = [500, 1000, 2500, 5000]
 
@@ -380,7 +380,7 @@ export default {
           formatter: params => {
             if (compact) return `${params.data.count}笔`
             const coreText = params.data.coreCount > 0 ? `  🔒${params.data.coreCount}笔` : ''
-            return `${this.formatNumber(params.data.totalQty, 6)} BTC · ${params.data.count}笔${coreText}  均价 ${this.formatNumber(params.data.avgPrice, 2)}`
+            return `${this.quantityNumber(params.data.totalQty)} BTC · ${params.data.count}笔${coreText}  均价 ${this.formatNumber(params.data.avgPrice, 2)}`
           }
         }
       })
@@ -492,7 +492,7 @@ export default {
       return [
         `买入时间：${this.formatDateTime(trade.openTime)}`,
         `买入价格：${this.formatNumber(trade.openPrice, 2)}`,
-        `剩余数量：${this.formatNumber(trade.qty, 8)}`,
+        `剩余数量：${this.quantityNumber(trade.qty)}`,
         `盈亏平衡价：${this.formatNumber(trade.breakEvenPrice, 2)}`,
         `当前盈亏：${this.signedNumber(trade.profit, 2)}`,
         `收益率：${this.signedPercent(trade.roi)}`
@@ -502,10 +502,10 @@ export default {
       return [
         `价格区间：${bucket.range}`,
         `成交笔数：${bucket.count}笔`,
-        `持仓数量：${this.formatNumber(bucket.totalQty, 8)} BTC`,
+        `持仓数量：${this.quantityNumber(bucket.totalQty)} BTC`,
         `底仓成交：${bucket.coreCount}笔`,
-        `底仓数量：${this.formatNumber(bucket.coreQty, 8)} BTC`,
-        `可撮合数量：${this.formatNumber(bucket.availableQty, 8)} BTC`,
+        `底仓数量：${this.quantityNumber(bucket.coreQty)} BTC`,
+        `可撮合数量：${this.quantityNumber(bucket.availableQty)} BTC`,
         `加权均价：${this.formatNumber(bucket.avgPrice, 2)}`,
         `当前盈亏：${this.signedNumber(bucket.profit, 2)}`,
         `收益率：${this.signedPercent(bucket.profitRate)}`
@@ -521,6 +521,9 @@ export default {
       const number = Number(value)
       if (!Number.isFinite(number)) return '--'
       return number.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits })
+    },
+    quantityNumber(value) {
+      return formatQuantity(value)
     },
     signedNumber(value, digits) {
       const number = Number(value) || 0

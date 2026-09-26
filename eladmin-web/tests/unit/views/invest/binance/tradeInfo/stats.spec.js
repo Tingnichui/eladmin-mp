@@ -117,6 +117,13 @@ describe('trade stats request lifecycle', () => {
     expect(Stats.methods.currencyValue.call(vm, 0, '$')).toBe('$0.00')
   })
 
+  it('removes trailing zeroes from asset quantities', () => {
+    const vm = { query: { symbol: 'BTCUSDT' }}
+    expect(Stats.methods.quantityValue.call(vm, 0.00200000, false)).toBe('0.002')
+    expect(Stats.methods.quantityValue.call(vm, 0, false)).toBe('0')
+    expect(Stats.methods.quantityValue.call(vm, null, false)).toBe('--')
+  })
+
   it('shows only a non-zero net profit change', () => {
     const vm = {
       spotStats: {},
