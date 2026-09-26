@@ -57,6 +57,23 @@ public class BinanceProxyExecutor {
         return properties.getReadTimeoutMs();
     }
 
+    /**
+     * Returns the current business-request cooldown deadline for a proxy node.
+     * Health probes deliberately do not mutate this state.
+     */
+    public Long getUnavailableUntil(BinanceProxyProperties.Node node) {
+        if (node == null) {
+            return null;
+        }
+        String key = node.key();
+        Long blockedUntil = unavailableUntil.get(key);
+        if (blockedUntil != null && blockedUntil <= System.currentTimeMillis()) {
+            unavailableUntil.remove(key, blockedUntil);
+            return null;
+        }
+        return blockedUntil;
+    }
+
     private List<BinanceProxyProperties.Node> candidates() {
         List<BinanceProxyProperties.Node> nodes = properties.getNodes();
         if (nodes == null || nodes.isEmpty()) {
