@@ -37,10 +37,19 @@
             </div>
             <el-button slot="reference" size="small" plain icon="el-icon-wallet">账户资产</el-button>
           </el-popover>
-          <el-popover placement="bottom-end" width="360" trigger="hover" @show="loadClosedSummary">
+          <el-popover placement="bottom-end" width="380" trigger="hover" @show="loadClosedSummary">
             <div v-loading="summaryLoading" class="popover-content">
-              <div class="popover-title">全部已平仓周期汇总</div>
-              <div v-for="item in summaryItems" :key="item.label" class="popover-row"><span>{{ item.label }}</span><strong :class="item.tone">{{ item.value }}</strong></div>
+              <div class="popover-title">全部已平仓周期汇总（{{ summaryValuationReady ? 'USD' : marginAsset }}）</div>
+              <div v-for="item in summaryItems" :key="item.label" class="popover-row">
+                <span>{{ item.label }}</span>
+                <el-tooltip v-if="item.tooltip" :content="item.tooltip" placement="left">
+                  <strong :class="item.tone">{{ item.value }}</strong>
+                </el-tooltip>
+                <strong v-else :class="item.tone">{{ item.value }}</strong>
+              </div>
+              <div class="summary-note">
+                {{ summaryValuationReady ? `按当前标记价格 ${price(position.markPrice)} 折算，悬浮金额可查看原始 BTC` : '实时标记价格不可用，暂时显示原始 BTC' }}
+              </div>
             </div>
             <el-button slot="reference" size="small" plain icon="el-icon-s-grid">全部汇总</el-button>
           </el-popover>
@@ -243,12 +252,30 @@ export default {
         { label: '维持保证金', value: this.assetValue(this.account.maintMargin) }
       ]
     },
+    summaryValuationReady() {
+      const markPrice = Number(this.position.markPrice)
+      return Number.isFinite(markPrice) && markPrice > 0
+    },
     summaryItems() {
+      const markPrice = Number(this.position.markPrice)
+      const moneyItem = (label, value, tone) => {
+        const btcValue = Number(value)
+        const originalValue = this.assetValue(value)
+        if (!this.summaryValuationReady || !Number.isFinite(btcValue)) {
+          return { label, value: originalValue, tone }
+        }
+        return {
+          label,
+          value: this.usdValue(btcValue * markPrice),
+          tone,
+          tooltip: `${originalValue}；按当前标记价格折算`
+        }
+      }
       return [
-        { label: '已实现盈亏', value: this.assetValue(this.summary.realizedPnl), tone: this.tone(this.summary.realizedPnl) },
-        { label: '手续费', value: this.assetValue(this.summary.commission) },
-        { label: '资金费', value: this.assetValue(this.summary.fundingFee), tone: this.tone(this.summary.fundingFee) },
-        { label: '净盈亏', value: this.assetValue(this.summary.netPnl), tone: this.tone(this.summary.netPnl) },
+        moneyItem('已实现盈亏', this.summary.realizedPnl, this.tone(this.summary.realizedPnl)),
+        moneyItem('手续费', this.summary.commission),
+        moneyItem('资金费', this.summary.fundingFee, this.tone(this.summary.fundingFee)),
+        moneyItem('净盈亏', this.summary.netPnl, this.tone(this.summary.netPnl)),
         { label: '已平仓周期', value: this.summary.closedPositionCount == null ? '--' : this.summary.closedPositionCount },
         { label: '成交笔数', value: this.summary.totalTradeCount == null ? '--' : this.summary.totalTradeCount }
       ]
@@ -443,6 +470,12 @@ export default {
     assetValue(value) {
       return `${this.decimal(value)} ${this.marginAsset}`
     },
+    usdValue(value) {
+      const number = Number(value)
+      if (!Number.isFinite(number)) return '--'
+      const amount = Math.abs(number).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      return `${number < 0 ? '-' : ''}$${amount}`
+    },
     btcValue(value) {
       if (value == null || value === '') return '--'
       const number = Number(value)
@@ -488,6 +521,7 @@ export default {
 .popover-content { min-height: 120px; }
 .popover-row { display: flex; justify-content: space-between; padding: 6px 0; color: #606266; }
 .popover-row strong { color: #303133; }
+.summary-note { margin-top: 8px; padding-top: 8px; border-top: 1px solid #ebeef5; color: #909399; font-size: 12px; line-height: 18px; }
 .primary { color: #409eff !important; }
 .warning-tone { color: #e6a23c !important; }
 .danger-tone, .loss { color: #f56c6c !important; }
