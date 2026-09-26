@@ -1,11 +1,7 @@
 <template>
   <div class="position-chart">
     <div class="chart-toolbar">
-      <el-radio-group v-model="viewMode" size="small" class="view-mode-switch" @change="refreshChartLayout">
-        <el-radio-button label="trades">逐笔买入</el-radio-button>
-        <el-radio-button label="buckets">价格区间聚合</el-radio-button>
-      </el-radio-group>
-      <div v-if="viewMode === 'buckets'" class="interval-control">
+      <div class="interval-control">
         <span class="control-label">价格间隔</span>
         <div class="interval-stepper">
           <el-button
@@ -64,7 +60,6 @@ export default {
     return {
       chart: null,
       isMobileViewport: false,
-      viewMode: 'buckets',
       profitFilter: 'all',
       coreFilter: 'all',
       priceInterval: 2500
@@ -103,7 +98,6 @@ export default {
     },
     chartHeight() {
       if (!this.isMobileViewport || this.height !== '100%') return this.height
-      if (this.viewMode !== 'buckets') return '420px'
       const bucketCount = this.groupTradesByPrice(this.filteredTrades).length
       return `${Math.max(360, bucketCount * 38 + 76)}px`
     }
@@ -153,14 +147,9 @@ export default {
       this.updateChart()
     },
     handleChartClick(params) {
-      if (!params.data) return
-      if (params.data.trade) {
-        this.hideTooltip()
-        this.$emit('select-trade', params.data.trade.raw)
-      } else if (params.data.trades) {
-        this.hideTooltip()
-        this.$emit('select-bucket', params.data)
-      }
+      if (!params.data || !params.data.trades) return
+      this.hideTooltip()
+      this.$emit('select-bucket', params.data)
     },
     hideTooltip() {
       if (this.chart) this.chart.dispatchAction({ type: 'hideTip' })
@@ -175,11 +164,6 @@ export default {
       const priceDiff = side ? currentPrice - breakEvenPrice : breakEvenPrice - currentPrice
       const calculatedProfit = mulAmount(priceDiff, qty, 8)
       const profit = trade.netPnl == null ? calculatedProfit : Number(trade.netPnl)
-      const calculatedRoi = openPrice > 0 ? divAmount(profit, mulAmount(openPrice, qty)) : 0
-      const roi = trade.roi == null ? calculatedRoi : Number(trade.roi)
-      const openTimeValue = trade.openTime || trade.tradeTime
-      const parsedOpenTime = openTimeValue ? new Date(openTimeValue).getTime() : NaN
-      const openTime = Number.isFinite(parsedOpenTime) ? parsedOpenTime : null
       const profitable = currentPrice > 0 && profit >= 0
       const coreQty = Number(trade.coreQty) || 0
       const availableQty = trade.availableQty == null ? Math.max(qty - coreQty, 0) : Number(trade.availableQty) || 0
@@ -188,24 +172,18 @@ export default {
         openPrice,
         qty,
         openAmount: Number(trade.openAmount) || mulAmount(openPrice, qty),
-        openTime,
-        breakEvenPrice,
         profit,
-        roi,
         profitable,
         coreQty,
-        availableQty,
-        corePositionId: trade.corePositionId || null
+        availableQty
       }
     },
     updateChart() {
       if (!this.chart) return
       if (!this.rowData || !this.rowData.length) {
         this.renderEmptyChart()
-      } else if (this.viewMode === 'buckets') {
-        this.renderBucketChart()
       } else {
-        this.renderTradeChart()
+        this.renderBucketChart()
       }
     },
     renderEmptyChart() {
@@ -218,131 +196,6 @@ export default {
           textStyle: { color: '#909399', fontSize: 14, fontWeight: 'normal' }
         }
       })
-    },
-    renderTradeChart() {
-      const compact = this.isMobileViewport
-      const currentPrice = Number(this.currentPrice) || 0
-      const averagePrice = Number(this.averagePrice) || this.weightedAverage(this.normalizedTrades)
-      const visibleTrades = this.filteredTrades
-      const allPrices = this.normalizedTrades.map(item => item.openPrice).concat([currentPrice, averagePrice]).filter(Boolean)
-      if (!allPrices.length) {
-        this.renderEmptyChart()
-        return
-      }
-      const minPrice = Math.min(...allPrices)
-      const maxPrice = Math.max(...allPrices)
-      const padding = Math.max((maxPrice - minPrice) * 0.12, 100)
-      const maxQty = Math.max(...this.normalizedTrades.map(item => item.qty), 0.00000001)
-      const makeData = profitable => visibleTrades
-        .filter(item => item.profitable === profitable && item.openTime != null)
-        .map(item => ({
-          value: [item.openTime, item.openPrice, item.qty],
-          trade: item,
-          symbolSize: 9 + Math.sqrt(item.qty / maxQty) * 18,
-          itemStyle: item.coreQty > 0 ? {
-            borderColor: '#409eff',
-            borderWidth: 3,
-            shadowBlur: 12,
-            shadowColor: '#409eff'
-          } : undefined,
-          label: item.coreQty > 0 ? {
-            show: true,
-            position: 'top',
-            color: '#409eff',
-            fontSize: 13,
-            formatter: '🔒'
-          } : undefined
-        }))
-      const series = [
-        this.createScatterSeries('盈利买入', '#13ce8a', makeData(true)),
-        this.createScatterSeries('亏损买入', '#f56c6c', makeData(false))
-      ]
-      series[0].markLine = {
-        silent: true,
-        symbol: 'none',
-        label: { position: 'insideEndTop' },
-        data: [
-          {
-            name: '当前价格',
-            yAxis: currentPrice,
-            lineStyle: { color: '#409eff', type: 'dashed', width: 2 },
-            label: { formatter: `当前价格 ${this.formatNumber(currentPrice, 2)}`, color: '#409eff' }
-          },
-          {
-            name: '持仓均价',
-            yAxis: averagePrice,
-            lineStyle: { color: '#e6a23c', type: 'dashed', width: 2 },
-            label: { formatter: `持仓均价 ${this.formatNumber(averagePrice, 2)}`, color: '#e6a23c' }
-          }
-        ]
-      }
-      if (currentPrice) {
-        series[0].markArea = {
-          silent: true,
-          data: [
-            [
-              { yAxis: minPrice - padding, itemStyle: { color: 'rgba(19, 206, 138, 0.06)' }},
-              { yAxis: currentPrice }
-            ],
-            [
-              { yAxis: currentPrice, itemStyle: { color: 'rgba(245, 108, 108, 0.06)' }},
-              { yAxis: maxPrice + padding }
-            ]
-          ]
-        }
-      }
-      this.chart.clear()
-      this.chart.setOption({
-        animationDuration: 300,
-        color: ['#13ce8a', '#f56c6c'],
-        legend: { show: !compact, bottom: 0, data: ['盈利买入', '亏损买入'] },
-        toolbox: {
-          show: !compact,
-          right: 10,
-          top: 0,
-          feature: {
-            restore: { title: '刷新图表' },
-            saveAsImage: { title: '保存图片', pixelRatio: 2 }
-          }
-        },
-        grid: compact
-          ? { left: 62, right: 12, top: 18, bottom: 36 }
-          : { left: 78, right: 36, top: 38, bottom: 58 },
-        tooltip: { trigger: 'item', formatter: params => this.tradeTooltip(params.data.trade) },
-        xAxis: {
-          name: compact ? '' : '买入时间',
-          type: 'time',
-          axisLine: { lineStyle: { color: '#dcdfe6' }},
-          splitLine: { show: true, lineStyle: { color: '#eef1f6', type: 'dashed' }},
-          axisLabel: { color: '#606266', fontSize: compact ? 11 : 12 }
-        },
-        yAxis: {
-          name: compact ? '' : '买入价格 (USDT)',
-          type: 'value',
-          min: Math.max(0, minPrice - padding),
-          max: maxPrice + padding,
-          scale: true,
-          axisLine: { lineStyle: { color: '#dcdfe6' }},
-          splitLine: { lineStyle: { color: '#eef1f6', type: 'dashed' }},
-          axisLabel: { color: '#606266', fontSize: compact ? 11 : 12, formatter: value => this.formatNumber(value, 0) }
-        },
-        series
-      }, true)
-    },
-    createScatterSeries(name, color, data) {
-      return {
-        name,
-        type: 'scatter',
-        data,
-        itemStyle: {
-          color,
-          borderColor: '#fff',
-          borderWidth: 1,
-          shadowBlur: 8,
-          shadowColor: color
-        },
-        emphasis: { itemStyle: { borderWidth: 2, shadowBlur: 14 }}
-      }
     },
     renderBucketChart() {
       const compact = this.isMobileViewport
@@ -488,16 +341,6 @@ export default {
       const totalAmount = trades.reduce((sum, trade) => addAmount(sum, trade.openAmount), 0)
       return totalQty > 0 ? divAmount(totalAmount, totalQty, 2) : 0
     },
-    tradeTooltip(trade) {
-      return [
-        `买入时间：${this.formatDateTime(trade.openTime)}`,
-        `买入价格：${this.formatNumber(trade.openPrice, 2)}`,
-        `剩余数量：${this.quantityNumber(trade.qty)}`,
-        `盈亏平衡价：${this.formatNumber(trade.breakEvenPrice, 2)}`,
-        `当前盈亏：${this.signedNumber(trade.profit, 2)}`,
-        `收益率：${this.signedPercent(trade.roi)}`
-      ].join('<br/>')
-    },
     bucketTooltip(bucket) {
       return [
         `价格区间：${bucket.range}`,
@@ -510,12 +353,6 @@ export default {
         `当前盈亏：${this.signedNumber(bucket.profit, 2)}`,
         `收益率：${this.signedPercent(bucket.profitRate)}`
       ].join('<br/>')
-    },
-    formatDateTime(value) {
-      const date = new Date(value)
-      if (Number.isNaN(date.getTime())) return '--'
-      const pad = number => String(number).padStart(2, '0')
-      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
     },
     formatNumber(value, digits) {
       const number = Number(value)
@@ -552,14 +389,12 @@ export default {
 .core-filter { white-space: nowrap; }
 @media (max-width: 700px) {
   .chart-toolbar { gap: 8px; padding-top: 12px; }
-  .view-mode-switch, .profit-filter, .core-filter { display: flex; width: 100%; margin-left: 0; }
+  .profit-filter, .core-filter { display: flex; width: 100%; margin-left: 0; }
   .interval-control { width: 100%; }
   .interval-stepper { flex: 1 1 auto; }
   .interval-value { flex: 1 1 auto; min-width: 0; }
-  ::v-deep .view-mode-switch .el-radio-button,
   ::v-deep .profit-filter .el-radio-button,
   ::v-deep .core-filter .el-radio-button { flex: 1 1 0; min-width: 0; }
-  ::v-deep .view-mode-switch .el-radio-button__inner,
   ::v-deep .profit-filter .el-radio-button__inner,
   ::v-deep .core-filter .el-radio-button__inner { width: 100%; padding-right: 4px; padding-left: 4px; }
 }

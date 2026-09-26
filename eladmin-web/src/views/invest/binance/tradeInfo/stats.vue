@@ -144,7 +144,6 @@
         :current-price="spotStats.currentSpotPrice"
         :average-price="spotStats.posAvgPrice"
         height="100%"
-        @select-trade="openTradeCoreActions"
         @select-bucket="openBucketCoreActions"
       />
     </section>
@@ -1475,15 +1474,6 @@ export default {
       }).then(() => {
         this.accountSyncLoading = false
       })
-    },
-    openTradeCoreActions(trade) {
-      this.selectedCoreRange = null
-      this.coreActionRows = [this.toCoreActionRow(trade)]
-      this.coreActionView = 'trade'
-      this.expandedCoreOrderKeys = []
-      this.coreActionsDirty = false
-      this.showCoreActions = true
-      this.loadSpotOpenOrders()
     },
     openBucketCoreActions(bucket) {
       this.selectedCoreRange = { ...bucket }

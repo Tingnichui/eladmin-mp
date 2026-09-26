@@ -2,8 +2,9 @@
 import Chart from '@/views/invest/binance/tradeInfo/TradePositionDistributionBar.vue'
 
 describe('trade position distribution core position aggregation', () => {
-  it('defaults to price bucket aggregation', () => {
-    expect(Chart.data().viewMode).toBe('buckets')
+  it('keeps only price bucket aggregation', () => {
+    expect(Chart.data()).not.toHaveProperty('viewMode')
+    expect(Chart.methods).not.toHaveProperty('renderTradeChart')
     expect(Chart.data().priceInterval).toBe(2500)
     expect(Chart.data().coreFilter).toBe('all')
   })
@@ -29,7 +30,6 @@ describe('trade position distribution core position aggregation', () => {
     const vm = {
       isMobileViewport: true,
       height: '100%',
-      viewMode: 'buckets',
       filteredTrades: [
         { openPrice: 78000, qty: 0.001, openAmount: 78, profit: 1, coreQty: 0, availableQty: 0.001 },
         { openPrice: 81000, qty: 0.001, openAmount: 81, profit: 1, coreQty: 0, availableQty: 0.001 }
@@ -41,8 +41,6 @@ describe('trade position distribution core position aggregation', () => {
     }
 
     expect(Chart.computed.chartHeight.call(vm)).toBe('360px')
-    vm.viewMode = 'trades'
-    expect(Chart.computed.chartHeight.call(vm)).toBe('420px')
     vm.isMobileViewport = false
     expect(Chart.computed.chartHeight.call(vm)).toBe('100%')
   })
