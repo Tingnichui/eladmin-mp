@@ -83,22 +83,30 @@ describe('trade position distribution core position aggregation', () => {
     expect(buckets[0].trades).toHaveLength(2)
   })
 
-  it('filters trades by profit and core position independently', () => {
+  it('counts and filters by order while preserving trade rows', () => {
     const normalizedTrades = [
-      { tradeId: '1', profitable: true, coreQty: 0.001 },
-      { tradeId: '2', profitable: false, coreQty: 0 },
-      { tradeId: '3', profitable: false, coreQty: 0.002 }
+      { tradeId: '1', orderKey: 'order:10', profit: 2, coreQty: 0.001, hasRealtimePrice: true },
+      { tradeId: '2', orderKey: 'order:10', profit: -1, coreQty: 0, hasRealtimePrice: true },
+      { tradeId: '3', orderKey: 'order:20', profit: -2, coreQty: 0, hasRealtimePrice: true }
     ]
-    const vm = { normalizedTrades, profitFilter: 'all', coreFilter: 'core' }
+    const normalizedOrders = Chart.computed.normalizedOrders.call({ normalizedTrades })
+    const vm = { normalizedTrades, normalizedOrders, profitFilter: 'all', coreFilter: 'core' }
 
-    expect(Chart.computed.filteredTrades.call(vm).map(trade => trade.tradeId)).toEqual(['1', '3'])
+    expect(Chart.computed.tradeCounts.call({ normalizedOrders })).toEqual({ all: 2, profit: 1, loss: 1 })
+    expect(Chart.computed.coreTradeCounts.call({ normalizedOrders })).toEqual({ core: 1, nonCore: 1 })
+    expect(Chart.computed.filteredTrades.call(vm).map(trade => trade.tradeId)).toEqual(['1', '2'])
 
     vm.profitFilter = 'loss'
-    expect(Chart.computed.filteredTrades.call(vm).map(trade => trade.tradeId)).toEqual(['3'])
+    expect(Chart.computed.filteredTrades.call(vm)).toEqual([])
 
+    vm.profitFilter = 'all'
     vm.coreFilter = 'nonCore'
-    expect(Chart.computed.filteredTrades.call(vm).map(trade => trade.tradeId)).toEqual(['2'])
-    expect(Chart.computed.coreTradeCounts.call({ normalizedTrades })).toEqual({ core: 2, nonCore: 1 })
+    expect(Chart.computed.filteredTrades.call(vm).map(trade => trade.tradeId)).toEqual(['3'])
+  })
+
+  it('uses trade id when historical data has no order id', () => {
+    expect(Chart.methods.tradeOrderKey({ orderId: '88', tradeId: '11' })).toBe('order:88')
+    expect(Chart.methods.tradeOrderKey({ orderId: null, tradeId: '11' })).toBe('trade:11')
   })
 
   it('compacts both ends of a mobile price range', () => {

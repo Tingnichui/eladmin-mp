@@ -24,9 +24,9 @@
         </div>
       </div>
       <el-radio-group v-model="profitFilter" size="small" class="profit-filter" @change="refreshChartLayout">
-        <el-radio-button label="all">全部成交 {{ tradeCounts.all }}</el-radio-button>
-        <el-radio-button label="profit">盈利成交 {{ tradeCounts.profit }}</el-radio-button>
-        <el-radio-button label="loss">亏损成交 {{ tradeCounts.loss }}</el-radio-button>
+        <el-radio-button label="all">全部订单 {{ tradeCounts.all }}</el-radio-button>
+        <el-radio-button label="profit">盈利订单 {{ tradeCounts.profit }}</el-radio-button>
+        <el-radio-button label="loss">亏损订单 {{ tradeCounts.loss }}</el-radio-button>
       </el-radio-group>
       <el-radio-group v-model="coreFilter" size="small" class="core-filter" @change="refreshChartLayout">
         <el-radio-button label="all">底仓不限</el-radio-button>
@@ -69,23 +69,46 @@ export default {
     normalizedTrades() {
       return (this.rowData || []).map(trade => this.normalizeTrade(trade))
     },
+    normalizedOrders() {
+      const orders = new Map()
+      this.normalizedTrades.forEach(trade => {
+        if (!orders.has(trade.orderKey)) {
+          orders.set(trade.orderKey, {
+            key: trade.orderKey,
+            profit: 0,
+            coreQty: 0,
+            hasRealtimePrice: false
+          })
+        }
+        const order = orders.get(trade.orderKey)
+        order.profit = addAmount(order.profit, trade.profit)
+        order.coreQty = addAmount(order.coreQty, trade.coreQty)
+        order.hasRealtimePrice = order.hasRealtimePrice || trade.hasRealtimePrice
+      })
+      return Array.from(orders.values()).map(order => ({
+        ...order,
+        profitable: order.hasRealtimePrice && order.profit >= 0
+      }))
+    },
     tradeCounts() {
-      return this.normalizedTrades.reduce((result, trade) => {
+      return this.normalizedOrders.reduce((result, order) => {
         result.all++
-        result[trade.profitable ? 'profit' : 'loss']++
+        result[order.profitable ? 'profit' : 'loss']++
         return result
       }, { all: 0, profit: 0, loss: 0 })
     },
     coreTradeCounts() {
-      return this.normalizedTrades.reduce((result, trade) => {
-        result[trade.coreQty > 0 ? 'core' : 'nonCore']++
+      return this.normalizedOrders.reduce((result, order) => {
+        result[order.coreQty > 0 ? 'core' : 'nonCore']++
         return result
       }, { core: 0, nonCore: 0 })
     },
     filteredTrades() {
+      const orders = new Map(this.normalizedOrders.map(order => [order.key, order]))
       return this.normalizedTrades.filter(trade => {
-        const profitMatched = this.profitFilter === 'all' || trade.profitable === (this.profitFilter === 'profit')
-        const coreMatched = this.coreFilter === 'all' || (trade.coreQty > 0) === (this.coreFilter === 'core')
+        const order = orders.get(trade.orderKey)
+        const profitMatched = this.profitFilter === 'all' || order.profitable === (this.profitFilter === 'profit')
+        const coreMatched = this.coreFilter === 'all' || (order.coreQty > 0) === (this.coreFilter === 'core')
         return profitMatched && coreMatched
       })
     },
@@ -164,19 +187,26 @@ export default {
       const priceDiff = side ? currentPrice - breakEvenPrice : breakEvenPrice - currentPrice
       const calculatedProfit = mulAmount(priceDiff, qty, 8)
       const profit = trade.netPnl == null ? calculatedProfit : Number(trade.netPnl)
-      const profitable = currentPrice > 0 && profit >= 0
+      const hasRealtimePrice = currentPrice > 0
+      const profitable = hasRealtimePrice && profit >= 0
       const coreQty = Number(trade.coreQty) || 0
       const availableQty = trade.availableQty == null ? Math.max(qty - coreQty, 0) : Number(trade.availableQty) || 0
       return {
         raw: trade,
+        orderKey: this.tradeOrderKey(trade),
         openPrice,
         qty,
         openAmount: Number(trade.openAmount) || mulAmount(openPrice, qty),
         profit,
         profitable,
+        hasRealtimePrice,
         coreQty,
         availableQty
       }
+    },
+    tradeOrderKey(trade) {
+      if (trade && trade.orderId != null && String(trade.orderId) !== '') return `order:${trade.orderId}`
+      return `trade:${trade && trade.tradeId != null ? trade.tradeId : ''}`
     },
     updateChart() {
       if (!this.chart) return
