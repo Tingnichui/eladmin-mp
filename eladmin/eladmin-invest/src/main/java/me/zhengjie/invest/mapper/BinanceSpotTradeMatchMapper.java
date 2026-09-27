@@ -18,11 +18,13 @@ package me.zhengjie.invest.mapper;
 import me.zhengjie.invest.domain.BinanceSpotTradeMatch;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeMatchQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeStatsAggregate;
+import me.zhengjie.invest.domain.dto.SpotFeeAssetSummary;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import java.util.List;
 
 /**
 * @author genghui
@@ -35,4 +37,9 @@ public interface BinanceSpotTradeMatchMapper extends BaseMapper<BinanceSpotTrade
 
     BinanceSpotTradeStatsAggregate aggregateStats(@Param("uid") Integer uid,
                                                    @Param("symbol") String symbol);
+
+    List<SpotFeeAssetSummary> aggregateFeeAssets(@Param("uid") Integer uid,
+                                                  @Param("symbol") String symbol);
+
+    int deleteByScope(@Param("uid") Integer uid, @Param("symbol") String symbol);
 }

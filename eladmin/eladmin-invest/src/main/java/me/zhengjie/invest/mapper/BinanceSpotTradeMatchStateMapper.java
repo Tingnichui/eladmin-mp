@@ -72,4 +72,8 @@ public interface BinanceSpotTradeMatchStateMapper extends BaseMapper<BinanceSpot
 
     BigDecimal sumStatsUnmatchedSellQty(@Param("uid") Integer uid,
                                         @Param("symbol") String symbol);
+
+    int countCoreQtyConflicts(@Param("uid") Integer uid, @Param("symbol") String symbol);
+
+    int deleteByScope(@Param("uid") Integer uid, @Param("symbol") String symbol);
 }

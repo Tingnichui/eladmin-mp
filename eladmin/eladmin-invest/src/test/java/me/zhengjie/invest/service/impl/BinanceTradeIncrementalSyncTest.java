@@ -6,6 +6,7 @@ import me.zhengjie.invest.domain.BinanceCoinFuturesTradeInfo;
 import me.zhengjie.invest.domain.BinanceFuturesTradeInfo;
 import me.zhengjie.invest.domain.BinanceTradeInfo;
 import me.zhengjie.invest.service.BinanceSpotTradeMatcherService;
+import me.zhengjie.invest.service.support.SpotCommissionValuationService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceCoinFuturesUtil;
 import me.zhengjie.invest.util.BinanceSpotUtil;
@@ -38,6 +39,8 @@ class BinanceTradeIncrementalSyncTest {
         BinanceTradeInfoServiceImpl service = spy(new BinanceTradeInfoServiceImpl());
         ReflectionTestUtils.setField(service, "binanceSpotUtil", spotUtil);
         ReflectionTestUtils.setField(service, "binanceSpotTradeMatcherService", matcherService);
+        ReflectionTestUtils.setField(service, "spotCommissionValuationService",
+                mock(SpotCommissionValuationService.class));
         doReturn(Collections.emptyList()).when(service).list(any(Wrapper.class));
         doReturn(true).when(service).saveOrUpdateBatch(anyCollection());
         List<BinanceTradeInfo> firstPage = spotTrades(0L, 1000);
@@ -63,6 +66,8 @@ class BinanceTradeIncrementalSyncTest {
         BinanceTradeInfoServiceImpl service = spy(new BinanceTradeInfoServiceImpl());
         ReflectionTestUtils.setField(service, "binanceSpotUtil", spotUtil);
         ReflectionTestUtils.setField(service, "binanceSpotTradeMatcherService", matcherService);
+        ReflectionTestUtils.setField(service, "spotCommissionValuationService",
+                mock(SpotCommissionValuationService.class));
         doReturn(Collections.emptyList()).when(service).list(any(Wrapper.class));
         when(spotUtil.getMyTrades("BNBUSDT", 0L, 1000)).thenReturn(Collections.emptyList());
 

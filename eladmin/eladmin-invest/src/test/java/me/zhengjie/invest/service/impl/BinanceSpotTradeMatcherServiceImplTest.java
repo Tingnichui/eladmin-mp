@@ -7,6 +7,7 @@ import me.zhengjie.invest.domain.dto.BinanceSpotTradeMatchResult;
 import me.zhengjie.invest.mapper.BinanceSpotTradeMatchMapper;
 import me.zhengjie.invest.mapper.BinanceSpotTradeMatchStateMapper;
 import me.zhengjie.invest.service.support.BinanceSpotSellSourceStore;
+import me.zhengjie.invest.service.support.SpotCommissionValuationService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -57,8 +58,8 @@ class BinanceSpotTradeMatcherServiceImplTest {
         assertEquals(1L, matches.get(0).getBuyTradeId());
         assertEquals(new BigDecimal("1"), matches.get(0).getMatchedQty());
         assertEquals(new BigDecimal("120"), matches.get(0).getBuyAmount());
-        assertEquals(new BigDecimal("0.270"), matches.get(0).getFee());
-        assertEquals(new BigDecimal("29.730"), matches.get(0).getNetPnl());
+        assertEquals(0, new BigDecimal("0.270").compareTo(matches.get(0).getFee()));
+        assertEquals(0, new BigDecimal("29.730").compareTo(matches.get(0).getNetPnl()));
         assertEquals(2L, matches.get(1).getBuyTradeId());
         assertEquals(new BigDecimal("0.5"), matches.get(1).getMatchedQty());
 
@@ -281,6 +282,12 @@ class BinanceSpotTradeMatcherServiceImplTest {
         state.setRemainingQty(new BigDecimal(qty));
         state.setMatchStatus("PENDING");
         state.setPrice(new BigDecimal(price));
+        BigDecimal commission = new BigDecimal(qty).multiply(new BigDecimal(price))
+                .multiply(new BigDecimal("0.001"));
+        state.setCommission(commission);
+        state.setCommissionAsset("USDT");
+        state.setCommissionQuoteAmount(commission);
+        state.setCommissionValuationStatus(SpotCommissionValuationService.STATUS_COMPLETED);
         return state;
     }
 }

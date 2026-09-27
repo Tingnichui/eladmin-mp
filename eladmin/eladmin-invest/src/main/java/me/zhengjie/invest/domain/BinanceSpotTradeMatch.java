@@ -94,6 +94,27 @@ public class BinanceSpotTradeMatch implements Serializable {
     @ApiModelProperty(value = "手续费率")
     private BigDecimal feeRate;
 
+    @ApiModelProperty(value = "买入手续费资产")
+    private String buyFeeAsset;
+
+    @ApiModelProperty(value = "本次撮合分摊的买入手续费")
+    private BigDecimal buyFeeAmount;
+
+    @ApiModelProperty(value = "本次撮合分摊的买入折算手续费")
+    private BigDecimal buyFeeQuoteAmount;
+
+    @ApiModelProperty(value = "卖出手续费资产")
+    private String sellFeeAsset;
+
+    @ApiModelProperty(value = "本次撮合分摊的卖出手续费")
+    private BigDecimal sellFeeAmount;
+
+    @ApiModelProperty(value = "本次撮合分摊的卖出折算手续费")
+    private BigDecimal sellFeeQuoteAmount;
+
+    @ApiModelProperty(value = "手续费估值是否完整")
+    private Integer feeValuationComplete;
+
     @NotNull
     @ApiModelProperty(value = "已实现盈亏")
     private BigDecimal pnl;
@@ -102,7 +123,6 @@ public class BinanceSpotTradeMatch implements Serializable {
     @ApiModelProperty(value = "手续费")
     private BigDecimal fee;
 
-    @NotNull
     @ApiModelProperty(value = "扣除手续费后的净盈亏")
     private BigDecimal netPnl;
 

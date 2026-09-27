@@ -11,6 +11,11 @@
         <result column="order_id" property="orderId"/>
         <result column="quote_qty" property="quoteQty"/>
         <result column="commission_asset" property="commissionAsset"/>
+        <result column="commission_quote_asset" property="commissionQuoteAsset"/>
+        <result column="commission_quote_price" property="commissionQuotePrice"/>
+        <result column="commission_quote_amount" property="commissionQuoteAmount"/>
+        <result column="commission_valuation_source" property="commissionValuationSource"/>
+        <result column="commission_valuation_status" property="commissionValuationStatus"/>
         <result column="is_buyer" property="isBuyer"/>
         <result column="is_maker" property="isMaker"/>
         <result column="is_best_match" property="isBestMatch"/>
@@ -20,7 +25,10 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id, symbol, price, qty, commission, time, order_id, quote_qty, commission_asset, is_buyer, is_maker, is_best_match, uid
+        id, symbol, price, qty, commission, time, order_id, quote_qty, commission_asset,
+        commission_quote_asset, commission_quote_price, commission_quote_amount,
+        commission_valuation_source, commission_valuation_status,
+        is_buyer, is_maker, is_best_match, uid
     </sql>
 
     <select id="findAll" resultMap="BaseResultMap">
@@ -92,6 +100,14 @@
 
     <select id="listAllSymbol" resultType="java.lang.String">
         select distinct t1.symbol from binance_trade_info t1
+    </select>
+
+    <select id="findScopeForFeeValuation" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM binance_trade_info
+        WHERE uid = #{uid}
+          AND symbol = #{symbol}
+        ORDER BY time ASC, id ASC
     </select>
 
 </mapper>

@@ -98,6 +98,22 @@ public class BinanceSpotTradeMatchState implements Serializable {
     private Long orderId;
 
     @TableField(exist = false)
+    @ApiModelProperty(value = "原始成交手续费")
+    private BigDecimal commission;
+
+    @TableField(exist = false)
+    @ApiModelProperty(value = "原始成交手续费资产")
+    private String commissionAsset;
+
+    @TableField(exist = false)
+    @ApiModelProperty(value = "折算后的手续费")
+    private BigDecimal commissionQuoteAmount;
+
+    @TableField(exist = false)
+    @ApiModelProperty(value = "手续费估值状态")
+    private String commissionValuationStatus;
+
+    @TableField(exist = false)
     @ApiModelProperty(value = "当前有效底仓数量")
     private BigDecimal activeCoreQty;
 

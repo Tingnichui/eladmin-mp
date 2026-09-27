@@ -19,4 +19,6 @@ public class BinanceSpotTradeStatsAggregate {
     private BigDecimal fee = BigDecimal.ZERO;
 
     private BigDecimal netPnl = BigDecimal.ZERO;
+
+    private Integer incompleteFeeCount = 0;
 }

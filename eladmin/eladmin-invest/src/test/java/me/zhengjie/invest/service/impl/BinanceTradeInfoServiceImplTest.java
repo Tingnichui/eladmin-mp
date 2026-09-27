@@ -19,6 +19,7 @@ import me.zhengjie.invest.mapper.BinanceTradeInfoMapper;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceSpotUtil;
+import me.zhengjie.invest.service.support.SpotCommissionValuationService;
 import me.zhengjie.utils.RedisUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,6 +63,8 @@ class BinanceTradeInfoServiceImplTest {
         ReflectionTestUtils.setField(service, "binanceSpotUtil", spotUtil);
         ReflectionTestUtils.setField(service, "binanceAccountInfoService", accountService);
         ReflectionTestUtils.setField(service, "redisUtils", redisUtils);
+        ReflectionTestUtils.setField(service, "spotCommissionValuationService",
+                mock(SpotCommissionValuationService.class));
         when(matchMapper.aggregateStats(any(), any())).thenReturn(new BinanceSpotTradeStatsAggregate());
         when(stateMapper.sumStatsUnmatchedSellQty(any(), any())).thenReturn(BigDecimal.ZERO);
         when(stateMapper.findStatsOpenBuys(any(), any())).thenReturn(Collections.emptyList());
@@ -596,6 +599,11 @@ class BinanceTradeInfoServiceImplTest {
         position.setTradeId(tradeId);
         position.setPrice(new BigDecimal(price));
         position.setRemainingQty(new BigDecimal(qty));
+        position.setOriginalQty(new BigDecimal(qty));
+        position.setCommission(BigDecimal.ZERO);
+        position.setCommissionAsset("USDT");
+        position.setCommissionQuoteAmount(BigDecimal.ZERO);
+        position.setCommissionValuationStatus(SpotCommissionValuationService.STATUS_COMPLETED);
         position.setTradeTime(new Timestamp(time));
         return position;
     }

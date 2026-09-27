@@ -33,6 +33,7 @@ import me.zhengjie.invest.domain.dto.BinanceSpotOrderRequest;
 import me.zhengjie.invest.domain.dto.BinanceSpotOpenOrderDto;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
+import me.zhengjie.invest.domain.dto.SpotActualFeeRebuildResult;
 import me.zhengjie.invest.service.*;
 import me.zhengjie.invest.service.support.BinanceStatsRealtimeService;
 import me.zhengjie.invest.service.support.BinanceStatsRealtimeSnapshot;
@@ -215,6 +216,24 @@ public class BinanceTradeInfoController {
             throw new BadRequestException("请选择现货交易对");
         }
         return ResponseEntity.ok(binanceSpotTradeMatcherService.initializeAndMatch(uid, spotSymbol.name()));
+    }
+
+    @PutMapping("/rebuildSpotActualFees")
+    @Log("按实际手续费重建现货撮合")
+    @ApiOperation("补算实际手续费并重建现货 FIFO 撮合")
+    @PreAuthorize("@el.check('binanceTradeInfo:sync')")
+    public ResponseEntity<SpotActualFeeRebuildResult> rebuildSpotActualFees(
+            @RequestParam Integer uid, @RequestParam String symbol) {
+        BinanceEnum.SYMBOL spotSymbol;
+        try {
+            spotSymbol = BinanceEnum.SYMBOL.valueOf(symbol);
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new BadRequestException("交易对不存在");
+        }
+        if (!Integer.valueOf(0).equals(spotSymbol.getType())) {
+            throw new BadRequestException("请选择现货交易对");
+        }
+        return ResponseEntity.ok(binanceSpotTradeMatcherService.rebuildWithActualFees(uid, spotSymbol.name()));
     }
 
 

@@ -45,6 +45,7 @@ import me.zhengjie.invest.service.BinanceSpotTradeMatcherService;
 import me.zhengjie.invest.service.BinanceTradeInfoExtService;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
 import me.zhengjie.invest.service.support.BinanceSpotHedgeContext;
+import me.zhengjie.invest.service.support.SpotCommissionValuationService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import me.zhengjie.invest.util.BinanceSpotUtil;
 import me.zhengjie.invest.util.BinanceUsdFuturesUtil;
@@ -104,6 +105,8 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
     private BinanceUsdFuturesUtil binanceUsdFuturesUtil;
     @Resource
     private RedisUtils redisUtils;
+    @Resource
+    private SpotCommissionValuationService spotCommissionValuationService;
 
     @Override
     public PageResult<BinanceTradeInfo> queryAll(BinanceTradeInfoQueryCriteria criteria, Page<Object> page) {
@@ -118,6 +121,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void create(BinanceTradeInfo resources) {
+        spotCommissionValuationService.value(resources);
         save(resources);
     }
 
@@ -126,6 +130,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
     public void update(BinanceTradeInfo resources) {
         BinanceTradeInfo binanceTradeInfo = getById(resources.getId());
         binanceTradeInfo.copy(resources);
+        spotCommissionValuationService.value(binanceTradeInfo);
         saveOrUpdate(binanceTradeInfo);
     }
 
@@ -201,6 +206,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                         .peek(order -> order.setUid(accountInfo.getUid()))
                         .collect(Collectors.toList());
                 if (CollectionUtils.isNotEmpty(newOrders)) {
+                    spotCommissionValuationService.valueAll(newOrders);
                     this.saveOrUpdateBatch(newOrders);
                     syncedCount[0] += newOrders.size();
                 }
@@ -235,7 +241,6 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         BinanceTradeStatsInfoVO statsInfoVO = new BinanceTradeStatsInfoVO();
         statsInfoVO.setLastNetPnl((BigDecimal) redisUtils.get(key));
         final boolean side = true;
-        final String feeRate = "0.001";
         BinanceSpotTradeStatsAggregate aggregate = binanceSpotTradeMatchMapper.aggregateStats(
                 criteria.getUid(), criteria.getSymbol());
         if (aggregate == null) {
@@ -244,12 +249,21 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
         statsInfoVO.setTotalBuyAmount(zeroIfNull(aggregate.getTotalBuyAmount()));
         statsInfoVO.setTotalSellAmount(zeroIfNull(aggregate.getTotalSellAmount()));
         statsInfoVO.setPnl(zeroIfNull(aggregate.getPnl()));
-        statsInfoVO.setFee(zeroIfNull(aggregate.getFee()));
-        statsInfoVO.setNetPnl(zeroIfNull(aggregate.getNetPnl()));
-        statsInfoVO.setRoi(statsInfoVO.getTotalBuyAmount().compareTo(BigDecimal.ZERO) > 0
+        boolean realizedFeeComplete = aggregate.getIncompleteFeeCount() == null
+                || aggregate.getIncompleteFeeCount() == 0;
+        statsInfoVO.setFeeValuationComplete(realizedFeeComplete);
+        statsInfoVO.setFeeAssetSummary(binanceSpotTradeMatchMapper.aggregateFeeAssets(
+                criteria.getUid(), criteria.getSymbol()));
+        statsInfoVO.setFee(realizedFeeComplete ? zeroIfNull(aggregate.getFee()) : null);
+        statsInfoVO.setNetPnl(realizedFeeComplete ? zeroIfNull(aggregate.getNetPnl()) : null);
+        statsInfoVO.setRoi(realizedFeeComplete && statsInfoVO.getTotalBuyAmount().compareTo(BigDecimal.ZERO) > 0
                 ? statsInfoVO.getNetPnl().divide(statsInfoVO.getTotalBuyAmount(), 8, RoundingMode.HALF_UP)
                 : null);
-        redisUtils.set(key, statsInfoVO.getNetPnl());
+        if (realizedFeeComplete) {
+            redisUtils.set(key, statsInfoVO.getNetPnl());
+        } else {
+            addWarning(statsInfoVO, "部分已实现手续费尚未完成 USDT 估值");
+        }
 
         BigDecimal unmatchedSellQty = zeroIfNull(binanceSpotTradeMatchStateMapper.sumStatsUnmatchedSellQty(
                 criteria.getUid(), criteria.getSymbol()));
@@ -290,26 +304,49 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
             }
 
             List<MatchedTradeInfo> matchedTradeInfos = openList.stream().map(position -> {
-                MatchedTradeInfo trade = new MatchedTradeInfo(side, feeRate);
+                MatchedTradeInfo trade = new MatchedTradeInfo(side, "0");
                 BigDecimal coreQty = zeroIfNull(position.getActiveCoreQty());
+                BigDecimal originalQty = zeroIfNull(position.getOriginalQty());
+                BigDecimal remainingQty = zeroIfNull(position.getRemainingQty());
+                boolean feeComplete = SpotCommissionValuationService.STATUS_COMPLETED
+                        .equals(position.getCommissionValuationStatus())
+                        && position.getCommissionQuoteAmount() != null;
+                BigDecimal remainingFeeAmount = allocateRemainingFee(
+                        position.getCommission(), remainingQty, originalQty);
+                BigDecimal remainingFeeQuote = allocateRemainingFee(
+                        position.getCommissionQuoteAmount(), remainingQty, originalQty);
                 trade.setTradeId(position.getTradeId());
                 trade.setOrderId(position.getOrderId());
                 trade.setCorePositionId(position.getCorePositionId());
                 trade.setCoreQty(coreQty);
                 trade.setAvailableQty(zeroIfNull(position.getRemainingQty()).subtract(coreQty));
                 trade.setCoreLockedAt(position.getCoreLockedAt());
-                trade.setQty(position.getRemainingQty());
+                trade.setQty(remainingQty);
                 trade.setOpenPrice(position.getPrice());
                 trade.setOpenTime(position.getTradeTime());
                 trade.setClosePrice(currentPrice);
+                trade.setActualFeeMode(true);
+                trade.setFeeAsset(position.getCommissionAsset());
+                trade.setFeeAmount(remainingFeeAmount);
+                trade.setFeeValuationComplete(feeComplete);
+                trade.setFee(feeComplete ? remainingFeeQuote : null);
+                trade.setNetPnl(feeComplete ? trade.getPnl().subtract(remainingFeeQuote) : null);
+                trade.setBreakEvenPrice(feeComplete && remainingQty.signum() > 0
+                        ? trade.getOpenAmount().add(remainingFeeQuote)
+                        .divide(remainingQty, 8, RoundingMode.HALF_UP) : null);
                 return trade;
             }).collect(Collectors.toList());
-            // 持仓盈利
-            statsInfoVO.setHoldingProfit(matchedTradeInfos.stream().map(MatchedTradeInfo::getNetPnl).filter(netPnl -> netPnl.compareTo(BigDecimal.ZERO) > 0).reduce(BigDecimal.ZERO, BigDecimal::add));
-            // 持仓亏损
-            statsInfoVO.setHoldingLoss(matchedTradeInfos.stream().map(MatchedTradeInfo::getNetPnl).filter(netPnl -> netPnl.compareTo(BigDecimal.ZERO) <= 0).reduce(BigDecimal.ZERO, BigDecimal::add));
-            // 持仓盈亏
-            statsInfoVO.setHoldingProfitLoss(matchedTradeInfos.stream().map(MatchedTradeInfo::getNetPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
+            boolean holdingFeeComplete = matchedTradeInfos.stream().allMatch(MatchedTradeInfo::isFeeValuationComplete);
+            if (holdingFeeComplete) {
+                statsInfoVO.setHoldingProfit(matchedTradeInfos.stream().map(MatchedTradeInfo::getNetPnl).filter(netPnl -> netPnl.compareTo(BigDecimal.ZERO) > 0).reduce(BigDecimal.ZERO, BigDecimal::add));
+                statsInfoVO.setHoldingLoss(matchedTradeInfos.stream().map(MatchedTradeInfo::getNetPnl).filter(netPnl -> netPnl.compareTo(BigDecimal.ZERO) <= 0).reduce(BigDecimal.ZERO, BigDecimal::add));
+                statsInfoVO.setHoldingProfitLoss(matchedTradeInfos.stream().map(MatchedTradeInfo::getNetPnl).reduce(BigDecimal.ZERO, BigDecimal::add));
+            } else {
+                statsInfoVO.setHoldingProfit(null);
+                statsInfoVO.setHoldingLoss(null);
+                statsInfoVO.setHoldingProfitLoss(null);
+                addWarning(statsInfoVO, "部分持仓手续费尚未完成 USDT 估值");
+            }
             // 持仓订单
             // 按未平仓买入批次逐笔返回，保留真实成交时间；价格区间聚合由前端按需完成。
             statsInfoVO.setTradeList(matchedTradeInfos.stream()
@@ -331,6 +368,15 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
 
     private BigDecimal zeroIfNull(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private BigDecimal allocateRemainingFee(BigDecimal totalFee,
+                                            BigDecimal remainingQty,
+                                            BigDecimal originalQty) {
+        if (totalFee == null || originalQty == null || originalQty.signum() <= 0) {
+            return null;
+        }
+        return totalFee.multiply(remainingQty).divide(originalQty, 16, RoundingMode.HALF_UP);
     }
 
     private void addWarning(BinanceTradeStatsInfoVO statsInfo, String warning) {

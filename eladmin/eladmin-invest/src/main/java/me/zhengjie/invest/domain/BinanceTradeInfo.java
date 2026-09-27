@@ -75,6 +75,21 @@ public class BinanceTradeInfo implements Serializable {
     @ApiModelProperty(value = "手续费资产")
     private String commissionAsset;
 
+    @ApiModelProperty(value = "手续费折算计价资产")
+    private String commissionQuoteAsset;
+
+    @ApiModelProperty(value = "手续费资产折算价格")
+    private BigDecimal commissionQuotePrice;
+
+    @ApiModelProperty(value = "折算后的手续费")
+    private BigDecimal commissionQuoteAmount;
+
+    @ApiModelProperty(value = "手续费估值来源")
+    private String commissionValuationSource;
+
+    @ApiModelProperty(value = "手续费估值状态")
+    private String commissionValuationStatus;
+
     @NotNull
     @ApiModelProperty(value = "是否为买方")
     private Integer isBuyer;

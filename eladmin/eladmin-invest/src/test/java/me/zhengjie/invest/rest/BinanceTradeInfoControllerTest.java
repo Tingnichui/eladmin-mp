@@ -7,6 +7,7 @@ import me.zhengjie.invest.domain.dto.BinanceSpotOrderRequest;
 import me.zhengjie.invest.domain.dto.BinanceSpotOpenOrderDto;
 import me.zhengjie.invest.domain.dto.BinanceTradeInfoQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceTradeStatsInfoVO;
+import me.zhengjie.invest.domain.dto.SpotActualFeeRebuildResult;
 import me.zhengjie.invest.service.BinanceAccountInfoService;
 import me.zhengjie.invest.service.BinanceCoinFuturesTradeInfoService;
 import me.zhengjie.invest.service.BinanceC2cOrderService;
@@ -134,6 +135,21 @@ class BinanceTradeInfoControllerTest {
                 () -> controller.matchSpotTradeInfo(7, "BTCUSD_PERP"));
 
         verifyNoInteractions(matcherService);
+    }
+
+    @Test
+    void shouldRebuildSpotMatchingWithActualFees() {
+        SpotActualFeeRebuildResult result = new SpotActualFeeRebuildResult();
+        result.setValuedCount(5);
+        result.setRebuilt(true);
+        when(matcherService.rebuildWithActualFees(7, "BTCUSDT")).thenReturn(result);
+
+        ResponseEntity<SpotActualFeeRebuildResult> response =
+                controller.rebuildSpotActualFees(7, "BTCUSDT");
+
+        assertEquals(5, response.getBody().getValuedCount());
+        assertEquals(true, response.getBody().isRebuilt());
+        verify(matcherService).rebuildWithActualFees(7, "BTCUSDT");
     }
 
     @Test

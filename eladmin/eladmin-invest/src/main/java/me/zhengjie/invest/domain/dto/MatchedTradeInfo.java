@@ -97,6 +97,14 @@ public class MatchedTradeInfo {
      * 手续费率
      */
     private BigDecimal feeRate;
+    /** 实际手续费模式；false 时保留合约等旧逻辑的费率估算。 */
+    private boolean actualFeeMode;
+    /** 原币手续费资产。 */
+    private String feeAsset;
+    /** 当前持仓部分分摊的原币手续费。 */
+    private BigDecimal feeAmount;
+    /** 手续费估值是否完整。 */
+    private boolean feeValuationComplete = true;
     /**
      * 净盈亏
      */
@@ -107,6 +115,9 @@ public class MatchedTradeInfo {
     private BigDecimal breakEvenPrice;
 
     public BigDecimal getBreakEvenPrice() {
+        if (actualFeeMode) {
+            return breakEvenPrice;
+        }
         BigDecimal qty = this.getQty();
         if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
             return BigDecimal.ZERO;
@@ -123,10 +134,16 @@ public class MatchedTradeInfo {
     }
 
     public BigDecimal getNetPnl() {
+        if (actualFeeMode) {
+            return netPnl;
+        }
         return this.getPnl().subtract(this.getFee());
     }
 
     public BigDecimal getFee() {
+        if (actualFeeMode) {
+            return fee;
+        }
         return (this.getOpenAmount().add(this.getCloseAmount())).multiply(this.feeRate);
     }
 
@@ -149,6 +166,9 @@ public class MatchedTradeInfo {
     }
 
     public BigDecimal getRoi() {
+        if (actualFeeMode && this.getNetPnl() == null) {
+            return null;
+        }
         if (this.getOpenAmount().compareTo(BigDecimal.ZERO) == 0) {
             return BigDecimal.ZERO;
         }

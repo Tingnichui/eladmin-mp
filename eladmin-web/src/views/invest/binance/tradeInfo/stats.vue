@@ -107,6 +107,7 @@
                   <div class="summary-value-row">
                     <strong :class="['summary-value', item.tone]">{{ item.value }}</strong>
                   </div>
+                  <small v-if="item.detail" class="summary-detail">{{ item.detail }}</small>
                 </div>
               </div>
             </div>
@@ -202,6 +203,7 @@
           <div v-for="item in mobileTradeSummaryDetails" :key="item.label" class="mobile-summary-item">
             <span>{{ item.label }}</span>
             <strong :class="item.tone">{{ item.value }}</strong>
+            <small v-if="item.detail">{{ item.detail }}</small>
           </div>
         </div>
         <el-button class="mobile-summary-close" @click="showMobileTradeSummary = false">关闭</el-button>
@@ -631,6 +633,10 @@
             <template slot-scope="scope">
               <div class="core-cell-primary">{{ decimalValue(scope.row.price, 2) }}</div>
               <small class="core-cell-meta">金额 {{ moneyValue(scope.row.openAmount) }}</small>
+              <small v-if="scope.row.feeAsset" class="core-cell-meta">
+                手续费 {{ quantityValue(scope.row.feeAmount, false) }} {{ scope.row.feeAsset }}
+                <template v-if="scope.row.feeValuationComplete === false">（待估值）</template>
+              </small>
             </template>
           </el-table-column>
           <el-table-column label="持仓数量" width="175">
@@ -1134,7 +1140,13 @@ export default {
         { label: '卖出总额', value: this.moneyValue(this.spotStats.totalSellAmount) },
         { label: '收益率', value: this.signedPercentValue(this.spotStats.roi), tone: this.valueTone(this.spotStats.roi) },
         { label: '盈亏', value: this.signedMoneyValue(this.spotStats.pnl), tone: this.valueTone(this.spotStats.pnl) },
-        { label: '手续费', value: this.moneyValue(this.spotStats.fee) },
+        {
+          label: '手续费折合',
+          value: this.spotStats.feeValuationComplete === false ? '待估值' : `${this.moneyValue(this.spotStats.fee)} USDT`,
+          detail: (this.spotStats.feeAssetSummary || [])
+            .map(item => `${this.quantityValue(item.amount, false)} ${item.asset}`)
+            .join(' + ')
+        },
         {
           label: '净盈亏',
           value: this.signedMoneyValue(this.spotStats.netPnl),
@@ -1870,6 +1882,7 @@ export default {
 .popover-stat-row strong { color: #17233d; }
 .trade-summary-popover .summary-grid { display: grid; grid-template-columns: repeat(5, minmax(110px, 1fr)); }
 .summary-item { min-width: 0; padding: 9px 10px; border-right: 1px solid #ebeef5; border-top: 1px solid #f1f3f7; }
+.summary-detail { display: block; overflow: hidden; margin-top: 4px; color: #909399; text-overflow: ellipsis; white-space: nowrap; }
 .summary-item:nth-child(5n) { border-right: 0; }
 .summary-label-row { display: flex; align-items: center; gap: 5px; min-width: 0; margin-bottom: 6px; }
 .summary-label-row .summary-label { overflow: hidden; margin-bottom: 0; text-overflow: ellipsis; white-space: nowrap; }
@@ -1904,6 +1917,7 @@ export default {
 .mobile-summary-item { min-width: 0; padding: 11px 12px; border-bottom: 1px solid #ebeef5; }
 .mobile-summary-item:nth-child(2n+1) { border-right: 1px solid #ebeef5; }
 .mobile-summary-item span, .mobile-summary-item strong { display: block; }
+.mobile-summary-item small { display: block; overflow: hidden; margin-top: 4px; color: #909399; text-overflow: ellipsis; white-space: nowrap; }
 .mobile-summary-item span { color: #8492a6; font-size: 12px; }
 .mobile-summary-item strong { overflow: hidden; margin-top: 5px; color: #17233d; font-size: 16px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .mobile-summary-close { width: 100%; }

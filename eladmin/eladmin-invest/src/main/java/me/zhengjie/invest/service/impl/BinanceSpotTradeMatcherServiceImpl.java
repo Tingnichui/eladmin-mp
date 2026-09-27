@@ -5,15 +5,19 @@ import me.zhengjie.invest.domain.BinanceSpotTradeMatch;
 import me.zhengjie.invest.domain.BinanceSpotTradeMatchState;
 import me.zhengjie.invest.domain.dto.BinanceSpotSellSourceDto;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeMatchResult;
+import me.zhengjie.invest.domain.dto.SpotActualFeeRebuildResult;
 import me.zhengjie.invest.mapper.BinanceSpotTradeMatchMapper;
 import me.zhengjie.invest.mapper.BinanceSpotTradeMatchStateMapper;
 import me.zhengjie.invest.service.BinanceSpotTradeMatcherService;
 import me.zhengjie.invest.service.support.BinanceSpotSellSourceStore;
+import me.zhengjie.invest.service.support.SpotCommissionValuationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import javax.annotation.Resource;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 /**
@@ -28,11 +32,13 @@ public class BinanceSpotTradeMatcherServiceImpl implements BinanceSpotTradeMatch
     static final String STATUS_COMPLETED = "COMPLETED";
     static final String STATUS_EXCEPTION = "EXCEPTION";
     static final String STATUS_SOURCE_EXCEPTION = "SOURCE_EXCEPTION";
-    static final BigDecimal FEE_RATE = new BigDecimal("0.001");
+    private static final int MONEY_SCALE = 16;
 
     private final BinanceSpotTradeMatchStateMapper stateMapper;
     private final BinanceSpotTradeMatchMapper matchMapper;
     private final BinanceSpotSellSourceStore sellSourceStore;
+    @Resource
+    private SpotCommissionValuationService commissionValuationService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -170,7 +176,19 @@ public class BinanceSpotTradeMatcherServiceImpl implements BinanceSpotTradeMatch
         BigDecimal buyAmount = matchedQty.multiply(buy.getPrice());
         BigDecimal sellAmount = matchedQty.multiply(sell.getPrice());
         BigDecimal pnl = sellAmount.subtract(buyAmount);
-        BigDecimal fee = buyAmount.add(sellAmount).multiply(FEE_RATE);
+        BigDecimal buyFeeAmount = allocateFee(
+                buy.getCommission(), buy.getMatchedQty(), matchedQty, buy.getOriginalQty());
+        BigDecimal sellFeeAmount = allocateFee(
+                sell.getCommission(), sell.getMatchedQty(), matchedQty, sell.getOriginalQty());
+        BigDecimal buyFeeQuoteAmount = allocateFee(
+                buy.getCommissionQuoteAmount(), buy.getMatchedQty(), matchedQty, buy.getOriginalQty());
+        BigDecimal sellFeeQuoteAmount = allocateFee(
+                sell.getCommissionQuoteAmount(), sell.getMatchedQty(), matchedQty, sell.getOriginalQty());
+        boolean valuationComplete = "COMPLETED".equals(buy.getCommissionValuationStatus())
+                && "COMPLETED".equals(sell.getCommissionValuationStatus())
+                && buyFeeQuoteAmount != null && sellFeeQuoteAmount != null;
+        BigDecimal fee = valuationComplete
+                ? buyFeeQuoteAmount.add(sellFeeQuoteAmount) : BigDecimal.ZERO;
 
         BinanceSpotTradeMatch match = new BinanceSpotTradeMatch();
         match.setUid(uid);
@@ -184,11 +202,55 @@ public class BinanceSpotTradeMatcherServiceImpl implements BinanceSpotTradeMatch
         match.setSellTime(sell.getTradeTime());
         match.setBuyAmount(buyAmount);
         match.setSellAmount(sellAmount);
-        match.setFeeRate(FEE_RATE);
+        match.setFeeRate(BigDecimal.ZERO);
+        match.setBuyFeeAsset(buy.getCommissionAsset());
+        match.setBuyFeeAmount(buyFeeAmount);
+        match.setBuyFeeQuoteAmount(buyFeeQuoteAmount);
+        match.setSellFeeAsset(sell.getCommissionAsset());
+        match.setSellFeeAmount(sellFeeAmount);
+        match.setSellFeeQuoteAmount(sellFeeQuoteAmount);
+        match.setFeeValuationComplete(valuationComplete ? 1 : 0);
         match.setPnl(pnl);
         match.setFee(fee);
-        match.setNetPnl(pnl.subtract(fee));
+        match.setNetPnl(valuationComplete ? pnl.subtract(fee) : null);
         return match;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public SpotActualFeeRebuildResult rebuildWithActualFees(Integer uid, String symbol) {
+        validateScope(uid, symbol);
+        SpotActualFeeRebuildResult result = commissionValuationService.valueScope(uid, symbol);
+        if (result.getFailedCount() > 0) {
+            return result;
+        }
+        int conflicts = stateMapper.countCoreQtyConflicts(uid, symbol);
+        result.setCoreConflictCount(conflicts);
+        if (conflicts > 0) {
+            return result;
+        }
+        result.setDeletedMatchCount(matchMapper.deleteByScope(uid, symbol));
+        result.setDeletedStateCount(stateMapper.deleteByScope(uid, symbol));
+        result.setMatchResult(initializeAndMatch(uid, symbol));
+        result.setRebuilt(true);
+        return result;
+    }
+
+    private BigDecimal allocateFee(BigDecimal totalFee,
+                                   BigDecimal previouslyMatchedQty,
+                                   BigDecimal matchedQty,
+                                   BigDecimal originalQty) {
+        if (totalFee == null || originalQty == null || originalQty.signum() <= 0) {
+            return null;
+        }
+        BigDecimal before = totalFee.multiply(positive(previouslyMatchedQty))
+                .divide(originalQty, MONEY_SCALE, RoundingMode.HALF_UP);
+        BigDecimal afterQty = positive(previouslyMatchedQty).add(matchedQty);
+        BigDecimal after = afterQty.compareTo(originalQty) >= 0
+                ? totalFee
+                : totalFee.multiply(afterQty)
+                .divide(originalQty, MONEY_SCALE, RoundingMode.HALF_UP);
+        return after.subtract(before);
     }
 
     private String status(BigDecimal matchedQty, BigDecimal remainingQty) {

@@ -51,5 +51,9 @@ public class BinanceTradeStatsInfoVO extends BinanceBaseStatsVO implements Seria
     private BigDecimal unmatchedSellQty = BigDecimal.ZERO;
     // 局部降级提示，由统计接口合并到顶层 warnings
     private List<String> warnings = new ArrayList<>();
+    // 按原始资产汇总的已实现手续费
+    private List<SpotFeeAssetSummary> feeAssetSummary = new ArrayList<>();
+    // 已实现手续费是否全部完成 USDT 估值
+    private boolean feeValuationComplete = true;
 
 }

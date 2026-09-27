@@ -38,4 +38,7 @@ public interface BinanceTradeInfoMapper extends BaseMapper<BinanceTradeInfo> {
 
     List<String> listAllSymbol();
 
+    List<BinanceTradeInfo> findScopeForFeeValuation(@Param("uid") Integer uid,
+                                                     @Param("symbol") String symbol);
+
 }

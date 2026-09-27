@@ -15,6 +15,13 @@
         <result column="buy_amount" property="buyAmount"/>
         <result column="sell_amount" property="sellAmount"/>
         <result column="fee_rate" property="feeRate"/>
+        <result column="buy_fee_asset" property="buyFeeAsset"/>
+        <result column="buy_fee_amount" property="buyFeeAmount"/>
+        <result column="buy_fee_quote_amount" property="buyFeeQuoteAmount"/>
+        <result column="sell_fee_asset" property="sellFeeAsset"/>
+        <result column="sell_fee_amount" property="sellFeeAmount"/>
+        <result column="sell_fee_quote_amount" property="sellFeeQuoteAmount"/>
+        <result column="fee_valuation_complete" property="feeValuationComplete"/>
         <result column="pnl" property="pnl"/>
         <result column="fee" property="fee"/>
         <result column="net_pnl" property="netPnl"/>
@@ -22,7 +29,11 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id, uid, symbol, buy_trade_id, sell_trade_id, matched_qty, buy_price, sell_price, buy_time, sell_time, buy_amount, sell_amount, fee_rate, pnl, fee, net_pnl, create_time
+        id, uid, symbol, buy_trade_id, sell_trade_id, matched_qty, buy_price, sell_price,
+        buy_time, sell_time, buy_amount, sell_amount, fee_rate,
+        buy_fee_asset, buy_fee_amount, buy_fee_quote_amount,
+        sell_fee_asset, sell_fee_amount, sell_fee_quote_amount, fee_valuation_complete,
+        pnl, fee, net_pnl, create_time
     </sql>
 
     <resultMap id="StatsAggregateResultMap" type="me.zhengjie.invest.domain.dto.BinanceSpotTradeStatsAggregate">
@@ -31,6 +42,13 @@
         <result column="pnl" property="pnl"/>
         <result column="fee" property="fee"/>
         <result column="net_pnl" property="netPnl"/>
+        <result column="incomplete_fee_count" property="incompleteFeeCount"/>
+    </resultMap>
+
+    <resultMap id="FeeAssetSummaryResultMap" type="me.zhengjie.invest.domain.dto.SpotFeeAssetSummary">
+        <result column="asset" property="asset"/>
+        <result column="amount" property="amount"/>
+        <result column="quote_amount" property="quoteAmount"/>
     </resultMap>
 
     <select id="findAll" resultMap="BaseResultMap">
@@ -64,9 +82,36 @@
                COALESCE(SUM(t1.sell_amount), 0) AS total_sell_amount,
                COALESCE(SUM(t1.pnl), 0) AS pnl,
                COALESCE(SUM(t1.fee), 0) AS fee,
-               COALESCE(SUM(t1.net_pnl), 0) AS net_pnl
+               COALESCE(SUM(t1.net_pnl), 0) AS net_pnl,
+               SUM(CASE WHEN t1.fee_valuation_complete = 0 THEN 1 ELSE 0 END) AS incomplete_fee_count
         FROM binance_spot_trade_match t1
         WHERE t1.uid = #{uid}
           AND t1.symbol = #{symbol}
     </select>
+
+    <select id="aggregateFeeAssets" resultMap="FeeAssetSummaryResultMap">
+        SELECT fee_asset AS asset,
+               SUM(fee_amount) AS amount,
+               SUM(fee_quote_amount) AS quote_amount
+        FROM (
+            SELECT buy_fee_asset AS fee_asset,
+                   buy_fee_amount AS fee_amount,
+                   buy_fee_quote_amount AS fee_quote_amount
+            FROM binance_spot_trade_match
+            WHERE uid = #{uid} AND symbol = #{symbol}
+            UNION ALL
+            SELECT sell_fee_asset AS fee_asset,
+                   sell_fee_amount AS fee_amount,
+                   sell_fee_quote_amount AS fee_quote_amount
+            FROM binance_spot_trade_match
+            WHERE uid = #{uid} AND symbol = #{symbol}
+        ) fee_rows
+        WHERE fee_asset IS NOT NULL
+        GROUP BY fee_asset
+        ORDER BY fee_asset
+    </select>
+
+    <delete id="deleteByScope">
+        DELETE FROM binance_spot_trade_match WHERE uid = #{uid} AND symbol = #{symbol}
+    </delete>
 </mapper>

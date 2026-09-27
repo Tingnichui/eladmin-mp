@@ -1,6 +1,7 @@
 package me.zhengjie.invest.service;
 
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeMatchResult;
+import me.zhengjie.invest.domain.dto.SpotActualFeeRebuildResult;
 
 /**
  * 现货成交数据库 FIFO 撮合服务。
@@ -12,4 +13,6 @@ public interface BinanceSpotTradeMatcherService {
     BinanceSpotTradeMatchResult match(Integer uid, String symbol);
 
     BinanceSpotTradeMatchResult initializeAndMatch(Integer uid, String symbol);
+
+    SpotActualFeeRebuildResult rebuildWithActualFees(Integer uid, String symbol);
 }
