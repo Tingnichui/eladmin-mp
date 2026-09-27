@@ -224,6 +224,8 @@ public class BinanceSpotTradeMatcherServiceImpl implements BinanceSpotTradeMatch
         if (result.getFailedCount() > 0) {
             return result;
         }
+        result.setAdjustedCorePositionCount(
+                stateMapper.adjustFullyLockedCoreQtyForBaseFee(uid, symbol));
         int conflicts = stateMapper.countCoreQtyConflicts(uid, symbol);
         result.setCoreConflictCount(conflicts);
         if (conflicts > 0) {

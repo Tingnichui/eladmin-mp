@@ -4,12 +4,14 @@ import me.zhengjie.invest.domain.BinanceSpotTradeMatch;
 import me.zhengjie.invest.domain.BinanceSpotTradeMatchState;
 import me.zhengjie.invest.domain.dto.BinanceSpotSellSourceDto;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeMatchResult;
+import me.zhengjie.invest.domain.dto.SpotActualFeeRebuildResult;
 import me.zhengjie.invest.mapper.BinanceSpotTradeMatchMapper;
 import me.zhengjie.invest.mapper.BinanceSpotTradeMatchStateMapper;
 import me.zhengjie.invest.service.support.BinanceSpotSellSourceStore;
 import me.zhengjie.invest.service.support.SpotCommissionValuationService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -18,6 +20,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -27,6 +30,31 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class BinanceSpotTradeMatcherServiceImplTest {
+
+    @Test
+    void shouldAdjustLegacyFullyLockedCoreQtyBeforeConflictCheck() {
+        BinanceSpotTradeMatchStateMapper stateMapper = mock(BinanceSpotTradeMatchStateMapper.class);
+        BinanceSpotTradeMatchMapper matchMapper = mock(BinanceSpotTradeMatchMapper.class);
+        BinanceSpotSellSourceStore sourceStore = mock(BinanceSpotSellSourceStore.class);
+        SpotCommissionValuationService valuationService = mock(SpotCommissionValuationService.class);
+        BinanceSpotTradeMatcherServiceImpl service = new BinanceSpotTradeMatcherServiceImpl(
+                stateMapper, matchMapper, sourceStore);
+        ReflectionTestUtils.setField(service, "commissionValuationService", valuationService);
+        SpotActualFeeRebuildResult valuationResult = new SpotActualFeeRebuildResult();
+        valuationResult.setTradeCount(21);
+        valuationResult.setValuedCount(21);
+        when(valuationService.valueScope(7, "BTCUSDT")).thenReturn(valuationResult);
+        when(stateMapper.adjustFullyLockedCoreQtyForBaseFee(7, "BTCUSDT")).thenReturn(21);
+        when(stateMapper.countCoreQtyConflicts(7, "BTCUSDT")).thenReturn(1);
+
+        SpotActualFeeRebuildResult result = service.rebuildWithActualFees(7, "BTCUSDT");
+
+        assertEquals(21, result.getAdjustedCorePositionCount());
+        assertEquals(1, result.getCoreConflictCount());
+        assertFalse(result.isRebuilt());
+        verify(matchMapper, never()).deleteByScope(any(), any());
+        verify(stateMapper, never()).deleteByScope(any(), any());
+    }
 
     @Test
     void shouldInitializeAndPersistFifoMatches() {
