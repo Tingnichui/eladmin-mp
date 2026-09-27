@@ -60,21 +60,8 @@
             (trade_id, uid, symbol, is_buyer, trade_time, original_qty,
              matched_qty, remaining_qty, match_status)
         SELECT
-            t1.id, t1.uid, t1.symbol, t1.is_buyer, t1.time,
-            CASE
-                WHEN t1.is_buyer = 1
-                 AND t1.commission_asset = LEFT(t1.symbol, LENGTH(t1.symbol) - 4)
-                THEN GREATEST(t1.qty - t1.commission, 0)
-                ELSE t1.qty
-            END,
-            0,
-            CASE
-                WHEN t1.is_buyer = 1
-                 AND t1.commission_asset = LEFT(t1.symbol, LENGTH(t1.symbol) - 4)
-                THEN GREATEST(t1.qty - t1.commission, 0)
-                ELSE t1.qty
-            END,
-            'PENDING'
+            t1.id, t1.uid, t1.symbol, t1.is_buyer, t1.time, t1.qty,
+            0, t1.qty, 'PENDING'
         FROM binance_trade_info t1
         WHERE t1.uid = #{uid}
           AND t1.symbol = #{symbol}
@@ -271,48 +258,4 @@
           AND s.remaining_qty &gt; 0
     </select>
 
-    <select id="countCoreQtyConflicts" resultType="java.lang.Integer">
-        SELECT COUNT(*)
-        FROM binance_trade_info t
-        INNER JOIN (
-            SELECT uid, symbol, trade_id, SUM(core_qty) AS core_qty
-            FROM binance_spot_core_position
-            WHERE released_at IS NULL
-            GROUP BY uid, symbol, trade_id
-        ) c ON c.uid = t.uid AND c.symbol = t.symbol AND c.trade_id = t.id
-        WHERE t.uid = #{uid}
-          AND t.symbol = #{symbol}
-          AND t.is_buyer = 1
-          AND c.core_qty &gt; CASE
-              WHEN t.commission_asset = LEFT(t.symbol, LENGTH(t.symbol) - 4)
-              THEN GREATEST(t.qty - t.commission, 0)
-              ELSE t.qty
-          END
-    </select>
-
-    <update id="adjustFullyLockedCoreQtyForBaseFee">
-        UPDATE binance_spot_core_position c
-        INNER JOIN binance_trade_info t
-          ON t.uid = c.uid
-         AND t.symbol = c.symbol
-         AND t.id = c.trade_id
-        INNER JOIN binance_spot_trade_match_state s
-          ON s.uid = c.uid
-         AND s.symbol = c.symbol
-         AND s.trade_id = c.trade_id
-        SET c.core_qty = GREATEST(c.core_qty - t.commission, 0),
-            c.update_time = CURRENT_TIMESTAMP
-        WHERE c.uid = #{uid}
-          AND c.symbol = #{symbol}
-          AND c.released_at IS NULL
-          AND t.is_buyer = 1
-          AND t.commission_asset = LEFT(t.symbol, LENGTH(t.symbol) - 4)
-          AND t.commission &gt; 0
-          AND c.core_qty = s.remaining_qty
-          AND c.core_qty &gt; GREATEST(t.qty - t.commission, 0)
-    </update>
-
-    <delete id="deleteByScope">
-        DELETE FROM binance_spot_trade_match_state WHERE uid = #{uid} AND symbol = #{symbol}
-    </delete>
 </mapper>

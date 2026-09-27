@@ -111,7 +111,42 @@
         ORDER BY fee_asset
     </select>
 
-    <delete id="deleteByScope">
-        DELETE FROM binance_spot_trade_match WHERE uid = #{uid} AND symbol = #{symbol}
-    </delete>
+    <select id="findFeeRevaluationRows" resultType="me.zhengjie.invest.domain.dto.SpotTradeMatchFeeRevaluation">
+        SELECT m.id,
+               m.buy_trade_id AS buyTradeId,
+               m.sell_trade_id AS sellTradeId,
+               m.matched_qty AS matchedQty,
+               m.pnl,
+               buy.qty AS buyTradeQty,
+               buy.commission AS buyCommission,
+               buy.commission_asset AS buyCommissionAsset,
+               buy.commission_quote_amount AS buyCommissionQuoteAmount,
+               buy.commission_valuation_status AS buyCommissionValuationStatus,
+               sell.qty AS sellTradeQty,
+               sell.commission AS sellCommission,
+               sell.commission_asset AS sellCommissionAsset,
+               sell.commission_quote_amount AS sellCommissionQuoteAmount,
+               sell.commission_valuation_status AS sellCommissionValuationStatus
+        FROM binance_spot_trade_match m
+        INNER JOIN binance_trade_info buy ON buy.id = m.buy_trade_id
+        INNER JOIN binance_trade_info sell ON sell.id = m.sell_trade_id
+        WHERE m.uid = #{uid}
+          AND m.symbol = #{symbol}
+        ORDER BY m.id ASC
+    </select>
+
+    <update id="updateFeeValuation">
+        UPDATE binance_spot_trade_match
+        SET fee_rate = 0,
+            buy_fee_asset = #{buyFeeAsset},
+            buy_fee_amount = #{buyFeeAmount},
+            buy_fee_quote_amount = #{buyFeeQuoteAmount},
+            sell_fee_asset = #{sellFeeAsset},
+            sell_fee_amount = #{sellFeeAmount},
+            sell_fee_quote_amount = #{sellFeeQuoteAmount},
+            fee_valuation_complete = #{feeValuationComplete},
+            fee = #{fee},
+            net_pnl = #{netPnl}
+        WHERE id = #{id}
+    </update>
 </mapper>

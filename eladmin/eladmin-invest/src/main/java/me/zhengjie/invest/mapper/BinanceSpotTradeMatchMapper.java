@@ -19,6 +19,8 @@ import me.zhengjie.invest.domain.BinanceSpotTradeMatch;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeMatchQueryCriteria;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeStatsAggregate;
 import me.zhengjie.invest.domain.dto.SpotFeeAssetSummary;
+import me.zhengjie.invest.domain.dto.SpotTradeMatchFeeRevaluation;
+import java.math.BigDecimal;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
@@ -41,5 +43,17 @@ public interface BinanceSpotTradeMatchMapper extends BaseMapper<BinanceSpotTrade
     List<SpotFeeAssetSummary> aggregateFeeAssets(@Param("uid") Integer uid,
                                                   @Param("symbol") String symbol);
 
-    int deleteByScope(@Param("uid") Integer uid, @Param("symbol") String symbol);
+    List<SpotTradeMatchFeeRevaluation> findFeeRevaluationRows(@Param("uid") Integer uid,
+                                                               @Param("symbol") String symbol);
+
+    int updateFeeValuation(@Param("id") Long id,
+                           @Param("buyFeeAsset") String buyFeeAsset,
+                           @Param("buyFeeAmount") BigDecimal buyFeeAmount,
+                           @Param("buyFeeQuoteAmount") BigDecimal buyFeeQuoteAmount,
+                           @Param("sellFeeAsset") String sellFeeAsset,
+                           @Param("sellFeeAmount") BigDecimal sellFeeAmount,
+                           @Param("sellFeeQuoteAmount") BigDecimal sellFeeQuoteAmount,
+                           @Param("feeValuationComplete") int feeValuationComplete,
+                           @Param("fee") BigDecimal fee,
+                           @Param("netPnl") BigDecimal netPnl);
 }

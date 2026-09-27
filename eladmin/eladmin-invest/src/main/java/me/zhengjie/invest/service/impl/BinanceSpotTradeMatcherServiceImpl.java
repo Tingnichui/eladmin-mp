@@ -6,6 +6,7 @@ import me.zhengjie.invest.domain.BinanceSpotTradeMatchState;
 import me.zhengjie.invest.domain.dto.BinanceSpotSellSourceDto;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeMatchResult;
 import me.zhengjie.invest.domain.dto.SpotActualFeeRebuildResult;
+import me.zhengjie.invest.domain.dto.SpotTradeMatchFeeRevaluation;
 import me.zhengjie.invest.mapper.BinanceSpotTradeMatchMapper;
 import me.zhengjie.invest.mapper.BinanceSpotTradeMatchStateMapper;
 import me.zhengjie.invest.service.BinanceSpotTradeMatcherService;
@@ -18,7 +19,9 @@ import javax.annotation.Resource;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 将现货 FIFO 撮合结果固化到数据库，现货统计直接读取固化结果与剩余持仓。
@@ -224,16 +227,36 @@ public class BinanceSpotTradeMatcherServiceImpl implements BinanceSpotTradeMatch
         if (result.getFailedCount() > 0) {
             return result;
         }
-        result.setAdjustedCorePositionCount(
-                stateMapper.adjustFullyLockedCoreQtyForBaseFee(uid, symbol));
-        int conflicts = stateMapper.countCoreQtyConflicts(uid, symbol);
-        result.setCoreConflictCount(conflicts);
-        if (conflicts > 0) {
-            return result;
+        Map<Long, BigDecimal> buyMatchedQty = new HashMap<>();
+        Map<Long, BigDecimal> sellMatchedQty = new HashMap<>();
+        int updatedCount = 0;
+        for (SpotTradeMatchFeeRevaluation row : matchMapper.findFeeRevaluationRows(uid, symbol)) {
+            BigDecimal buyPreviouslyMatched = buyMatchedQty.getOrDefault(row.getBuyTradeId(), BigDecimal.ZERO);
+            BigDecimal sellPreviouslyMatched = sellMatchedQty.getOrDefault(row.getSellTradeId(), BigDecimal.ZERO);
+            BigDecimal buyFeeAmount = allocateFee(
+                    row.getBuyCommission(), buyPreviouslyMatched, row.getMatchedQty(), row.getBuyTradeQty());
+            BigDecimal sellFeeAmount = allocateFee(
+                    row.getSellCommission(), sellPreviouslyMatched, row.getMatchedQty(), row.getSellTradeQty());
+            BigDecimal buyFeeQuoteAmount = allocateFee(
+                    row.getBuyCommissionQuoteAmount(), buyPreviouslyMatched, row.getMatchedQty(), row.getBuyTradeQty());
+            BigDecimal sellFeeQuoteAmount = allocateFee(
+                    row.getSellCommissionQuoteAmount(), sellPreviouslyMatched, row.getMatchedQty(), row.getSellTradeQty());
+            boolean valuationComplete = "COMPLETED".equals(row.getBuyCommissionValuationStatus())
+                    && "COMPLETED".equals(row.getSellCommissionValuationStatus())
+                    && buyFeeQuoteAmount != null && sellFeeQuoteAmount != null;
+            BigDecimal fee = valuationComplete
+                    ? buyFeeQuoteAmount.add(sellFeeQuoteAmount) : BigDecimal.ZERO;
+            updatedCount += matchMapper.updateFeeValuation(
+                    row.getId(),
+                    row.getBuyCommissionAsset(), buyFeeAmount, buyFeeQuoteAmount,
+                    row.getSellCommissionAsset(), sellFeeAmount, sellFeeQuoteAmount,
+                    valuationComplete ? 1 : 0,
+                    fee,
+                    valuationComplete ? row.getPnl().subtract(fee) : null);
+            buyMatchedQty.put(row.getBuyTradeId(), buyPreviouslyMatched.add(row.getMatchedQty()));
+            sellMatchedQty.put(row.getSellTradeId(), sellPreviouslyMatched.add(row.getMatchedQty()));
         }
-        result.setDeletedMatchCount(matchMapper.deleteByScope(uid, symbol));
-        result.setDeletedStateCount(stateMapper.deleteByScope(uid, symbol));
-        result.setMatchResult(initializeAndMatch(uid, symbol));
+        result.setUpdatedMatchCount(updatedCount);
         result.setRebuilt(true);
         return result;
     }

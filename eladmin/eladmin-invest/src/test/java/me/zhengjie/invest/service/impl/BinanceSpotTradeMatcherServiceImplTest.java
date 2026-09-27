@@ -5,6 +5,7 @@ import me.zhengjie.invest.domain.BinanceSpotTradeMatchState;
 import me.zhengjie.invest.domain.dto.BinanceSpotSellSourceDto;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeMatchResult;
 import me.zhengjie.invest.domain.dto.SpotActualFeeRebuildResult;
+import me.zhengjie.invest.domain.dto.SpotTradeMatchFeeRevaluation;
 import me.zhengjie.invest.mapper.BinanceSpotTradeMatchMapper;
 import me.zhengjie.invest.mapper.BinanceSpotTradeMatchStateMapper;
 import me.zhengjie.invest.service.support.BinanceSpotSellSourceStore;
@@ -20,7 +21,6 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -32,7 +32,7 @@ import static org.mockito.Mockito.when;
 class BinanceSpotTradeMatcherServiceImplTest {
 
     @Test
-    void shouldAdjustLegacyFullyLockedCoreQtyBeforeConflictCheck() {
+    void shouldRevalueExistingMatchesWithoutRebuildingFifo() {
         BinanceSpotTradeMatchStateMapper stateMapper = mock(BinanceSpotTradeMatchStateMapper.class);
         BinanceSpotTradeMatchMapper matchMapper = mock(BinanceSpotTradeMatchMapper.class);
         BinanceSpotSellSourceStore sourceStore = mock(BinanceSpotSellSourceStore.class);
@@ -41,19 +41,41 @@ class BinanceSpotTradeMatcherServiceImplTest {
                 stateMapper, matchMapper, sourceStore);
         ReflectionTestUtils.setField(service, "commissionValuationService", valuationService);
         SpotActualFeeRebuildResult valuationResult = new SpotActualFeeRebuildResult();
-        valuationResult.setTradeCount(21);
-        valuationResult.setValuedCount(21);
+        valuationResult.setTradeCount(2);
+        valuationResult.setValuedCount(2);
         when(valuationService.valueScope(7, "BTCUSDT")).thenReturn(valuationResult);
-        when(stateMapper.adjustFullyLockedCoreQtyForBaseFee(7, "BTCUSDT")).thenReturn(21);
-        when(stateMapper.countCoreQtyConflicts(7, "BTCUSDT")).thenReturn(1);
+        SpotTradeMatchFeeRevaluation row = new SpotTradeMatchFeeRevaluation();
+        row.setId(99L);
+        row.setBuyTradeId(1L);
+        row.setSellTradeId(2L);
+        row.setMatchedQty(new BigDecimal("0.5"));
+        row.setPnl(new BigDecimal("10"));
+        row.setBuyTradeQty(new BigDecimal("1"));
+        row.setBuyCommission(new BigDecimal("0.001"));
+        row.setBuyCommissionAsset("BTC");
+        row.setBuyCommissionQuoteAmount(new BigDecimal("1"));
+        row.setBuyCommissionValuationStatus("COMPLETED");
+        row.setSellTradeQty(new BigDecimal("0.5"));
+        row.setSellCommission(new BigDecimal("0.2"));
+        row.setSellCommissionAsset("USDT");
+        row.setSellCommissionQuoteAmount(new BigDecimal("0.2"));
+        row.setSellCommissionValuationStatus("COMPLETED");
+        when(matchMapper.findFeeRevaluationRows(7, "BTCUSDT")).thenReturn(Collections.singletonList(row));
+        when(matchMapper.updateFeeValuation(
+                eq(99L), eq("BTC"), any(), any(), eq("USDT"), any(), any(),
+                eq(1), any(), any())).thenReturn(1);
 
         SpotActualFeeRebuildResult result = service.rebuildWithActualFees(7, "BTCUSDT");
 
-        assertEquals(21, result.getAdjustedCorePositionCount());
-        assertEquals(1, result.getCoreConflictCount());
-        assertFalse(result.isRebuilt());
-        verify(matchMapper, never()).deleteByScope(any(), any());
-        verify(stateMapper, never()).deleteByScope(any(), any());
+        assertEquals(1, result.getUpdatedMatchCount());
+        assertEquals(true, result.isRebuilt());
+        verify(stateMapper, never()).initializeFromTrades(any(), any());
+        verify(matchMapper).updateFeeValuation(
+                eq(99L), eq("BTC"), eq(new BigDecimal("0.0005000000000000")),
+                eq(new BigDecimal("0.5000000000000000")), eq("USDT"),
+                eq(new BigDecimal("0.2000000000000000")), eq(new BigDecimal("0.2000000000000000")),
+                eq(1), eq(new BigDecimal("0.7000000000000000")),
+                eq(new BigDecimal("9.3000000000000000")));
     }
 
     @Test
