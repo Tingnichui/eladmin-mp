@@ -29,7 +29,7 @@ public interface GenConfigService extends IService<GenConfig> {
      * @param tableName 表名
      * @return 表配置
      */
-    GenConfig find(String tableName);
+    GenConfig find(String dataSource, String tableName);
 
     /**
      * 更新表配置
@@ -37,5 +37,5 @@ public interface GenConfigService extends IService<GenConfig> {
      * @param genConfig 表配置
      * @return 表配置
      */
-    GenConfig update(String tableName, GenConfig genConfig);
+    GenConfig update(String dataSource, String tableName, GenConfig genConfig);
 }

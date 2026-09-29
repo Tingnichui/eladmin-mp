@@ -38,12 +38,21 @@ import java.io.Serializable;
 public class GenConfig implements Serializable {
 
     public GenConfig(String tableName) {
+        this("master", tableName);
+    }
+
+    public GenConfig(String dataSource, String tableName) {
+        this.dataSource = dataSource;
         this.tableName = tableName;
     }
 
     @ApiModelProperty(value = "ID", hidden = true)
     @TableId(value = "config_id", type = IdType.AUTO)
     private Long id;
+
+    @NotBlank
+    @ApiModelProperty(value = "数据源")
+    private String dataSource = "master";
 
     @NotBlank
     @ApiModelProperty(value = "表名")

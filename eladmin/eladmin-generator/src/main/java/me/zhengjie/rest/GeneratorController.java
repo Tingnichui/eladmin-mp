@@ -20,6 +20,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import me.zhengjie.domain.ColumnInfo;
+import me.zhengjie.domain.dto.GeneratorSyncRequest;
 import me.zhengjie.domain.dto.TableInfo;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.service.GenConfigService;
@@ -33,6 +34,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.List;
+import javax.validation.Valid;
 
 /**
  * @author Zheng Jie
@@ -52,14 +54,18 @@ public class GeneratorController {
 
     @ApiOperation("查询数据库数据")
     @GetMapping(value = "/tables")
-    public ResponseEntity<PageResult<TableInfo>> queryTables(@RequestParam(defaultValue = "") String name, @RequestParam(defaultValue = "1") Integer page, @RequestParam(defaultValue = "10") Integer size){
-        return new ResponseEntity<>(generatorService.getTables(name, new Page<>(page, size)), HttpStatus.OK);
+    public ResponseEntity<PageResult<TableInfo>> queryTables(@RequestParam(defaultValue = "master") String dataSource,
+                                                             @RequestParam(defaultValue = "") String name,
+                                                             @RequestParam(defaultValue = "1") Integer page,
+                                                             @RequestParam(defaultValue = "10") Integer size){
+        return new ResponseEntity<>(generatorService.getTables(dataSource, name, new Page<>(page, size)), HttpStatus.OK);
     }
 
     @ApiOperation("查询字段数据")
     @GetMapping(value = "/columns")
-    public ResponseEntity<PageResult<ColumnInfo>> queryColumns(@RequestParam String tableName){
-        List<ColumnInfo> columnInfos = generatorService.getColumns(tableName);
+    public ResponseEntity<PageResult<ColumnInfo>> queryColumns(@RequestParam(defaultValue = "master") String dataSource,
+                                                               @RequestParam String tableName){
+        List<ColumnInfo> columnInfos = generatorService.getColumns(dataSource, tableName);
         return new ResponseEntity<>(PageUtil.toPage(columnInfos), HttpStatus.OK);
     }
 
@@ -72,27 +78,32 @@ public class GeneratorController {
 
     @ApiOperation("同步字段数据")
     @PostMapping(value = "sync")
-    public ResponseEntity<HttpStatus> syncColumn(@RequestBody List<String> tables){
-        for (String table : tables) {
-            generatorService.sync(generatorService.getColumns(table), generatorService.query(table));
+    public ResponseEntity<HttpStatus> syncColumn(@Valid @RequestBody GeneratorSyncRequest request){
+        for (String table : request.getTables()) {
+            generatorService.sync(generatorService.getColumns(request.getDataSource(), table),
+                    generatorService.query(request.getDataSource(), table));
         }
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @ApiOperation("生成代码")
     @PostMapping(value = "/{tableName}/{type}")
-    public ResponseEntity<Object> generatorCode(@PathVariable String tableName, @PathVariable Integer type, HttpServletRequest request, HttpServletResponse response){
+    public ResponseEntity<Object> generatorCode(@PathVariable String tableName,
+                                                 @PathVariable Integer type,
+                                                 @RequestParam(defaultValue = "master") String dataSource,
+                                                 HttpServletRequest request,
+                                                 HttpServletResponse response){
         if(!generatorEnabled && type == 0){
             throw new BadRequestException("此环境不允许生成代码，请选择预览或者下载查看！");
         }
         switch (type){
             // 生成代码
-            case 0: generatorService.generator(genConfigService.find(tableName), generatorService.getColumns(tableName));
+            case 0: generatorService.generator(genConfigService.find(dataSource, tableName), generatorService.getColumns(dataSource, tableName));
                     break;
             // 预览
-            case 1: return generatorService.preview(genConfigService.find(tableName), generatorService.getColumns(tableName));
+            case 1: return generatorService.preview(genConfigService.find(dataSource, tableName), generatorService.getColumns(dataSource, tableName));
             // 打包
-            case 2: generatorService.download(genConfigService.find(tableName), generatorService.getColumns(tableName), request, response);
+            case 2: generatorService.download(genConfigService.find(dataSource, tableName), generatorService.getColumns(dataSource, tableName), request, response);
                     break;
             default: throw new BadRequestException("没有这个选项");
         }

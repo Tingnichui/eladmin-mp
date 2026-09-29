@@ -30,7 +30,7 @@ class GenConfigServiceImplTest {
         GenConfig existing = new GenConfig("binance_spot_core_position");
         existing.setId(12L);
         GenConfigMapper mapper = mock(GenConfigMapper.class);
-        when(mapper.findByTableName("binance_spot_core_position")).thenReturn(existing);
+        when(mapper.findByDataSourceAndTableName("master", "binance_spot_core_position")).thenReturn(existing);
         when(mapper.updateById(any(GenConfig.class))).thenReturn(1);
 
         GenConfigServiceImpl service = new GenConfigServiceImpl(mapper);
@@ -39,13 +39,13 @@ class GenConfigServiceImplTest {
         config.setPack("me.zhengjie.invest");
         config.setModuleName("eladmin-invest");
 
-        GenConfig result = service.update("binance_spot_core_position", config);
+        GenConfig result = service.update("master", "binance_spot_core_position", config);
 
         assertEquals(12L, result.getId());
         assertEquals(webRoot.resolve("src/api").normalize().toString(), result.getApiPath());
         verify(mapper).updateById(config);
         verify(mapper, never()).insert(any(GenConfig.class));
-        verify(mapper).deleteDuplicates("binance_spot_core_position", 12L);
+        verify(mapper).deleteDuplicates("master", "binance_spot_core_position", 12L);
     }
 
     @Test
@@ -56,7 +56,7 @@ class GenConfigServiceImplTest {
         config.setPath(tempDir.resolve("other/src/views/corePosition").toString());
 
         assertThrows(BadRequestException.class,
-                () -> service.update("binance_spot_core_position", config));
-        verify(mapper, never()).findByTableName(any());
+                () -> service.update("master", "binance_spot_core_position", config));
+        verify(mapper, never()).findByDataSourceAndTableName(any(), any());
     }
 }

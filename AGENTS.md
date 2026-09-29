@@ -43,6 +43,8 @@ Java 代码目标版本为 Java 8，并沿用现有 `me.zhengjie` 包结构。Sp
 - Maven 本地仓库：`C:\MyProgram\develop\Maven\apache-maven-3.5.4\repo`
 - Java 8 安装目录：`C:\MyProgram\develop\Java\java1.8_8u361`
 
+处理 `eladmin-web` 前端任务前，先执行 `node -v`。本项目基于 Vue 2 和旧版 Webpack，统一使用 Node 16，未安装 Node 16 时可使用 Node 14；不要直接使用 Node 17 及以上版本。若当前版本不兼容，Codex 应自行通过 NVM 执行 `nvm use <已安装的兼容版本>`，再进行依赖安装、lint、构建或启动，不要把版本切换留给用户处理。只有本机没有任何 Node 14/16 时才说明缺失情况。
+
 如需构建或测试后端，优先使用上述 Maven 与 Java 路径。若任一路径不存在，必须先说明缺失项并询问用户如何处理；等待用户回复后，再继续执行构建、测试或代码修改。
 
 启动 Java 后端项目前，必须先检查 `JASYPT_ENCRYPTOR_PASSWORD`：依次从当前进程环境变量、Windows 用户级环境变量和本机 `.codex-local/env.ps1` 获取。任一来源已配置时直接使用且不得输出密钥值；全部未配置时才向用户询问，未取得密钥前不要启动后端服务。

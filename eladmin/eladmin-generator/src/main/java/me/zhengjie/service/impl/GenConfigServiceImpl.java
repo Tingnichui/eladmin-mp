@@ -22,6 +22,7 @@ import me.zhengjie.domain.GenConfig;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.mapper.GenConfigMapper;
 import me.zhengjie.service.GenConfigService;
+import me.zhengjie.utils.GeneratorDataSourceSupport;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,27 +41,30 @@ public class GenConfigServiceImpl extends ServiceImpl<GenConfigMapper, GenConfig
     private final GenConfigMapper genConfigMapper;
 
     @Override
-    public GenConfig find(String tableName) {
-        GenConfig genConfig = genConfigMapper.findByTableName(tableName);
+    public GenConfig find(String dataSource, String tableName) {
+        String normalizedDataSource = GeneratorDataSourceSupport.normalize(dataSource);
+        GenConfig genConfig = genConfigMapper.findByDataSourceAndTableName(normalizedDataSource, tableName);
         if(genConfig == null){
-            return new GenConfig(tableName);
+            return new GenConfig(normalizedDataSource, tableName);
         }
         return genConfig;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public GenConfig update(String tableName, GenConfig genConfig) {
+    public GenConfig update(String dataSource, String tableName, GenConfig genConfig) {
+        String normalizedDataSource = GeneratorDataSourceSupport.normalize(dataSource);
+        genConfig.setDataSource(normalizedDataSource);
         genConfig.setTableName(tableName);
         genConfig.setApiPath(resolveApiPath(genConfig.getPath()));
-        GenConfig existing = genConfigMapper.findByTableName(tableName);
+        GenConfig existing = genConfigMapper.findByDataSourceAndTableName(normalizedDataSource, tableName);
         if (existing != null) {
             genConfig.setId(existing.getId());
             genConfigMapper.updateById(genConfig);
         } else {
             genConfigMapper.insert(genConfig);
         }
-        genConfigMapper.deleteDuplicates(tableName, genConfig.getId());
+        genConfigMapper.deleteDuplicates(normalizedDataSource, tableName, genConfig.getId());
         return genConfig;
     }
 

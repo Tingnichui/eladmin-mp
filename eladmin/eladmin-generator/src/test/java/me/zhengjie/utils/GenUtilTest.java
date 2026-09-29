@@ -76,6 +76,38 @@ class GenUtilTest {
         assertTrue(index.contains("<el-input-number v-model=\"form.coreQty\""));
     }
 
+    @Test
+    void previewUsesConfiguredDataSourceAndMapsJsonToString() {
+        ColumnInfo id = column("id", "bigint", "PRI", "auto_increment", "主键");
+        id.setNotNull(false);
+        id.setListShow(false);
+        id.setFormShow(false);
+        ColumnInfo payload = column("payload", "json", "", "", "事件内容");
+        payload.setFormType("Textarea");
+
+        GenConfig config = new GenConfig("investment_strategy", "research_strategy_alert_events");
+        config.setApiAlias("策略告警事件");
+        config.setPack("me.zhengjie.invest");
+        config.setModuleName("eladmin-invest");
+        config.setAuthor("test");
+        config.setCover(false);
+
+        List<Map<String, Object>> preview = GenUtil.preview(Arrays.asList(id, payload), config);
+        String service = preview.stream()
+                .filter(item -> "ServiceImpl".equals(item.get("name")))
+                .map(item -> String.valueOf(item.get("content")))
+                .findFirst()
+                .orElseThrow(AssertionError::new);
+        String entity = preview.stream()
+                .filter(item -> "Entity".equals(item.get("name")))
+                .map(item -> String.valueOf(item.get("content")))
+                .findFirst()
+                .orElseThrow(AssertionError::new);
+
+        assertTrue(service.contains("@DS(\"investment_strategy\")"));
+        assertTrue(entity.contains("private String payload;"));
+    }
+
     private ColumnInfo column(String name, String type, String key, String extra, String remark) {
         ColumnInfo column = new ColumnInfo();
         column.setTableName("binance_spot_core_position");

@@ -39,14 +39,14 @@ public interface GeneratorService extends IService<ColumnInfo> {
      * @param page 分页参数
      * @return /
      */
-    PageResult<TableInfo> getTables(String name, Page<Object> page);
+    PageResult<TableInfo> getTables(String dataSource, String name, Page<Object> page);
 
     /**
      * 得到数据表的元数据
      * @param name 表名
      * @return /
      */
-    List<ColumnInfo> getColumns(String name);
+    List<ColumnInfo> getColumns(String dataSource, String name);
 
     /**
      * 同步表数据
@@ -90,5 +90,5 @@ public interface GeneratorService extends IService<ColumnInfo> {
      * @param table /
      * @return /
      */
-    List<ColumnInfo> query(String table);
+    List<ColumnInfo> query(String dataSource, String table);
 }

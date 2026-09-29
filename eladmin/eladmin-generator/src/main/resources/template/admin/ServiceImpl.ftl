@@ -15,6 +15,9 @@
 */
 package ${package}.service.impl;
 
+<#if dataSource != "master">
+import com.baomidou.dynamic.datasource.annotation.DS;
+</#if>
 import ${package}.domain.${className};
 import me.zhengjie.utils.FileUtil;
 <#if hasDict>
@@ -42,6 +45,9 @@ import me.zhengjie.utils.PageResult;
 * @author ${author}
 * @date ${date}
 **/
+<#if dataSource != "master">
+@DS("${dataSource}")
+</#if>
 @Service
 @RequiredArgsConstructor
 public class ${className}ServiceImpl extends ServiceImpl<${className}Mapper, ${className}> implements ${className}Service {

@@ -36,6 +36,9 @@ import java.io.Serializable;
 @TableName("code_column")
 public class ColumnInfo implements Serializable {
 
+    @ApiModelProperty(value = "数据源")
+    private String dataSource = "master";
+
     @ApiModelProperty(value = "ID", hidden = true)
     @TableId(value = "column_id", type = IdType.AUTO)
     private Long id;

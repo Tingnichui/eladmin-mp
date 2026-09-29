@@ -4,7 +4,7 @@
       <el-col style="margin-bottom: 10px">
         <el-card class="box-card" shadow="never">
           <div slot="header" class="clearfix">
-            <span class="role-span">字段配置：{{ tableName }}</span>
+            <span class="role-span">字段配置：{{ tableName }}（{{ dataSource }}）</span>
             <el-button
               :loading="genLoading"
               icon="el-icon-s-promotion"
@@ -198,8 +198,8 @@ export default {
   mixins: [crud],
   data() {
     return {
-      activeName: 'first', tableName: '', tableHeight: 550, columnLoading: false, configLoading: false, dicts: [], syncLoading: false, genLoading: false,
-      form: { id: null, tableName: '', author: '', pack: '', path: '', moduleName: '', cover: 'false', apiPath: '', prefix: '', apiAlias: null },
+      activeName: 'first', tableName: '', dataSource: 'master', tableHeight: 550, columnLoading: false, configLoading: false, dicts: [], syncLoading: false, genLoading: false,
+      form: { id: null, dataSource: 'master', tableName: '', author: '', pack: '', path: '', moduleName: '', cover: 'false', apiPath: '', prefix: '', apiAlias: null },
       rules: {
         author: [
           { required: true, message: '作者不能为空', trigger: 'blur' }
@@ -225,9 +225,10 @@ export default {
   created() {
     this.tableHeight = document.documentElement.clientHeight - 385
     this.tableName = this.$route.params.tableName
+    this.dataSource = this.$route.query.dataSource || 'master'
     this.$nextTick(() => {
       this.init()
-      get(this.tableName).then(data => {
+      get(this.tableName, this.dataSource).then(data => {
         this.form = data
         this.form.cover = this.form.cover.toString()
       })
@@ -240,7 +241,7 @@ export default {
     beforeInit() {
       this.url = 'api/generator/columns'
       const tableName = this.tableName
-      this.params = { tableName }
+      this.params = { tableName, dataSource: this.dataSource }
       return true
     },
     saveColumnConfig() {
@@ -271,7 +272,7 @@ export default {
     },
     sync() {
       this.syncLoading = true
-      sync([this.tableName]).then(() => {
+      sync(this.dataSource, [this.tableName]).then(() => {
         this.init()
         this.notify('同步成功', 'success')
         this.syncLoading = false
@@ -284,7 +285,7 @@ export default {
       save(this.data).then(res => {
         this.notify('保存成功', 'success')
         // 生成代码
-        generator(this.tableName, 0).then(data => {
+        generator(this.tableName, 0, this.dataSource).then(data => {
           this.genLoading = false
           this.notify('生成成功', 'success')
         }).catch(err => {

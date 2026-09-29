@@ -3,6 +3,7 @@
 <mapper namespace="me.zhengjie.mapper.GenConfigMapper">
     <resultMap id="BaseResultMap" type="me.zhengjie.domain.GenConfig">
         <id column="config_id" property="id"/>
+        <result column="data_source" property="dataSource"/>
         <result column="table_name" property="tableName"/>
         <result column="api_alias" property="apiAlias"/>
         <result column="pack" property="pack"/>
@@ -15,21 +16,23 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        config_id, table_name, api_alias, pack, module_name, path, api_path, author, prefix, cover
+        config_id, data_source, table_name, api_alias, pack, module_name, path, api_path, author, prefix, cover
     </sql>
 
-    <select id="findByTableName" resultMap="BaseResultMap">
+    <select id="findByDataSourceAndTableName" resultMap="BaseResultMap">
         SELECT
         <include refid="Base_Column_List"/>
         FROM code_config
-        WHERE table_name = #{tableName}
+        WHERE data_source = #{dataSource}
+          AND table_name = #{tableName}
         ORDER BY config_id DESC
         LIMIT 1
     </select>
 
     <delete id="deleteDuplicates">
         DELETE FROM code_config
-        WHERE table_name = #{tableName}
+        WHERE data_source = #{dataSource}
+          AND table_name = #{tableName}
           AND config_id != #{configId}
     </delete>
 </mapper>

@@ -205,6 +205,8 @@ public class GenUtil {
         genMap.put("date", LocalDate.now().toString());
         // 表名
         genMap.put("tableName", genConfig.getTableName());
+        // 数据源
+        genMap.put("dataSource", GeneratorDataSourceSupport.normalize(genConfig.getDataSource()));
         // 大写开头的类名
         String className = toCapitalizeCamelCase(genConfig.getTableName());
         // 小写开头的类名

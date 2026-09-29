@@ -27,6 +27,7 @@ import me.zhengjie.domain.ColumnInfo;
 import me.zhengjie.domain.dto.TableInfo;
 import me.zhengjie.exception.BadRequestException;
 import me.zhengjie.mapper.ColumnInfoMapper;
+import me.zhengjie.service.DatabaseMetadataService;
 import me.zhengjie.service.GeneratorService;
 import me.zhengjie.utils.*;
 import org.springframework.http.HttpStatus;
@@ -52,19 +53,22 @@ import java.util.stream.Collectors;
 public class GeneratorServiceImpl extends ServiceImpl<ColumnInfoMapper, ColumnInfo> implements GeneratorService {
 
     private final ColumnInfoMapper columnInfoMapper;
+    private final DatabaseMetadataService databaseMetadataService;
     private final String CONFIG_MESSAGE = "请先配置生成器";
 
     @Override
-    public PageResult<TableInfo> getTables(String name, Page<Object> page) {
-        return PageUtil.toPage(columnInfoMapper.getTables(name, page));
+    public PageResult<TableInfo> getTables(String dataSource, String name, Page<Object> page) {
+        String normalizedDataSource = GeneratorDataSourceSupport.normalize(dataSource);
+        return PageUtil.toPage(databaseMetadataService.getTables(normalizedDataSource, name, page));
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    public List<ColumnInfo> getColumns(String tableName) {
-        List<ColumnInfo> columnInfos = columnInfoMapper.findByTableNameOrderByIdAsc(tableName);
+    public List<ColumnInfo> getColumns(String dataSource, String tableName) {
+        String normalizedDataSource = GeneratorDataSourceSupport.normalize(dataSource);
+        List<ColumnInfo> columnInfos = columnInfoMapper.findByDataSourceAndTableNameOrderByIdAsc(
+                normalizedDataSource, tableName);
         if (CollectionUtil.isNotEmpty(columnInfos)) {
-            Map<String, ColumnInfo> databaseColumns = query(tableName).stream()
+            Map<String, ColumnInfo> databaseColumns = query(normalizedDataSource, tableName).stream()
                     .collect(Collectors.toMap(ColumnInfo::getColumnName, column -> column));
             for (ColumnInfo columnInfo : columnInfos) {
                 ColumnInfo databaseColumn = databaseColumns.get(columnInfo.getColumnName());
@@ -82,16 +86,18 @@ public class GeneratorServiceImpl extends ServiceImpl<ColumnInfoMapper, ColumnIn
             }
             return columnInfos;
         } else {
-            columnInfos = query(tableName);
+            columnInfos = query(normalizedDataSource, tableName);
             saveBatch(columnInfos);
             return columnInfos;
         }
     }
 
     @Override
-    public List<ColumnInfo> query(String tableName) {
-        List<ColumnInfo> columnInfos = columnInfoMapper.getColumns(tableName);
+    public List<ColumnInfo> query(String dataSource, String tableName) {
+        String normalizedDataSource = GeneratorDataSourceSupport.normalize(dataSource);
+        List<ColumnInfo> columnInfos = databaseMetadataService.getColumns(normalizedDataSource, tableName);
         for (ColumnInfo columnInfo : columnInfos) {
+            columnInfo.setDataSource(normalizedDataSource);
             columnInfo.setTableName(tableName);
             if (GenUtil.PK.equalsIgnoreCase(columnInfo.getKeyType())) {
                 applyPrimaryKeyDefaults(columnInfo);
@@ -136,6 +142,9 @@ public class GeneratorServiceImpl extends ServiceImpl<ColumnInfoMapper, ColumnIn
             return "Date";
         }
         String type = Objects.toString(columnInfo.getColumnType(), "").toLowerCase();
+        if ("json".equals(type) || type.endsWith("text")) {
+            return "Textarea";
+        }
         if (!"bigint".equals(type) && ("tinyint".equals(type) || "smallint".equals(type)
                 || "mediumint".equals(type) || "int".equals(type) || "integer".equals(type)
                 || "decimal".equals(type) || "numeric".equals(type) || "float".equals(type)
@@ -181,6 +190,9 @@ public class GeneratorServiceImpl extends ServiceImpl<ColumnInfoMapper, ColumnIn
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void save(List<ColumnInfo> columnInfos) {
+        for (ColumnInfo columnInfo : columnInfos) {
+            columnInfo.setDataSource(GeneratorDataSourceSupport.normalize(columnInfo.getDataSource()));
+        }
         saveOrUpdateBatch(columnInfos);
     }
 

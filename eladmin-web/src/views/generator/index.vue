@@ -3,6 +3,10 @@
     <!--工具栏-->
     <div class="head-container">
       <div v-if="crud.props.searchToggle">
+        <el-select v-model="crud.params.dataSource" size="small" class="filter-item" style="width: 190px" @change="crud.toQuery">
+          <el-option label="主库（master）" value="master" />
+          <el-option label="投资策略库" value="investment_strategy" />
+        </el-select>
         <el-input v-model="query.name" clearable size="small" placeholder="请输入表名" style="width: 200px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
         <rrOperation />
       </div>
@@ -31,13 +35,13 @@
       <el-table-column label="操作" width="160px" align="center" fixed="right">
         <template slot-scope="scope">
           <el-button size="mini" style="margin-right: 2px" type="text">
-            <router-link :to="'/sys-tools/generator/preview/' + scope.row.tableName">
+            <router-link :to="{ path: '/sys-tools/generator/preview/' + scope.row.tableName, query: { dataSource: crud.params.dataSource } }">
               预览
             </router-link>
           </el-button>
           <el-button size="mini" style="margin-left: -1px;margin-right: 2px" type="text" @click="toDownload(scope.row.tableName)">下载</el-button>
           <el-button size="mini" style="margin-left: -1px;margin-right: 2px" type="text">
-            <router-link :to="'/sys-tools/generator/config/' + scope.row.tableName">
+            <router-link :to="{ path: '/sys-tools/generator/config/' + scope.row.tableName, query: { dataSource: crud.params.dataSource } }">
               配置
             </router-link>
           </el-button>
@@ -63,7 +67,7 @@ export default {
   name: 'GeneratorIndex',
   components: { pagination, crudOperation, rrOperation },
   cruds() {
-    return CRUD({ url: 'api/generator/tables' })
+    return CRUD({ url: 'api/generator/tables', params: { dataSource: 'master' }})
   },
   mixins: [presenter(), header()],
   data() {
@@ -77,7 +81,7 @@ export default {
   methods: {
     toGen(tableName) {
       // 生成代码
-      generator(tableName, 0).then(data => {
+      generator(tableName, 0, this.crud.params.dataSource).then(data => {
         this.$notify({
           title: '生成成功',
           type: 'success',
@@ -87,7 +91,7 @@ export default {
     },
     toDownload(tableName) {
       // 打包下载
-      generator(tableName, 2).then(data => {
+      generator(tableName, 2, this.crud.params.dataSource).then(data => {
         downloadFile(data, tableName, 'zip')
       })
     },
@@ -97,7 +101,7 @@ export default {
         tables.push(val.tableName)
       })
       this.syncLoading = true
-      sync(tables).then(() => {
+      sync(this.crud.params.dataSource, tables).then(() => {
         this.crud.refresh()
         this.crud.notify('同步成功', CRUD.NOTIFICATION_TYPE.SUCCESS)
         this.syncLoading = false

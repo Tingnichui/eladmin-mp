@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="me.zhengjie.invest.mapper.ResearchStrategyAlertEventsMapper">
+    <resultMap id="BaseResultMap" type="me.zhengjie.invest.domain.ResearchStrategyAlertEvents">
+        <id column="id" property="id"/>
+        <result column="event_key" property="eventKey"/>
+        <result column="alert_id" property="alertId"/>
+        <result column="schema_version" property="schemaVersion"/>
+        <result column="strategy_id" property="strategyId"/>
+        <result column="symbol" property="symbol"/>
+        <result column="interval_code" property="intervalCode"/>
+        <result column="profile_revision" property="profileRevision"/>
+        <result column="parameter_fingerprint" property="parameterFingerprint"/>
+        <result column="source_fingerprint" property="sourceFingerprint"/>
+        <result column="bar_open_time" property="barOpenTime"/>
+        <result column="decision_time" property="decisionTime"/>
+        <result column="action" property="action"/>
+        <result column="position_before" property="positionBefore"/>
+        <result column="position_after" property="positionAfter"/>
+        <result column="action_price" property="actionPrice"/>
+        <result column="close_price" property="closePrice"/>
+        <result column="stop_loss_price" property="stopLossPrice"/>
+        <result column="reason" property="reason"/>
+        <result column="title" property="title"/>
+        <result column="message" property="message"/>
+        <result column="payload" property="payload"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, event_key, alert_id, schema_version, strategy_id, symbol, interval_code, profile_revision, parameter_fingerprint, source_fingerprint, bar_open_time, decision_time, action, position_before, position_after, action_price, close_price, stop_loss_price, reason, title, message, payload, created_at
+    </sql>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM research_strategy_alert_events t1
+        WHERE 1 = 1
+            <if test="criteria.strategyId != null and criteria.strategyId != ''">
+                AND t1.strategy_id = #{criteria.strategyId}
+            </if>
+            <if test="criteria.symbol != null and criteria.symbol != ''">
+                AND t1.symbol = #{criteria.symbol}
+            </if>
+            <if test="criteria.intervalCode != null and criteria.intervalCode != ''">
+                AND t1.interval_code = #{criteria.intervalCode}
+            </if>
+            <if test="criteria.action != null and criteria.action != ''">
+                AND t1.action = #{criteria.action}
+            </if>
+            <if test="criteria.decisionTime != null and criteria.decisionTime.size() > 1">
+                AND t1.decision_time BETWEEN #{criteria.decisionTime[0]} AND #{criteria.decisionTime[1]}
+            </if>
+            <if test="criteria.createdAt != null and criteria.createdAt.size() > 1">
+                AND t1.created_at BETWEEN #{criteria.createdAt[0]} AND #{criteria.createdAt[1]}
+            </if>
+        ORDER BY t1.id DESC
+    </select>
+</mapper>

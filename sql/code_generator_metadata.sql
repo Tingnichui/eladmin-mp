@@ -3,6 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS `code_column` (
   `column_id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `data_source` varchar(64) NOT NULL DEFAULT 'master' COMMENT '数据源名称',
   `table_name` varchar(180) DEFAULT NULL COMMENT '表名',
   `column_name` varchar(255) DEFAULT NULL COMMENT '数据库字段名称',
   `column_type` varchar(255) DEFAULT NULL COMMENT '数据库字段类型',
@@ -16,12 +17,14 @@ CREATE TABLE IF NOT EXISTS `code_column` (
   `query_type` varchar(255) DEFAULT NULL COMMENT '查询类型',
   `remark` varchar(255) DEFAULT NULL COMMENT '描述',
   PRIMARY KEY (`column_id`),
-  KEY `idx_table_name` (`table_name`)
+  KEY `idx_table_name` (`table_name`),
+  KEY `idx_data_source_table_name` (`data_source`, `table_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
   COMMENT='代码生成字段信息存储';
 
 CREATE TABLE IF NOT EXISTS `code_config` (
   `config_id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `data_source` varchar(64) NOT NULL DEFAULT 'master' COMMENT '数据源名称',
   `table_name` varchar(255) DEFAULT NULL COMMENT '表名',
   `author` varchar(255) DEFAULT NULL COMMENT '作者',
   `cover` bit(1) DEFAULT NULL COMMENT '是否覆盖',
@@ -32,6 +35,7 @@ CREATE TABLE IF NOT EXISTS `code_config` (
   `prefix` varchar(255) DEFAULT NULL COMMENT '表前缀',
   `api_alias` varchar(255) DEFAULT NULL COMMENT '接口名称',
   PRIMARY KEY (`config_id`),
-  KEY `idx_table_name` (`table_name`(100))
+  KEY `idx_table_name` (`table_name`(100)),
+  KEY `idx_data_source_table_name` (`data_source`, `table_name`(100))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
   COMMENT='代码生成器配置';

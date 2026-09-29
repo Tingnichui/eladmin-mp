@@ -3,6 +3,7 @@
 <mapper namespace="me.zhengjie.mapper.ColumnInfoMapper">
     <resultMap id="BaseResultMap" type="me.zhengjie.domain.ColumnInfo">
         <id column="column_id" property="id"/>
+        <result column="data_source" property="dataSource"/>
         <result column="table_name" property="tableName"/>
         <result column="column_name" property="columnName"/>
         <result column="column_type" property="columnType"/>
@@ -19,32 +20,15 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        column_id, table_name, column_name, column_type, key_type, extra, remark, not_null, list_show, form_show, form_type, query_type, dict_name
+        column_id, data_source, table_name, column_name, column_type, key_type, extra, remark, not_null, list_show, form_show, form_type, query_type, dict_name
     </sql>
 
-    <select id="getTables" resultType="me.zhengjie.domain.dto.TableInfo">
-        select table_name, create_time, engine, table_collation as coding, table_comment as remark
-        from information_schema.tables
-        where table_schema = (select database())
-        and table_name like concat('%',#{tableName},'%')
-        order by create_time desc
-    </select>
-
-    <select id="findByTableNameOrderByIdAsc" resultMap="BaseResultMap">
+    <select id="findByDataSourceAndTableNameOrderByIdAsc" resultMap="BaseResultMap">
         select
         <include refid="Base_Column_List"/>
         from code_column
-        where table_name = #{tableName}
+        where data_source = #{dataSource}
+          and table_name = #{tableName}
         order by column_id
-    </select>
-
-    <select id="getColumns" resultMap="BaseResultMap">
-        select column_name, if(is_nullable = 'NO', 1, 0) not_null,
-               data_type as column_type, column_comment as remark,
-               column_key key_type, extra, column_default
-        from information_schema.columns
-        where table_name = #{tableName}
-        and table_schema = (select database())
-        order by ordinal_position
     </select>
 </mapper>
