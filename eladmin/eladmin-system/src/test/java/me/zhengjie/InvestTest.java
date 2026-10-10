@@ -7,14 +7,13 @@ import me.zhengjie.invest.service.BinanceFuturesTradeInfoService;
 import me.zhengjie.invest.service.BinanceTradeInfoService;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ExternalIntegrationTest
 public class InvestTest {
 
     private static final Integer TEST_UID = 1014564231;

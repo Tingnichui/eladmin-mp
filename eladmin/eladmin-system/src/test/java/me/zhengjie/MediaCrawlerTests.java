@@ -4,11 +4,10 @@ import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateUtil;
 import me.zhengjie.mediacrawler.task.MediaCrawlerTask;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import javax.annotation.Resource;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ExternalIntegrationTest
 public class MediaCrawlerTests {
 
     @Resource

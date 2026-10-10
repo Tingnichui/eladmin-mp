@@ -38,11 +38,6 @@ public class StringUtils extends org.apache.commons.lang3.StringUtils {
     private static final String UNKNOWN = "unknown";
 
     /**
-     * 注入bean
-     */
-    private final static Ip2regionSearcher IP_SEARCHER = SpringBeanHolder.getBean(Ip2regionSearcher.class);
-
-    /**
      * 驼峰命名法工具
      *
      * @return toCamelCase(" hello_world ") == "helloWorld"
@@ -161,7 +156,8 @@ public class StringUtils extends org.apache.commons.lang3.StringUtils {
      * 根据ip获取详细地址
      */
     public static String getCityInfo(String ip) {
-        IpInfo ipInfo = IP_SEARCHER.memorySearch(ip);
+        Ip2regionSearcher ipSearcher = SpringBeanHolder.getBean(Ip2regionSearcher.class);
+        IpInfo ipInfo = ipSearcher.memorySearch(ip);
         if(ipInfo != null){
             return ipInfo.getAddress();
         }
@@ -181,9 +177,16 @@ public class StringUtils extends org.apache.commons.lang3.StringUtils {
      * 获得当天是周几
      */
     public static String getWeekDay() {
+        return getWeekDay(new Date());
+    }
+
+    /**
+     * 获得指定日期是周几
+     */
+    public static String getWeekDay(Date date) {
         String[] weekDays = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
         Calendar cal = Calendar.getInstance();
-        cal.setTime(new Date());
+        cal.setTime(date);
 
         int w = cal.get(Calendar.DAY_OF_WEEK) - 1;
         if (w < 0) {

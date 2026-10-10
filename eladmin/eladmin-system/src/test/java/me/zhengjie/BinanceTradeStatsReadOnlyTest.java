@@ -11,7 +11,6 @@ import me.zhengjie.invest.service.BinanceTradeInfoService;
 import me.zhengjie.invest.service.support.BinanceSpotHedgeContext;
 import me.zhengjie.invest.util.BinanceAccountContextHolder;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
@@ -20,7 +19,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ExternalIntegrationTest
 class BinanceTradeStatsReadOnlyTest {
 
     private static final Integer TEST_UID = 1014564231;

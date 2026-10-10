@@ -17,7 +17,6 @@ import me.zhengjie.invest.util.BinanceUsdFuturesUtil;
 import me.zhengjie.utils.RedisUtils;
 import org.apache.commons.collections4.CollectionUtils;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
@@ -26,7 +25,7 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ExternalIntegrationTest
 public class BinanceUsdFuturesUtilTests {
 
     @Resource

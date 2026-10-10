@@ -3,11 +3,10 @@ package me.zhengjie.utils;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 
 import static me.zhengjie.utils.StringUtils.getIp;
-import static me.zhengjie.utils.StringUtils.getWeekDay;
 import static me.zhengjie.utils.StringUtils.toCamelCase;
 import static me.zhengjie.utils.StringUtils.toCapitalizeCamelCase;
 import static me.zhengjie.utils.StringUtils.toUnderScoreCase;
@@ -37,12 +36,14 @@ public class StringUtilsTest {
 
     @Test
     public void testGetWeekDay() {
-        SimpleDateFormat simpleDateformat = new SimpleDateFormat("E");
-        assertEquals(simpleDateformat.format(new Date()), getWeekDay());
+        assertEquals("Sun", StringUtils.getWeekDay(
+                new GregorianCalendar(2024, Calendar.JANUARY, 7).getTime()));
     }
 
     @Test
     public void testGetIP() {
-        assertEquals("127.0.0.1", getIp(new MockHttpServletRequest()));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("x-forwarded-for", "192.0.2.10, 192.0.2.11");
+        assertEquals("192.0.2.10", getIp(request));
     }
 }

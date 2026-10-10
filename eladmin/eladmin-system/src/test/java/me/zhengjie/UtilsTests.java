@@ -14,7 +14,6 @@ import me.zhengjie.utils.AliyunOcrUtil;
 import me.zhengjie.utils.DingdingUtil;
 import org.apache.commons.collections4.CollectionUtils;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import javax.annotation.Resource;
 import java.io.File;
@@ -26,7 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ExternalIntegrationTest
 public class UtilsTests {
 
     @Resource

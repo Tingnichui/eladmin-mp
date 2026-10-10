@@ -15,13 +15,20 @@ import java.util.Map;
 
 import static me.zhengjie.utils.FileUtil.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class FileUtilTest {
 
     @Test
-    public void testToFile() {
-        long retval = toFile(new MockMultipartFile("foo", (byte[]) null)).getTotalSpace();
-        assertEquals(500695072768L, retval);
+    public void testToFile() throws Exception {
+        File file = toFile(new MockMultipartFile("foo", "foo.txt", "text/plain", "hello".getBytes()));
+        try {
+            assertTrue(file.exists());
+            assertEquals(5L, file.length());
+            assertEquals("txt", getExtensionName(file.getName()));
+        } finally {
+            Files.deleteIfExists(file.toPath());
+        }
     }
 
     @Test
@@ -38,10 +45,10 @@ public class FileUtilTest {
 
     @Test
     public void testGetSize() {
-        assertEquals("1000B   ", getSize(1000));
-        assertEquals("1.00KB   ", getSize(1024));
-        assertEquals("1.00MB   ", getSize(1048576));
-        assertEquals("1.00GB   ", getSize(1073741824));
+        assertEquals("1000B", getSize(1000));
+        assertEquals("1.00KB", getSize(1024));
+        assertEquals("1.00MB", getSize(1048576));
+        assertEquals("1.00GB", getSize(1073741824));
     }
 
     @Test
