@@ -72,7 +72,6 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final UserDetailsServiceImpl userDetailsService;
     private final me.zhengjie.modules.iou.IouAccountService iouAccounts;
-    private final me.zhengjie.modules.iou.IouRequestGuard iouGuard;
 
     @Log("用户登录")
     @ApiOperation("登录授权")
@@ -83,7 +82,6 @@ public class AuthController {
         boolean iouLogin = "IOU".equals(authUser.getLoginType());
         String username = authUser.getUsername();
         if (iouLogin) {
-            iouGuard.captcha(authUser.getUuid(), authUser.getCode());
             username = iouAccounts.resolveLogin(username);
         } else if (!SpringUtil.isDevEnv()) {
             // 查询验证码

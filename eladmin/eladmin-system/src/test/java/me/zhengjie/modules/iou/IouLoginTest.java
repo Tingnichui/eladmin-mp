@@ -22,7 +22,6 @@ import static org.mockito.Mockito.*;
 class IouLoginTest {
     private AuthController controller;
     private IouAccountService accounts;
-    private IouRequestGuard guard;
     private UserDetailsServiceImpl details;
     private OnlineUserService online;
     private TokenProvider tokens;
@@ -32,11 +31,11 @@ class IouLoginTest {
     private String originalKey;
     @BeforeEach void setup() throws Exception {
         originalKey=RsaProperties.privateKey;keyPair=RsaUtils.generateKeyPair();RsaProperties.privateKey=keyPair.getPrivateKey();
-        accounts=mock(IouAccountService.class);guard=mock(IouRequestGuard.class);details=mock(UserDetailsServiceImpl.class);
+        accounts=mock(IouAccountService.class);details=mock(UserDetailsServiceImpl.class);
         online=mock(OnlineUserService.class);tokens=mock(TokenProvider.class);passwords=mock(PasswordEncoder.class);
         SecurityProperties properties=new SecurityProperties();properties.setTokenStartWith("Bearer");
         LoginProperties login=new LoginProperties();login.setSingleLogin(true);
-        controller=new AuthController(properties,mock(RedisUtils.class),online,tokens,mock(CaptchaConfig.class),login,passwords,details,accounts,guard);
+        controller=new AuthController(properties,mock(RedisUtils.class),online,tokens,mock(CaptchaConfig.class),login,passwords,details,accounts);
         User user=new User();user.setId(123L);user.setUsername("iou_canonical");user.setUserType("IOU");user.setPassword("test-bcrypt");user.setEnabled(true);
         principal=new JwtUserDto(user,Collections.emptyList(),Collections.singletonList(new AuthorityDto("iou:profile:read")));
         when(accounts.resolveLogin(anyString())).thenReturn("iou_canonical");when(details.loadUserByUsername("iou_canonical")).thenReturn(principal);
@@ -45,20 +44,20 @@ class IouLoginTest {
     }
     @AfterEach void cleanup() {RsaProperties.privateKey=originalKey;SecurityContextHolder.clearContext();}
     private AuthUserDto request() throws Exception {
-        AuthUserDto dto=new AuthUserDto();dto.setUsername("110101199001010010");dto.setLoginType("IOU");dto.setCode("2");dto.setUuid("captcha-test");
+        AuthUserDto dto=new AuthUserDto();dto.setUsername("110101199001010010");dto.setLoginType("IOU");
         dto.setPassword(RsaUtils.encryptByPublicKey(keyPair.getPublicKey(),"test-password"));return dto;
     }
     @Test void reusesLoginTokenAndOnlineFlowWithCanonicalUsername() throws Exception {
         Map<?,?> result=(Map<?,?>)controller.login(request(),new MockHttpServletRequest()).getBody();
         assertEquals("Bearer test-token",result.get("token"));assertFalse(JSON.toJSONString(result).contains("test-bcrypt"));
-        verify(guard).captcha("captcha-test","2");verify(details).loadUserByUsername("iou_canonical");
+        verify(details).loadUserByUsername("iou_canonical");
         verify(online).kickOutForUsername("iou_canonical");verify(tokens).createToken(principal);verify(online).save(eq(principal),eq("test-token"),any());
         assertFalse(JSON.toJSONString(result).contains("110101199001010010"));
     }
-    @Test void captchaFailureCannotIssueToken() throws Exception {
-        doThrow(new BadRequestException("验证码错误")).when(guard).captcha(any(),any());
+    @Test void missingCaptchaStillRequiresCorrectIdentityAndPassword() throws Exception {
+        when(accounts.resolveLogin(anyString())).thenThrow(new BadRequestException("账号或密码错误"));
         assertThrows(BadRequestException.class,()->controller.login(request(),new MockHttpServletRequest()));
-        verifyNoInteractions(accounts,details,tokens,online);
+        verifyNoInteractions(details,tokens,online);
     }
     @Test void incorrectPasswordCannotCreateOnlineSession() throws Exception {
         when(passwords.matches(any(),any())).thenReturn(false);

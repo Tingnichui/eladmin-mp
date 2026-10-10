@@ -99,7 +99,8 @@ public class IouAccountService {
             transaction.execute(status -> {
                 checkUnused(hash);
                 User account=new User();
-                account.setUsername("iou_"+UUID.randomUUID().toString().replace("-", ""));
+                account.setUsername("iou_"+hash);
+                account.setNickName(name);
                 account.setUserType("IOU"); account.setEnabled(true); account.setPassword(passwordHash);
                 account.setDept(dept); account.setJobs(Collections.singleton(job)); account.setRoles(Collections.singleton(role));
                 users.create(account);
@@ -111,7 +112,7 @@ public class IouAccountService {
                 if (iouUsers.insert(person)!=1) throw new IllegalStateException("借条身份创建失败");
                 return null;
             });
-        } catch (org.springframework.dao.DuplicateKeyException e) {
+        } catch (org.springframework.dao.DuplicateKeyException | me.zhengjie.exception.EntityExistException e) {
             throw new BadRequestException("该身份已注册，请直接登录");
         }
     }
@@ -127,7 +128,8 @@ public class IouAccountService {
     }
 
     private void checkUnused(String hash) {
-        if (iouUsers.selectCount(new LambdaQueryWrapper<IouUser>().eq(IouUser::getIdNoHash,hash))>0) {
+        if (iouUsers.selectCount(new LambdaQueryWrapper<IouUser>().eq(IouUser::getIdNoHash,hash))>0
+            || users.findByName("iou_"+hash)!=null) {
             throw new BadRequestException("该身份已注册，请直接登录");
         }
     }

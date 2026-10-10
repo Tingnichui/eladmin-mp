@@ -258,10 +258,26 @@ export default {
       rules: {
         username: [
           { required: true, message: '请输入用户名', trigger: 'blur' },
-          { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
+          { trigger: 'blur', validator: (rule, value, callback) => {
+            const max = this.form.userType === 'IOU' ? 68 : 20
+            if (value && (value.length < 2 || value.length > max)) {
+              callback(new Error(`长度在 2 到 ${max} 个字符`))
+            } else {
+              callback()
+            }
+          } }
         ],
         nickName: [
-          { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
+          { trigger: 'blur', validator: (rule, value, callback) => {
+            const isIou = this.form.userType === 'IOU'
+            const min = isIou ? 1 : 2
+            const max = isIou ? 64 : 20
+            if (value && (value.length < min || value.length > max)) {
+              callback(new Error(`长度在 ${min} 到 ${max} 个字符`))
+            } else {
+              callback()
+            }
+          } }
         ],
         email: [
           { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }

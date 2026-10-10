@@ -49,7 +49,7 @@ class IouAccountServiceTest {
         when(transactions.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
         keyPair=RsaUtils.generateKeyPair(); originalKey=RsaProperties.privateKey; RsaProperties.privateKey=keyPair.getPrivateKey();
         when(identity.normalize(any())).thenReturn("110101199001010010");
-        when(identity.hash(any())).thenReturn("test-hmac"); when(identity.encrypt(any())).thenReturn("test-encrypted");
+        when(identity.hash(any())).thenReturn(String.join("", Collections.nCopies(64, "a"))); when(identity.encrypt(any())).thenReturn("test-encrypted");
         when(passwords.encode(any())).thenReturn("test-bcrypt");
         Dept dept=new Dept(); dept.setId(IouAccountService.DEPT_ID); dept.setName("借条用户"); dept.setEnabled(true);
         Job job=new Job(); job.setId(IouAccountService.JOB_ID); job.setName("借条用户"); job.setEnabled(true);
@@ -78,11 +78,13 @@ class IouAccountServiceTest {
     @Test void createsSystemUserWithFixedAssociationsAndOnlyTwoFactorState() throws Exception {
         service.register(request(),"127.0.0.1");
         ArgumentCaptor<User> account=ArgumentCaptor.forClass(User.class);verify(users).create(account.capture());
-        assertEquals("IOU",account.getValue().getUserType());assertTrue(account.getValue().getUsername().matches("iou_[a-f0-9]{32}"));
+        assertEquals("IOU",account.getValue().getUserType());
+        assertEquals("iou_"+identity.hash("110101199001010010"),account.getValue().getUsername());
+        assertTrue(account.getValue().getUsername().matches("iou_[a-f0-9]{64}"));
         assertEquals(IouAccountService.DEPT_ID,account.getValue().getDept().getId());
         assertEquals(IouAccountService.ROLE_ID,account.getValue().getRoles().iterator().next().getId());
         assertEquals(IouAccountService.JOB_ID,account.getValue().getJobs().iterator().next().getId());
-        assertEquals("test-bcrypt",account.getValue().getPassword());assertNull(account.getValue().getNickName());
+        assertEquals("test-bcrypt",account.getValue().getPassword());assertEquals("测试姓名",account.getValue().getNickName());
         ArgumentCaptor<IouUser> person=ArgumentCaptor.forClass(IouUser.class);verify(persons).insert(person.capture());
         assertEquals(123L,person.getValue().getSysUserId());assertEquals(2,person.getValue().getIdVerifyStatus());
         assertEquals(0,person.getValue().getVerifyStatus());assertNull(person.getValue().getVerifiedAt());
@@ -96,6 +98,38 @@ class IouAccountServiceTest {
         when(persons.selectCount(any())).thenReturn(1L);
         assertThrows(BadRequestException.class,()->service.register(request(),"127.0.0.1"));
         verifyNoInteractions(verifier,transactions);
+    }
+    @Test void existingDeterministicUsernameNeverCallsPaidProviderOrOverwritesAccount() throws Exception {
+        when(users.findByName("iou_"+identity.hash("110101199001010010"))).thenReturn(new User());
+        assertEquals("该身份已注册，请直接登录", assertThrows(BadRequestException.class,
+            () -> service.register(request(),"127.0.0.1")).getMessage());
+        verifyNoInteractions(verifier,transactions);
+        verify(users,never()).create(any());
+    }
+    @Test void repeatedRegistrationPreservesOriginalAccountAndTrimmedNickname() throws Exception {
+        when(persons.selectCount(any())).thenReturn(0L,0L,1L);
+        IouRegisterRequest first=request();first.setRealName(" 测试姓名 ");
+        service.register(first,"127.0.0.1");
+        assertThrows(BadRequestException.class,()->service.register(request(),"127.0.0.1"));
+        ArgumentCaptor<User> accounts=ArgumentCaptor.forClass(User.class);
+        verify(users).create(accounts.capture());
+        assertEquals("iou_"+identity.hash(first.getIdNo()),accounts.getValue().getUsername());
+        assertEquals("测试姓名",accounts.getValue().getNickName());
+        verify(verifier).iDCardVerify(any(),any());
+    }
+    @Test void usernameUniqueConstraintRaceRollsBackAccountCreation() throws Exception {
+        doThrow(new org.springframework.dao.DuplicateKeyException("username collision")).when(users).create(any());
+        assertEquals("该身份已注册，请直接登录",assertThrows(BadRequestException.class,
+            () -> service.register(request(),"127.0.0.1")).getMessage());
+        verify(transactions).rollback(any());verify(transactions,never()).commit(any());
+        verify(persons,never()).insert(any());
+    }
+    @Test void usernamePrecheckRaceReturnsDuplicateMessage() throws Exception {
+        doThrow(new me.zhengjie.exception.EntityExistException(User.class,"username","synthetic-name"))
+            .when(users).create(any());
+        assertEquals("该身份已注册，请直接登录",assertThrows(BadRequestException.class,
+            () -> service.register(request(),"127.0.0.1")).getMessage());
+        verify(transactions).rollback(any());verify(persons,never()).insert(any());
     }
     @Test void invalidCaptchaNeverCallsPaidProvider() throws Exception {
         doThrow(new BadRequestException("验证码错误")).when(guard).captcha(any(),any());
@@ -135,7 +169,8 @@ class IouAccountServiceTest {
     }
     @Test void providerFailureDoesNotCreateAnyAccount() throws Exception {
         when(verifier.iDCardVerify(any(),any())).thenThrow(new BadRequestException("核验失败"));
-        assertThrows(BadRequestException.class,()->service.register(request(),"127.0.0.1"));verifyNoInteractions(users,transactions);
+        assertThrows(BadRequestException.class,()->service.register(request(),"127.0.0.1"));
+        verify(users,never()).create(any());verifyNoInteractions(transactions);
     }
     @Test void businessInsertFailureRollsBackSystemAccount() throws Exception {
         when(persons.insert(any())).thenThrow(new IllegalStateException("storage failure"));
