@@ -37,6 +37,27 @@ public class IouIdentitySupport {
         return encryptor.encrypt(normalize(idNo));
     }
 
+    public String decrypt(String encrypted) {
+        if (encrypted == null || encrypted.trim().isEmpty()) {
+            throw new BadRequestException("身份证信息暂不可查看");
+        }
+        try {
+            return normalize(encryptor.decrypt(encrypted));
+        } catch (RuntimeException e) {
+            // 不向响应或异常日志传递密文、明文及底层解密异常。
+            throw new BadRequestException("身份证信息暂不可查看");
+        }
+    }
+
+    public String mask(String encrypted) {
+        try {
+            String idNo = decrypt(encrypted);
+            return idNo.substring(0, 3) + "***********" + idNo.substring(14);
+        } catch (BadRequestException e) {
+            return null;
+        }
+    }
+
     public String hash(String idNo) {
         if (hmacKey == null || hmacKey.length() < 32) {
             throw new BadRequestException("实名注册配置不可用，请联系管理员");

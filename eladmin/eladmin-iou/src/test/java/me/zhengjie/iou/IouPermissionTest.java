@@ -106,6 +106,18 @@ class IouPermissionTest {
         assertDoesNotThrow(() -> users.queryIouUser(new IouUserQueryCriteria()));
         assertDoesNotThrow(() -> notes.queryIouNote(new IouNoteQueryCriteria()));
         assertThrows(AccessDeniedException.class, () -> users.createIouUser(new IouUser()));
+        assertThrows(AccessDeniedException.class, () -> users.revealIdentity(1L));
         assertThrows(AccessDeniedException.class, () -> notes.deleteIouNote(Collections.singletonList(1L)));
+    }
+
+    @Test
+    void onlyIdentityPermissionAllowsRevealAndResponseCannotBeCached() {
+        authenticate("iouUser:viewIdentity");
+        IouUserService service = context.getBean(IouUserService.class);
+        when(service.revealIdentity(1L)).thenReturn("000000200001010001");
+        org.springframework.http.ResponseEntity<java.util.Map<String, String>> response = users.revealIdentity(1L);
+        assertEquals("no-store", response.getHeaders().getCacheControl());
+        assertEquals("000000200001010001", response.getBody().get("idNo"));
+        verify(service).revealIdentity(1L);
     }
 }

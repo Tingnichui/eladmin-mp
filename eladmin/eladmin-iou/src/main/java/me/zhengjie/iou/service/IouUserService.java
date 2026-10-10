@@ -31,6 +31,8 @@ import me.zhengjie.utils.PageResult;
 **/
 public interface IouUserService extends IService<IouUser> {
 
+    String revealIdentity(Long id);
+
     /**
     * 查询数据分页
     * @param criteria 条件

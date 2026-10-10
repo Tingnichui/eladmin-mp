@@ -77,6 +77,11 @@ public class IouUser implements Serializable {
     @ToString.Exclude
     private String idNoEncrypted;
 
+    @TableField(exist = false)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @JSONField(deserialize = false)
+    private String maskedIdNo;
+
     @ApiModelProperty(value = "身份证号HMAC-SHA256值，用于认证通过后的登录查询和唯一绑定")
     @JsonIgnore
     @JSONField(serialize = false, deserialize = false)

@@ -8,6 +8,7 @@ import me.zhengjie.iou.domain.IouUser;
 import me.zhengjie.iou.domain.dto.IouUserQueryCriteria;
 import me.zhengjie.iou.mapper.IouUserMapper;
 import me.zhengjie.iou.service.IouUserService;
+import me.zhengjie.iou.service.IouIdentitySupport;
 import me.zhengjie.utils.*;
 import org.springframework.stereotype.Service;
 import javax.servlet.http.HttpServletResponse;
@@ -20,9 +21,20 @@ import java.util.*;
 public class IouUserServiceImpl extends ServiceImpl<IouUserMapper, IouUser> implements IouUserService {
     private final IouUserMapper iouUserMapper;
     private final RedisUtils redisUtils;
+    private final IouIdentitySupport identitySupport;
     @Override
     public PageResult<IouUser> queryAll(IouUserQueryCriteria criteria, Page<Object> page) {
-        return PageUtil.toPage(iouUserMapper.findAll(criteria,page));
+        PageResult<IouUser> result = PageUtil.toPage(iouUserMapper.findAll(criteria,page));
+        result.getContent().forEach(user -> user.setMaskedIdNo(identitySupport.mask(user.getIdNoEncrypted())));
+        return result;
+    }
+    @Override
+    public String revealIdentity(Long id) {
+        IouUser user = iouUserMapper.selectById(id);
+        if (user == null) {
+            throw new BadRequestException("借条用户不存在");
+        }
+        return identitySupport.decrypt(user.getIdNoEncrypted());
     }
     @Override
     public void create(IouUser resources) {throw new BadRequestException("请通过注册接口创建借条账号");}

@@ -44,6 +44,16 @@ public class IouUserController {
 
     private final IouUserService iouUserService;
 
+    @Log("查看借条用户身份证")
+    @ApiOperation("查看身份证明文")
+    @PostMapping("/{id}/identity/reveal")
+    @PreAuthorize("@el.check('iouUser:viewIdentity')")
+    public ResponseEntity<java.util.Map<String, String>> revealIdentity(@PathVariable Long id) {
+        return ResponseEntity.ok()
+            .header("Cache-Control", "no-store")
+            .body(java.util.Collections.singletonMap("idNo", iouUserService.revealIdentity(id)));
+    }
+
     @ApiOperation("导出数据")
     @GetMapping(value = "/download")
     @PreAuthorize("@el.check('iouUser:list')")

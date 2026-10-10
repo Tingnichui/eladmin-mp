@@ -1,5 +1,12 @@
 import request from '@/utils/request'
 
+export function revealIdentity(id) {
+  return request({
+    url: `api/iouUser/${id}/identity/reveal`,
+    method: 'post'
+  })
+}
+
 export function add(data) {
   return request({
     url: 'api/iouUser',
