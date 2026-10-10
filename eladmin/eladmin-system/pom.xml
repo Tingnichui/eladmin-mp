@@ -79,6 +79,19 @@
             <version>6.6.5</version>
         </dependency>
 
+        <!-- 电子借条 -->
+        <dependency>
+            <groupId>me.zhengjie</groupId>
+            <artifactId>eladmin-iou</artifactId>
+            <version>1.1</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>me.zhengjie</groupId>
+                    <artifactId>eladmin-tools</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
         <!-- 加励健身 -->
         <dependency>
             <groupId>me.zhengjie</groupId>

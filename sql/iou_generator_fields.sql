@@ -1,0 +1,24 @@
+-- 同步两张表字段后执行，配置电子借条生成器字段，不改变业务表。
+USE `eladmin`;
+SET NAMES utf8mb4;
+UPDATE code_column SET list_show=b'0',form_show=b'0',not_null=b'0',query_type=NULL,dict_name=NULL WHERE data_source='master' AND table_name='iou_user' AND column_name IN ('id','password_hash','id_no_encrypted','id_no_hash');
+UPDATE code_column SET query_type='=',remark='手机号' WHERE data_source='master' AND table_name='iou_user' AND column_name='mobile';
+UPDATE code_column SET query_type='Like' WHERE data_source='master' AND table_name='iou_user' AND column_name='real_name';
+UPDATE code_column SET form_type='Select',dict_name='iou_user_verify_status',query_type='=',remark='认证状态',not_null=b'0' WHERE data_source='master' AND table_name='iou_user' AND column_name='verify_status';
+UPDATE code_column SET form_show=b'0',not_null=b'0' WHERE data_source='master' AND table_name='iou_user' AND column_name IN ('verified_at','create_time','update_time');
+UPDATE code_column SET query_type='BetWeen' WHERE data_source='master' AND table_name='iou_user' AND column_name='create_time';
+UPDATE code_column SET list_show=b'0',form_show=b'0',not_null=b'0',query_type=NULL,dict_name=NULL WHERE data_source='master' AND table_name='iou_note' AND column_name IN ('id','borrower_id_no_hash','borrower_id_no_encrypted','lender_id_no_hash','lender_id_no_encrypted');
+UPDATE code_column SET form_show=b'0',not_null=b'0' WHERE data_source='master' AND table_name='iou_note' AND column_name IN ('borrower_signed_at','lender_signed_at','effective_at','create_time','update_time');
+UPDATE code_column SET list_show=b'0' WHERE data_source='master' AND table_name='iou_note' AND column_name IN ('purpose','remark','agreement_file','cancel_reason','update_time');
+UPDATE code_column SET query_type='=' WHERE data_source='master' AND table_name='iou_note' AND column_name IN ('note_no','creator_user_id');
+UPDATE code_column SET form_type='Input',remark='发起人ID' WHERE data_source='master' AND table_name='iou_note' AND column_name='creator_user_id';
+UPDATE code_column SET query_type='Like' WHERE data_source='master' AND table_name='iou_note' AND column_name IN ('borrower_name','lender_name');
+UPDATE code_column SET form_type='Select',dict_name='iou_note_loan_type',query_type='=',remark='借款类型' WHERE data_source='master' AND table_name='iou_note' AND column_name='loan_type';
+UPDATE code_column SET form_type='Select',dict_name='iou_note_status',query_type='=',remark='借条状态' WHERE data_source='master' AND table_name='iou_note' AND column_name='status';
+UPDATE code_column SET query_type='BetWeen' WHERE data_source='master' AND table_name='iou_note' AND column_name IN ('due_date','create_time');
+UPDATE code_column SET form_type='Textarea' WHERE data_source='master' AND table_name='iou_note' AND column_name IN ('purpose','remark','cancel_reason');
+UPDATE code_column SET remark='借款人' WHERE data_source='master' AND table_name='iou_note' AND column_name='borrower_name';
+UPDATE code_column SET remark='出借人' WHERE data_source='master' AND table_name='iou_note' AND column_name='lender_name';
+UPDATE code_column SET remark='本金' WHERE data_source='master' AND table_name='iou_note' AND column_name='principal_amount';
+UPDATE code_column SET remark='年利率（0.15表示15%）' WHERE data_source='master' AND table_name='iou_note' AND column_name='annual_rate';
+UPDATE code_column SET remark='服务费' WHERE data_source='master' AND table_name='iou_note' AND column_name='service_fee';

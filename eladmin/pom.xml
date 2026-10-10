@@ -17,6 +17,7 @@
         <module>eladmin-media-crawler</module>
         <module>eladmin-other</module>
         <module>eladmin-invest</module>
+        <module>eladmin-iou</module>
     </modules>
 
     <name>ELADMIN 后台管理</name>

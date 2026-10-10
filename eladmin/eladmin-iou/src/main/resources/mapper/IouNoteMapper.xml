@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="me.zhengjie.iou.mapper.IouNoteMapper">
+    <resultMap id="BaseResultMap" type="me.zhengjie.iou.domain.IouNote">
+        <id column="id" property="id"/>
+        <result column="note_no" property="noteNo"/>
+        <result column="creator_user_id" property="creatorUserId"/>
+        <result column="borrower_name" property="borrowerName"/>
+        <result column="borrower_id_no_hash" property="borrowerIdNoHash"/>
+        <result column="borrower_id_no_encrypted" property="borrowerIdNoEncrypted"/>
+        <result column="lender_name" property="lenderName"/>
+        <result column="lender_id_no_hash" property="lenderIdNoHash"/>
+        <result column="lender_id_no_encrypted" property="lenderIdNoEncrypted"/>
+        <result column="loan_type" property="loanType"/>
+        <result column="principal_amount" property="principalAmount"/>
+        <result column="annual_rate" property="annualRate"/>
+        <result column="loan_date" property="loanDate"/>
+        <result column="due_date" property="dueDate"/>
+        <result column="interest_amount" property="interestAmount"/>
+        <result column="total_amount" property="totalAmount"/>
+        <result column="purpose" property="purpose"/>
+        <result column="remark" property="remark"/>
+        <result column="service_fee" property="serviceFee"/>
+        <result column="borrower_signed_at" property="borrowerSignedAt"/>
+        <result column="lender_signed_at" property="lenderSignedAt"/>
+        <result column="agreement_file" property="agreementFile"/>
+        <result column="status" property="status"/>
+        <result column="effective_at" property="effectiveAt"/>
+        <result column="cancel_reason" property="cancelReason"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, note_no, creator_user_id, borrower_name, borrower_id_no_hash, borrower_id_no_encrypted, lender_name, lender_id_no_hash, lender_id_no_encrypted, loan_type, principal_amount, annual_rate, loan_date, due_date, interest_amount, total_amount, purpose, remark, service_fee, borrower_signed_at, lender_signed_at, agreement_file, status, effective_at, cancel_reason, create_time, update_time
+    </sql>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM iou_note t1
+        WHERE 1 = 1
+            <if test="criteria.noteNo != null and criteria.noteNo != ''">
+                AND t1.note_no = #{criteria.noteNo}
+            </if>
+            <if test="criteria.creatorUserId != null and criteria.creatorUserId != ''">
+                AND t1.creator_user_id = #{criteria.creatorUserId}
+            </if>
+            <if test="criteria.borrowerName != null and criteria.borrowerName != ''">
+                AND t1.borrower_name LIKE CONCAT('%',#{criteria.borrowerName},'%')
+            </if>
+            <if test="criteria.lenderName != null and criteria.lenderName != ''">
+                AND t1.lender_name LIKE CONCAT('%',#{criteria.lenderName},'%')
+            </if>
+            <if test="criteria.loanType != null">
+                AND t1.loan_type = #{criteria.loanType}
+            </if>
+            <if test="criteria.status != null">
+                AND t1.status = #{criteria.status}
+            </if>
+            <if test="criteria.dueDate != null and criteria.dueDate.size() > 1">
+                AND t1.due_date BETWEEN #{criteria.dueDate[0]} AND #{criteria.dueDate[1]}
+            </if>
+            <if test="criteria.createTime != null and criteria.createTime.size() > 1">
+                AND t1.create_time BETWEEN #{criteria.createTime[0]} AND #{criteria.createTime[1]}
+            </if>
+        ORDER BY t1.id DESC
+    </select>
+</mapper>

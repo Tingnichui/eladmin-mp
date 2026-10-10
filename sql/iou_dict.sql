@@ -1,0 +1,24 @@
+-- 电子借条模块字典，在 eladmin 主库执行，可重复执行。
+USE `eladmin`;
+SET NAMES utf8mb4;
+START TRANSACTION;
+INSERT INTO sys_dict (name,description,create_by,update_by,create_time,update_time) SELECT 'iou_user_verify_status','电子借条用户认证状态，iou_user.verify_status','admin','admin',NOW(),NOW() WHERE NOT EXISTS (SELECT 1 FROM sys_dict WHERE name='iou_user_verify_status');
+SET @iou_dict_id := (SELECT dict_id FROM sys_dict WHERE name='iou_user_verify_status' ORDER BY dict_id LIMIT 1);
+INSERT INTO sys_dict_detail (dict_id,label,value,dict_sort,create_by,update_by,create_time,update_time) SELECT @iou_dict_id,'未认证','0',10,'admin','admin',NOW(),NOW() WHERE NOT EXISTS (SELECT 1 FROM sys_dict_detail WHERE dict_id=@iou_dict_id AND value='0');
+INSERT INTO sys_dict_detail (dict_id,label,value,dict_sort,create_by,update_by,create_time,update_time) SELECT @iou_dict_id,'认证中','1',20,'admin','admin',NOW(),NOW() WHERE NOT EXISTS (SELECT 1 FROM sys_dict_detail WHERE dict_id=@iou_dict_id AND value='1');
+INSERT INTO sys_dict_detail (dict_id,label,value,dict_sort,create_by,update_by,create_time,update_time) SELECT @iou_dict_id,'已认证','2',30,'admin','admin',NOW(),NOW() WHERE NOT EXISTS (SELECT 1 FROM sys_dict_detail WHERE dict_id=@iou_dict_id AND value='2');
+INSERT INTO sys_dict_detail (dict_id,label,value,dict_sort,create_by,update_by,create_time,update_time) SELECT @iou_dict_id,'认证失败','3',40,'admin','admin',NOW(),NOW() WHERE NOT EXISTS (SELECT 1 FROM sys_dict_detail WHERE dict_id=@iou_dict_id AND value='3');
+INSERT INTO sys_dict (name,description,create_by,update_by,create_time,update_time) SELECT 'iou_note_loan_type','电子借条借款类型，iou_note.loan_type','admin','admin',NOW(),NOW() WHERE NOT EXISTS (SELECT 1 FROM sys_dict WHERE name='iou_note_loan_type');
+SET @iou_dict_id := (SELECT dict_id FROM sys_dict WHERE name='iou_note_loan_type' ORDER BY dict_id LIMIT 1);
+INSERT INTO sys_dict_detail (dict_id,label,value,dict_sort,create_by,update_by,create_time,update_time) SELECT @iou_dict_id,'单次借款','1',10,'admin','admin',NOW(),NOW() WHERE NOT EXISTS (SELECT 1 FROM sys_dict_detail WHERE dict_id=@iou_dict_id AND value='1');
+INSERT INTO sys_dict_detail (dict_id,label,value,dict_sort,create_by,update_by,create_time,update_time) SELECT @iou_dict_id,'分期借款','2',20,'admin','admin',NOW(),NOW() WHERE NOT EXISTS (SELECT 1 FROM sys_dict_detail WHERE dict_id=@iou_dict_id AND value='2');
+INSERT INTO sys_dict (name,description,create_by,update_by,create_time,update_time) SELECT 'iou_note_status','电子借条状态，iou_note.status','admin','admin',NOW(),NOW() WHERE NOT EXISTS (SELECT 1 FROM sys_dict WHERE name='iou_note_status');
+SET @iou_dict_id := (SELECT dict_id FROM sys_dict WHERE name='iou_note_status' ORDER BY dict_id LIMIT 1);
+INSERT INTO sys_dict_detail (dict_id,label,value,dict_sort,create_by,update_by,create_time,update_time) SELECT @iou_dict_id,'草稿','0',10,'admin','admin',NOW(),NOW() WHERE NOT EXISTS (SELECT 1 FROM sys_dict_detail WHERE dict_id=@iou_dict_id AND value='0');
+INSERT INTO sys_dict_detail (dict_id,label,value,dict_sort,create_by,update_by,create_time,update_time) SELECT @iou_dict_id,'待对方确认','1',20,'admin','admin',NOW(),NOW() WHERE NOT EXISTS (SELECT 1 FROM sys_dict_detail WHERE dict_id=@iou_dict_id AND value='1');
+INSERT INTO sys_dict_detail (dict_id,label,value,dict_sort,create_by,update_by,create_time,update_time) SELECT @iou_dict_id,'已生效','2',30,'admin','admin',NOW(),NOW() WHERE NOT EXISTS (SELECT 1 FROM sys_dict_detail WHERE dict_id=@iou_dict_id AND value='2');
+INSERT INTO sys_dict_detail (dict_id,label,value,dict_sort,create_by,update_by,create_time,update_time) SELECT @iou_dict_id,'已结清','3',40,'admin','admin',NOW(),NOW() WHERE NOT EXISTS (SELECT 1 FROM sys_dict_detail WHERE dict_id=@iou_dict_id AND value='3');
+INSERT INTO sys_dict_detail (dict_id,label,value,dict_sort,create_by,update_by,create_time,update_time) SELECT @iou_dict_id,'已取消','4',50,'admin','admin',NOW(),NOW() WHERE NOT EXISTS (SELECT 1 FROM sys_dict_detail WHERE dict_id=@iou_dict_id AND value='4');
+INSERT INTO sys_dict_detail (dict_id,label,value,dict_sort,create_by,update_by,create_time,update_time) SELECT @iou_dict_id,'已拒绝','5',60,'admin','admin',NOW(),NOW() WHERE NOT EXISTS (SELECT 1 FROM sys_dict_detail WHERE dict_id=@iou_dict_id AND value='5');
+INSERT INTO sys_dict_detail (dict_id,label,value,dict_sort,create_by,update_by,create_time,update_time) SELECT @iou_dict_id,'待支付服务费','6',70,'admin','admin',NOW(),NOW() WHERE NOT EXISTS (SELECT 1 FROM sys_dict_detail WHERE dict_id=@iou_dict_id AND value='6');
+COMMIT;
