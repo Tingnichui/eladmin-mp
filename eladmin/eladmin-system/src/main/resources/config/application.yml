@@ -76,8 +76,14 @@ jasypt:
   encryptor:
     password: ${JASYPT_ENCRYPTOR_PASSWORD}
 
-# 沿用原项目 yzh-test 配置；接口地址并不代表沙箱，禁止自动真实调用测试。
+# 身份核验供应商配置；禁止在启动和单元测试中自动真实调用。
 iou:
+  # 测试、生产共用；凭据使用现有 Jasypt 密钥解密。
+  shumai:
+    url: https://api.shumaidata.com
+    app-id: ENC(gBVQpZr8vDC2ZiVMnPCJou3/xh/KmwXy8zP9LnQvwhmuIJJAoAxiJbYu6SJIj5Gv/dCatfjjGFCwxPINE48JvaaJfgr4DO1hw/55A4xm8J8=)
+    app-security: ENC(NE7rIRZuVcL7MF3p9icouMyQEr+sQMCsZqwbfk/nCDEGw34bepubaSZGUHNf/3QpdmOUah6TY/jbIakGLSxHqN1b+1o+XUZQEUEe5o+wqLE=)
+  # 保留原项目 yzh-test 配置；接口地址并不代表沙箱。
   yzh:
     url: https://api-service.yunzhanghu.com
     dealer-id: "28980096"
