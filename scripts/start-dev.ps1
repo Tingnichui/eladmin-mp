@@ -4,6 +4,7 @@ param(
     [string]$MavenHome = 'C:\MyProgram\develop\Maven\apache-maven-3.5.4',
     [string]$MavenRepository = 'C:\MyProgram\develop\Maven\apache-maven-3.5.4\repo',
     [string]$NodeExe = '',
+    [switch]$EnsureLocalUser,
     [switch]$SkipBuild,
     [switch]$RunTests,
     [switch]$RestartBackend
@@ -24,6 +25,8 @@ $mavenSettings = Join-Path $MavenHome 'conf\settings.xml'
 $vueCli = Join-Path $frontendRoot 'node_modules\@vue\cli-service\bin\vue-cli-service.js'
 $localEnvFile = Join-Path $projectRoot '.codex-local\env.ps1'
 $processJasyptPassword = $env:JASYPT_ENCRYPTOR_PASSWORD
+
+. (Join-Path $PSScriptRoot 'node-runtime.ps1')
 
 if (Test-Path -LiteralPath $localEnvFile) {
     . $localEnvFile
@@ -195,45 +198,6 @@ function Start-BackendService {
         -FailureLogPaths @($stdoutLog, $stderrLog)
 }
 
-function Resolve-NodeExecutable {
-    if (-not [string]::IsNullOrWhiteSpace($NodeExe)) {
-        Assert-PathExists -Path $NodeExe -Name 'Node.js'
-        return (Resolve-Path -LiteralPath $NodeExe).Path
-    }
-
-    $candidates = New-Object System.Collections.Generic.List[string]
-    if (-not [string]::IsNullOrWhiteSpace($env:NVM_SYMLINK)) {
-        $candidates.Add((Join-Path $env:NVM_SYMLINK 'node.exe'))
-    }
-
-    $nvmRoots = @($env:NVM_HOME, 'C:\MyProgram\develop\nvm') |
-        Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and (Test-Path -LiteralPath $_) } |
-        Select-Object -Unique
-    foreach ($nvmRoot in $nvmRoots) {
-        Get-ChildItem -LiteralPath $nvmRoot -Directory -Filter 'v16.*' -ErrorAction SilentlyContinue |
-            Sort-Object { [version]($_.Name.TrimStart('v')) } -Descending |
-            ForEach-Object { $candidates.Add((Join-Path $_.FullName 'node.exe')) }
-    }
-
-    $pathNode = Get-Command node.exe -ErrorAction SilentlyContinue
-    if ($null -ne $pathNode) {
-        $candidates.Add($pathNode.Source)
-    }
-
-    foreach ($candidate in $candidates) {
-        if (-not (Test-Path -LiteralPath $candidate)) {
-            continue
-        }
-        $versionText = & $candidate --version
-        $version = [version]$versionText.TrimStart('v')
-        if ($version.Major -le 16) {
-            return (Resolve-Path -LiteralPath $candidate).Path
-        }
-    }
-
-    throw '未找到兼容的 Node.js（建议 Node 16）。可通过 -NodeExe 指定 node.exe。'
-}
-
 Assert-PathExists -Path $JavaHome -Name 'Java 8'
 Assert-PathExists -Path $MavenHome -Name 'Maven'
 Assert-PathExists -Path $MavenRepository -Name 'Maven 本地仓库'
@@ -253,6 +217,15 @@ if ([string]::IsNullOrWhiteSpace($jasyptPassword)) {
 if ([string]::IsNullOrWhiteSpace($jasyptPassword)) {
     throw '未找到 JASYPT_ENCRYPTOR_PASSWORD。请先设置当前进程或 Windows 用户级环境变量。'
 }
+if ($EnsureLocalUser) {
+    if ([string]::IsNullOrWhiteSpace($env:LOCAL_DEV_USER_PASSWORD)) {
+        throw '使用 -EnsureLocalUser 时必须通过 LOCAL_DEV_USER_PASSWORD 提供本地开发账号密码。'
+    }
+    $env:LOCAL_DEV_USER_ENABLED = 'true'
+    if ([string]::IsNullOrWhiteSpace($env:LOCAL_DEV_USER_USERNAME)) {
+        $env:LOCAL_DEV_USER_USERNAME = 'chunhui'
+    }
+}
 
 New-Item -ItemType Directory -Force -Path $logRoot | Out-Null
 
@@ -267,6 +240,10 @@ $env:Path = "$JavaHome\bin;$MavenHome\bin;$env:Path"
 $backendHealthUri = 'http://127.0.0.1:11280/auth/code'
 $frontendUri = 'http://127.0.0.1:8013/'
 $proxyHealthUri = 'http://127.0.0.1:8013/auth/code'
+
+if ($EnsureLocalUser -and -not $RestartBackend -and (Test-HttpEndpoint -Uri $backendHealthUri)) {
+    throw '后端已运行，本地账号初始化不会再次执行。请同时使用 -RestartBackend。'
+}
 
 if ($RestartBackend) {
     if (-not $SkipBuild) {
@@ -301,7 +278,8 @@ if (-not (Test-HttpEndpoint -Uri $frontendUri)) {
     if (Test-PortListening -Port 8013) {
         Write-Host "前端已在运行：$frontendUri"
     } else {
-        $resolvedNodeExe = Resolve-NodeExecutable
+        $resolvedNodeExe = Resolve-CompatibleNodeExecutable -NodeExe $NodeExe
+        Set-CompatibleNodePath -Executable $resolvedNodeExe
         Write-Host "使用 Node.js：$resolvedNodeExe"
         Write-Host '启动前端...'
         $frontendProcess = Start-Process `

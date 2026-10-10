@@ -1,5 +1,6 @@
 /eladmin/logs
 /runtime-logs
+/.codex-local/
 
 ### IDEA ###
 /.idea
