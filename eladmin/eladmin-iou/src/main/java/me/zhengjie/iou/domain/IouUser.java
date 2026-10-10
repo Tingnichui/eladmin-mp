@@ -49,17 +49,26 @@ public class IouUser implements Serializable {
     @JSONField(serializeFeatures = com.alibaba.fastjson2.JSONWriter.Feature.WriteLongAsString)
     private Long id;
 
-    @NotBlank
+    @javax.validation.constraints.Pattern(regexp = "^$|1[0-9]{10}")
     @ApiModelProperty(value = "手机号")
     private String mobile;
 
-    @ApiModelProperty(value = "登录密码哈希（BCrypt），禁止存储明文")
-    @JsonIgnore
-    @JSONField(serialize = false, deserialize = false)
-    @ToString.Exclude
-    private String passwordHash;
+    @ApiModelProperty(value = "关联的系统用户ID")
+    @JsonSerialize(using = ToStringSerializer.class)
+    @JSONField(serializeFeatures = com.alibaba.fastjson2.JSONWriter.Feature.WriteLongAsString)
+    private Long sysUserId;
+
+    @ApiModelProperty(value = "二要素状态：0未认证、2已认证")
+    private Integer idVerifyStatus;
+
+    private Timestamp idVerifiedAt;
+
+    private String agreementVersion;
+
+    private Timestamp agreementAcceptedAt;
 
     @ApiModelProperty(value = "真实姓名")
+    @ToString.Exclude
     private String realName;
 
     @ApiModelProperty(value = "身份证号密文")

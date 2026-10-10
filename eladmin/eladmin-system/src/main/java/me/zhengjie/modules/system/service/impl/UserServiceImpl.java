@@ -17,6 +17,7 @@ package me.zhengjie.modules.system.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.RequiredArgsConstructor;
 import me.zhengjie.config.properties.FileProperties;
 import me.zhengjie.exception.BadRequestException;
@@ -88,14 +89,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void create(User resources) {
+        normalizeOptionalProfile(resources);
         resources.setDeptId(resources.getDept().getId());
         if (userMapper.findByUsername(resources.getUsername()) != null) {
             throw new EntityExistException(User.class, "username", resources.getUsername());
         }
-        if (userMapper.findByEmail(resources.getEmail()) != null) {
+        if (resources.getEmail() != null && userMapper.findByEmail(resources.getEmail()) != null) {
             throw new EntityExistException(User.class, "email", resources.getEmail());
         }
-        if (userMapper.findByPhone(resources.getPhone()) != null) {
+        if (resources.getPhone() != null && userMapper.findByPhone(resources.getPhone()) != null) {
             throw new EntityExistException(User.class, "phone", resources.getPhone());
         }
         resources.setIsAdmin(false);
@@ -109,10 +111,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(User resources) throws Exception {
+        normalizeOptionalProfile(resources);
         User user = getById(resources.getId());
+        // 内部关联账号不允许改为身份证等敏感资料。
+        if ("IOU".equals(user.getUserType()) && !Objects.equals(user.getUsername(), resources.getUsername())) {
+            throw new BadRequestException("借条账号的内部用户名不能修改");
+        }
         User user1 = userMapper.findByUsername(resources.getUsername());
-        User user2 = userMapper.findByEmail(resources.getEmail());
-        User user3 = userMapper.findByPhone(resources.getPhone());
+        User user2 = resources.getEmail() == null ? null : userMapper.findByEmail(resources.getEmail());
+        User user3 = resources.getPhone() == null ? null : userMapper.findByPhone(resources.getPhone());
         if (user1 != null && !user.getId().equals(user1.getId())) {
             throw new EntityExistException(User.class, "username", resources.getUsername());
         }
@@ -147,7 +154,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setPhone(resources.getPhone());
         user.setNickName(resources.getNickName());
         user.setGender(resources.getGender());
-        saveOrUpdate(user);
+        updateProfile(user);
         // 清除缓存
         delCaches(user.getId(), user.getUsername());
         // 更新用户岗位
@@ -161,22 +168,49 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateCenter(User resources) {
+        normalizeOptionalProfile(resources);
         User user = getById(resources.getId());
-        User user1 = userMapper.findByPhone(resources.getPhone());
+        User user1 = resources.getPhone() == null ? null : userMapper.findByPhone(resources.getPhone());
         if (user1 != null && !user.getId().equals(user1.getId())) {
             throw new EntityExistException(User.class, "phone", resources.getPhone());
         }
         user.setNickName(resources.getNickName());
         user.setPhone(resources.getPhone());
         user.setGender(resources.getGender());
-        saveOrUpdate(user);
+        updateProfile(user);
         // 清理缓存
         delCaches(user.getId(), user.getUsername());
+    }
+
+    /** 仅资料更新显式写入 NULL，避免全局修改字段策略影响头像等局部更新。 */
+    private void updateProfile(User user) {
+        LambdaUpdateWrapper<User> wrapper = new LambdaUpdateWrapper<User>()
+            .eq(User::getId, user.getId())
+            .set(user.getNickName() == null, User::getNickName, null)
+            .set(user.getEmail() == null, User::getEmail, null)
+            .set(user.getPhone() == null, User::getPhone, null);
+        update(user, wrapper);
+    }
+
+    private void normalizeOptionalProfile(User user) {
+        user.setNickName(trimToNull(user.getNickName()));
+        user.setEmail(trimToNull(user.getEmail()));
+        user.setPhone(trimToNull(user.getPhone()));
+    }
+
+    private String trimToNull(String value) {
+        return value == null || value.trim().isEmpty() ? null : value.trim();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(Set<Long> ids) {
+        for (Long id : ids) {
+            User candidate = getById(id);
+            if (candidate != null && "IOU".equals(candidate.getUserType())) {
+                throw new BadRequestException("借条账号请使用停用功能，不支持直接删除");
+            }
+        }
         for (Long id : ids) {
             // 清理缓存
             User user = getById(id);

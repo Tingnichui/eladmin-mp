@@ -78,13 +78,13 @@
               <el-input v-model="form.username" @keydown.native="keydown($event)" />
             </el-form-item>
             <el-form-item label="电话" prop="phone">
-              <el-input v-model.number="form.phone" />
+              <el-input v-model.trim="form.phone" />
             </el-form-item>
             <el-form-item label="昵称" prop="nickName">
-              <el-input v-model="form.nickName" @keydown.native="keydown($event)" />
+              <el-input v-model.trim="form.nickName" @keydown.native="keydown($event)" />
             </el-form-item>
             <el-form-item label="邮箱" prop="email">
-              <el-input v-model="form.email" />
+              <el-input v-model.trim="form.email" />
             </el-form-item>
             <el-form-item label="部门" prop="dept.id">
               <treeselect
@@ -156,7 +156,9 @@
         <el-table ref="table" v-loading="crud.loading" :data="crud.data" style="width: 100%;" @selection-change="crud.selectionChangeHandler">
           <el-table-column :selectable="checkboxT" type="selection" width="55" />
           <el-table-column :show-overflow-tooltip="true" prop="username" label="用户名" />
-          <el-table-column :show-overflow-tooltip="true" prop="nickName" label="昵称" />
+          <el-table-column :show-overflow-tooltip="true" prop="nickName" label="昵称">
+            <template slot-scope="scope">{{ scope.row.nickName || scope.row.username }}</template>
+          </el-table-column>
           <el-table-column prop="gender" label="性别" />
           <el-table-column :show-overflow-tooltip="true" prop="phone" width="100" label="电话" />
           <el-table-column :show-overflow-tooltip="true" width="135" prop="email" label="邮箱" />
@@ -232,7 +234,7 @@ export default {
     // 自定义验证
     const validPhone = (rule, value, callback) => {
       if (!value) {
-        callback(new Error('请输入电话号码'))
+        callback()
       } else if (!isvalidPhone(value)) {
         callback(new Error('请输入正确的11位手机号码'))
       } else {
@@ -259,15 +261,13 @@ export default {
           { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
         ],
         nickName: [
-          { required: true, message: '请输入用户昵称', trigger: 'blur' },
           { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
         ],
         email: [
-          { required: true, message: '请输入邮箱地址', trigger: 'blur' },
           { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
         ],
         phone: [
-          { required: true, trigger: 'blur', validator: validPhone }
+          { trigger: 'blur', validator: validPhone }
         ],
         'dept.id': [
           { required: true, message: '部门不能为空', trigger: 'blur' }

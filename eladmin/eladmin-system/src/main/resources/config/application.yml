@@ -78,6 +78,14 @@ jasypt:
 
 # 身份核验供应商配置；禁止在启动和单元测试中自动真实调用。
 iou:
+  identity:
+    # 身份证 HMAC 查重密钥：已有账号后不可随意更换，跨环境须保持一致。
+    hmac-key: ENC(gRrVazCxI4V79i3EzTa0JDBFnFFX8dQ37New/Rd+PdSm+zQRbUqj2EAYKB2B7L/CZluyZlOVbsGI5TrmaNwePV1hL3VpP/v+ixuTaCiFl7U=)
+  registration:
+    # 修改协议正文时同步更新版本；域名部署需将 /api 转发到后端。
+    agreement-version: ${IOU_REGISTRATION_AGREEMENT_VERSION:2026-10-10-v1}
+    user-agreement-url: ${IOU_USER_AGREEMENT_URL:https://lexiangjie.com/api/iou/auth/policies/agreement}
+    privacy-policy-url: ${IOU_PRIVACY_POLICY_URL:https://lexiangjie.com/api/iou/auth/policies/privacy}
   # 测试、生产共用；凭据使用现有 Jasypt 密钥解密。
   shumai:
     url: https://api.shumaidata.com

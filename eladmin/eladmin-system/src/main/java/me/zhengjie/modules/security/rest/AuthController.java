@@ -71,6 +71,8 @@ public class AuthController {
     private final LoginProperties loginProperties;
     private final PasswordEncoder passwordEncoder;
     private final UserDetailsServiceImpl userDetailsService;
+    private final me.zhengjie.modules.iou.IouAccountService iouAccounts;
+    private final me.zhengjie.modules.iou.IouRequestGuard iouGuard;
 
     @Log("用户登录")
     @ApiOperation("登录授权")
@@ -78,7 +80,12 @@ public class AuthController {
     public ResponseEntity<Object> login(@Validated @RequestBody AuthUserDto authUser, HttpServletRequest request) throws Exception {
         // 密码解密
         String password = RsaUtils.decryptByPrivateKey(RsaProperties.privateKey, authUser.getPassword());
-        if (!SpringUtil.isDevEnv()) {
+        boolean iouLogin = "IOU".equals(authUser.getLoginType());
+        String username = authUser.getUsername();
+        if (iouLogin) {
+            iouGuard.captcha(authUser.getUuid(), authUser.getCode());
+            username = iouAccounts.resolveLogin(username);
+        } else if (!SpringUtil.isDevEnv()) {
             // 查询验证码
             String code = redisUtils.get(authUser.getUuid(), String.class);
             // 清除验证码
@@ -91,10 +98,13 @@ public class AuthController {
             }
         }
         // 获取用户信息
-        JwtUserDto jwtUser = userDetailsService.loadUserByUsername(authUser.getUsername());
+        JwtUserDto jwtUser = userDetailsService.loadUserByUsername(username);
+        if (iouLogin != "IOU".equals(jwtUser.getUser().getUserType())) {
+            throw new BadRequestException("账号或密码错误");
+        }
         // 验证用户密码
         if (!passwordEncoder.matches(password, jwtUser.getPassword())) {
-            throw new BadRequestException("登录密码错误");
+            throw new BadRequestException(iouLogin ? "账号或密码错误" : "登录密码错误");
         }
         Authentication authentication = new UsernamePasswordAuthenticationToken(jwtUser, null, jwtUser.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -103,11 +113,11 @@ public class AuthController {
         // 返回 token 与 用户信息
         Map<String, Object> authInfo = new HashMap<String, Object>(2) {{
             put("token", properties.getTokenStartWith() + token);
-            put("user", jwtUser);
+            put("user", iouLogin ? iouProfile(jwtUser) : jwtUser);
         }};
         if (loginProperties.isSingleLogin()) {
             // 踢掉之前已经登录的token
-            onlineUserService.kickOutForUsername(authUser.getUsername());
+            onlineUserService.kickOutForUsername(jwtUser.getUsername());
         }
         // 保存在线信息
         onlineUserService.save(jwtUser, token, request);
@@ -117,9 +127,15 @@ public class AuthController {
 
     @ApiOperation("获取用户信息")
     @GetMapping(value = "/info")
-    public ResponseEntity<UserDetails> getUserInfo() {
+    public ResponseEntity<Object> getUserInfo() {
         JwtUserDto jwtUser = (JwtUserDto) SecurityUtils.getCurrentUser();
-        return ResponseEntity.ok(jwtUser);
+        return ResponseEntity.ok("IOU".equals(jwtUser.getUser().getUserType()) ? iouProfile(jwtUser) : jwtUser);
+    }
+
+    private Map<String, Object> iouProfile(JwtUserDto jwtUser) {
+        Map<String, Object> profile = iouAccounts.profile(jwtUser.getUser().getId());
+        profile.put("roles", jwtUser.getRoles());
+        return profile;
     }
 
     @ApiOperation("获取验证码")

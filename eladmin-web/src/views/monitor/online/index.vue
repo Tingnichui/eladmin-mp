@@ -26,7 +26,9 @@
 
       <el-table-column :show-overflow-tooltip="true" prop="uid" label="会话编号" />
       <el-table-column prop="userName" label="用户名" />
-      <el-table-column prop="nickName" label="用户昵称" />
+      <el-table-column prop="nickName" label="用户昵称">
+        <template slot-scope="scope">{{ scope.row.nickName || scope.row.userName }}</template>
+      </el-table-column>
       <el-table-column prop="dept" label="部门" />
       <el-table-column prop="ip" label="登录IP" />
       <el-table-column :show-overflow-tooltip="true" prop="address" label="登录地点" />

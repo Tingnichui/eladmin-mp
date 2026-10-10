@@ -45,7 +45,6 @@ class IouSensitiveDataTest {
     void userSecretsAreAcceptedOnlyThroughPlaintextInputAndNeverSerialized() {
         IouUser user = JSON.parseObject("{\"password\":\"test-password\",\"idNo\":\"000000200001010001\"}", IouUser.class);
         assertEquals("test-password", user.getPassword());
-        user.setPasswordHash("sensitive-password-hash");
         user.setIdNoHash("sensitive-id-hash");
         user.setIdNoEncrypted("sensitive-id-ciphertext");
         String json = JSON.toJSONString(user);

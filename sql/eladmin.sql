@@ -673,6 +673,7 @@ COMMIT;
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_user`;
 CREATE TABLE `sys_user` (
+  `user_type` varchar(16) NOT NULL DEFAULT 'BACKEND' COMMENT 'BACKEND后台账号/IOU借条账号',
   `user_id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `dept_id` bigint(20) DEFAULT NULL COMMENT '部门名称',
   `username` varchar(180) DEFAULT NULL COMMENT '用户名',

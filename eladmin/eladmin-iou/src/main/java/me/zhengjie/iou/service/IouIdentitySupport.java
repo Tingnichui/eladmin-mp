@@ -17,7 +17,7 @@ public class IouIdentitySupport {
     private final String hmacKey;
 
     public IouIdentitySupport(@Value("${jasypt.encryptor.password}") String encryptionPassword,
-                              @Value("${IOU_IDENTITY_HMAC_KEY:}") String hmacKey) {
+                              @Value("${iou.identity.hmac-key:${IOU_IDENTITY_HMAC_KEY:}}") String hmacKey) {
         this.hmacKey = hmacKey;
         this.encryptor = new StandardPBEStringEncryptor();
         this.encryptor.setPassword(encryptionPassword);
@@ -39,7 +39,7 @@ public class IouIdentitySupport {
 
     public String hash(String idNo) {
         if (hmacKey == null || hmacKey.length() < 32) {
-            throw new BadRequestException("尚未配置 IOU_IDENTITY_HMAC_KEY");
+            throw new BadRequestException("实名注册配置不可用，请联系管理员");
         }
         try {
             Mac mac = Mac.getInstance("HmacSHA256");

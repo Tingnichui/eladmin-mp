@@ -60,7 +60,6 @@ public class IouUserController {
     }
 
     @PostMapping
-    @Log("新增借条用户")
     @ApiOperation("新增借条用户")
     @PreAuthorize("@el.check('iouUser:add')")
     public ResponseEntity<Object> createIouUser(@Validated @RequestBody IouUser resources){
@@ -69,7 +68,6 @@ public class IouUserController {
     }
 
     @PutMapping
-    @Log("修改借条用户")
     @ApiOperation("修改借条用户")
     @PreAuthorize("@el.check('iouUser:edit')")
     public ResponseEntity<Object> updateIouUser(@Validated @RequestBody IouUser resources){
@@ -78,7 +76,6 @@ public class IouUserController {
     }
 
     @DeleteMapping
-    @Log("删除借条用户")
     @ApiOperation("删除借条用户")
     @PreAuthorize("@el.check('iouUser:del')")
     public ResponseEntity<Object> deleteIouUser(@ApiParam(value = "传ID数组[]") @RequestBody List<Long> ids) {

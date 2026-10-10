@@ -20,7 +20,7 @@
             </div>
             <ul class="user-info">
               <li><div style="height: 100%"><svg-icon icon-class="login" /> 登录账号<div class="user-right">{{ user.username }}</div></div></li>
-              <li><svg-icon icon-class="user1" /> 用户昵称 <div class="user-right">{{ user.nickName }}</div></li>
+              <li><svg-icon icon-class="user1" /> 用户昵称 <div class="user-right">{{ user.nickName || user.username }}</div></li>
               <li><svg-icon icon-class="dept" /> 所属部门 <div class="user-right"> {{ user.dept.name }}</div></li>
               <li><svg-icon icon-class="phone" /> 手机号码 <div class="user-right">{{ user.phone }}</div></li>
               <li><svg-icon icon-class="email" /> 用户邮箱 <div class="user-right">{{ user.email }}</div></li>
@@ -42,11 +42,11 @@
             <el-tab-pane label="用户资料" name="first">
               <el-form ref="form" :model="form" :rules="rules" style="margin-top: 10px;" size="small" label-width="65px">
                 <el-form-item label="昵称" prop="nickName">
-                  <el-input v-model="form.nickName" style="width: 35%" />
+                  <el-input v-model.trim="form.nickName" style="width: 35%" />
                   <span style="color: #C0C0C0;margin-left: 10px;">用户昵称不作为登录使用</span>
                 </el-form-item>
                 <el-form-item label="手机号" prop="phone">
-                  <el-input v-model="form.phone" style="width: 35%;" />
+                  <el-input v-model.trim="form.phone" style="width: 35%;" />
                   <span style="color: #C0C0C0;margin-left: 10px;">手机号码不能重复</span>
                 </el-form-item>
                 <el-form-item label="性别">
@@ -123,7 +123,7 @@ export default {
     // 自定义验证
     const validPhone = (rule, value, callback) => {
       if (!value) {
-        callback(new Error('请输入电话号码'))
+        callback()
       } else if (!isvalidPhone(value)) {
         callback(new Error('请输入正确的11位手机号码'))
       } else {
@@ -141,11 +141,10 @@ export default {
       form: {},
       rules: {
         nickName: [
-          { required: true, message: '请输入用户昵称', trigger: 'blur' },
           { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
         ],
         phone: [
-          { required: true, trigger: 'blur', validator: validPhone }
+          { trigger: 'blur', validator: validPhone }
         ]
       }
     }

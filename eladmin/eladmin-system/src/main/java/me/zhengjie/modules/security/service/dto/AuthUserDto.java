@@ -19,6 +19,8 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Getter;
 import lombok.Setter;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
+import com.alibaba.fastjson2.annotation.JSONField;
 
 /**
  * @author Zheng Jie
@@ -30,10 +32,12 @@ public class AuthUserDto {
 
     @NotBlank
     @ApiModelProperty(value = "用户名")
+    @JSONField(serialize = false)
     private String username;
 
     @NotBlank
     @ApiModelProperty(value = "密码")
+    @JSONField(serialize = false)
     private String password;
 
     @ApiModelProperty(value = "验证码")
@@ -41,4 +45,7 @@ public class AuthUserDto {
 
     @ApiModelProperty(value = "验证码的key")
     private String uuid = "";
+
+    @Pattern(regexp = "BACKEND|IOU", message = "登录类型不合法")
+    private String loginType = "BACKEND";
 }

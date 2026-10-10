@@ -27,6 +27,7 @@ import me.zhengjie.base.BaseEntity;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.Objects;
@@ -66,16 +67,18 @@ public class User extends BaseEntity implements Serializable {
     @ApiModelProperty(value = "用户名称")
     private String username;
 
-    @NotBlank
+    @ApiModelProperty(value = "账号类型：BACKEND 或 IOU")
+    private String userType = "BACKEND";
+
     @ApiModelProperty(value = "用户昵称")
     private String nickName;
 
-    @Email
-    @NotBlank
+    @Email(groups = {javax.validation.groups.Default.class, Update.class})
     @ApiModelProperty(value = "邮箱")
     private String email;
 
-    @NotBlank
+    @Pattern(regexp = "^$|1[0-9]{10}", message = "请输入正确的11位手机号码",
+        groups = {javax.validation.groups.Default.class, Update.class})
     @ApiModelProperty(value = "电话号码")
     private String phone;
 

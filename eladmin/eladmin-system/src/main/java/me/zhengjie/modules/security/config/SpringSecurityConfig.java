@@ -119,8 +119,10 @@ public class SpringSecurityConfig {
                 .antMatchers(HttpMethod.DELETE, anonymousUrls.get(RequestMethodEnum.DELETE.getType()).toArray(new String[0])).permitAll()
                 // 所有类型的接口都放行
                 .antMatchers(anonymousUrls.get(RequestMethodEnum.ALL.getType()).toArray(new String[0])).permitAll()
-                // 所有请求都需要认证
-                .anyRequest().authenticated()
+                .antMatchers("/auth/info").authenticated()
+                .antMatchers("/api/iou/app/**").access("isAuthenticated() and @iouAccessPolicy.canAccessH5(authentication)")
+                // H5 账号不进入后台；后台原有方法级权限继续生效。
+                .anyRequest().access("isAuthenticated() and @iouAccessPolicy.canAccessBackend(authentication)")
                 .and().apply(securityConfigurerAdapter())
                 .and().build();
     }

@@ -4,7 +4,11 @@
     <resultMap id="BaseResultMap" type="me.zhengjie.iou.domain.IouUser">
         <id column="id" property="id"/>
         <result column="mobile" property="mobile"/>
-        <result column="password_hash" property="passwordHash"/>
+        <result column="sys_user_id" property="sysUserId"/>
+        <result column="id_verify_status" property="idVerifyStatus"/>
+        <result column="id_verified_at" property="idVerifiedAt"/>
+        <result column="agreement_version" property="agreementVersion"/>
+        <result column="agreement_accepted_at" property="agreementAcceptedAt"/>
         <result column="real_name" property="realName"/>
         <result column="id_no_encrypted" property="idNoEncrypted"/>
         <result column="id_no_hash" property="idNoHash"/>
@@ -15,7 +19,7 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id, mobile, password_hash, real_name, id_no_encrypted, id_no_hash, verify_status, verified_at, create_time, update_time
+        id, mobile, sys_user_id, real_name, id_no_encrypted, id_no_hash, verify_status, verified_at, id_verify_status, id_verified_at, agreement_version, agreement_accepted_at, create_time, update_time
     </sql>
 
     <select id="findAll" resultMap="BaseResultMap">

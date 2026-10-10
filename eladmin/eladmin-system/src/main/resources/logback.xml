@@ -57,6 +57,8 @@
 
     <!-- Spring 日志级别控制 -->
     <logger name="org.springframework" level="warn" />
+    <!-- 身份资料写入及查询不允许开启参数级 SQL 日志。 -->
+    <logger name="me.zhengjie.iou.mapper" level="WARN" />
 
     <!-- DnsServerAddressStreamProviders调整为ERROR -->
     <logger name="io.netty.resolver.dns.DnsServerAddressStreamProviders" level="ERROR"/>
