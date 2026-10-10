@@ -3,6 +3,10 @@
 #### 项目简介
 一个基于 Spring Boot 2.7.18 、 Mybatis-Plus、 JWT、Spring Security、Redis、Vue的前后端分离的后台管理系统
 
+**本项目文档：** [文档索引](docs/README.md) · [项目协作与文档维护](docs/项目协作与文档维护.md)
+
+**用户端 H5：** [eladmin-h5（私有仓库）](https://github.com/Tingnichui/eladmin-h5)，框架运行与升级说明维护在该仓库。
+
 **开发文档：**  [https://eladmin.vip](https://eladmin.vip)
 
 **体验地址：**  [https://eladmin.vip/demo](https://eladmin.vip/demo)
