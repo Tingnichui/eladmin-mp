@@ -78,6 +78,11 @@ jasypt:
 
 # 身份核验供应商配置；禁止在启动和单元测试中自动真实调用。
 iou:
+  notes:
+    creation-enabled: true
+    signing-enabled: true
+    service-fee-policy: DISABLED
+    seal-key: ${IOU_NOTE_SEAL_KEY:}
   identity:
     # 身份证 HMAC 查重密钥：已有账号后不可随意更换，跨环境须保持一致。
     hmac-key: ENC(gRrVazCxI4V79i3EzTa0JDBFnFFX8dQ37New/Rd+PdSm+zQRbUqj2EAYKB2B7L/CZluyZlOVbsGI5TrmaNwePV1hL3VpP/v+ixuTaCiFl7U=)

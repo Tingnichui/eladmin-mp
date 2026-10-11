@@ -95,6 +95,9 @@ public class IouNoteServiceImpl extends ServiceImpl<IouNoteMapper, IouNote> impl
     }
 
     private void assertEditable(IouNote note) {
+        if (note.getCreateRequestKey() != null) {
+            throw new BadRequestException("用户端草稿及还款计划请通过用户端修改或撤销");
+        }
         if (note.getTermsLockedAt() != null || note.getBorrowerSignedAt() != null || note.getLenderSignedAt() != null
             || Integer.valueOf(1).equals(note.getBorrowerSignStatus()) || Integer.valueOf(2).equals(note.getBorrowerSignStatus())
             || Integer.valueOf(1).equals(note.getLenderSignStatus()) || Integer.valueOf(2).equals(note.getLenderSignStatus())

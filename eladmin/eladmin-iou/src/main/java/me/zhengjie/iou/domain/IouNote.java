@@ -173,6 +173,23 @@ public class IouNote implements Serializable {
 
     private String repaymentMethod;
 
+    private BigDecimal fixedInterestAmount;
+
+    @JsonIgnore
+    @JSONField(serialize = false, deserialize = false)
+    @ToString.Exclude
+    private String createRequestKey;
+
+    @JsonIgnore
+    @JSONField(serialize = false, deserialize = false)
+    @ToString.Exclude
+    private String createRequestHash;
+
+    @JsonIgnore
+    @JSONField(serialize = false, deserialize = false)
+    @ToString.Exclude
+    private String activeSignContext;
+
     private Integer installmentCount;
 
     private Integer repaymentCycleMonths;

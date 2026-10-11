@@ -1,0 +1,23 @@
+-- 自建手写签署与草稿幂等；不新增邀请或签署表。先执行iou_note_initiation_migration.sql。
+USE `eladmin`;
+SET NAMES utf8mb4;
+SET @iou_ddl = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='iou_note' AND column_name='fixed_interest_amount'), 'SELECT 1', 'ALTER TABLE iou_note ADD COLUMN fixed_interest_amount decimal(18,2) DEFAULT NULL COMMENT ''固定本息约定总利息''');
+PREPARE iou_stmt FROM @iou_ddl;
+EXECUTE iou_stmt;
+DEALLOCATE PREPARE iou_stmt;
+SET @iou_ddl = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='iou_note' AND column_name='create_request_key'), 'SELECT 1', 'ALTER TABLE iou_note ADD COLUMN create_request_key varchar(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL COMMENT ''创建幂等键，内部使用''');
+PREPARE iou_stmt FROM @iou_ddl;
+EXECUTE iou_stmt;
+DEALLOCATE PREPARE iou_stmt;
+SET @iou_ddl = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='iou_note' AND column_name='create_request_hash'), 'SELECT 1', 'ALTER TABLE iou_note ADD COLUMN create_request_hash char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL COMMENT ''原创建请求摘要，内部使用''');
+PREPARE iou_stmt FROM @iou_ddl;
+EXECUTE iou_stmt;
+DEALLOCATE PREPARE iou_stmt;
+SET @iou_ddl = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='iou_note' AND column_name='active_sign_context'), 'SELECT 1', 'ALTER TABLE iou_note ADD COLUMN active_sign_context longtext COMMENT ''双方手写签署幂等与凭证上下文，内部使用''');
+PREPARE iou_stmt FROM @iou_ddl;
+EXECUTE iou_stmt;
+DEALLOCATE PREPARE iou_stmt;
+SET @iou_ddl = IF(EXISTS(SELECT 1 FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='iou_note' AND index_name='uk_iou_note_create_request'), 'SELECT 1', 'ALTER TABLE iou_note ADD UNIQUE KEY uk_iou_note_create_request (creator_user_id, create_request_key)');
+PREPARE iou_stmt FROM @iou_ddl;
+EXECUTE iou_stmt;
+DEALLOCATE PREPARE iou_stmt;

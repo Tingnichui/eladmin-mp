@@ -36,6 +36,10 @@ CREATE TABLE IF NOT EXISTS `iou_note` (
   -- 发起与签署扩展字段：旧记录不自动伪造角色、计划或签署凭证。
   `creator_role` tinyint DEFAULT NULL COMMENT '发起人身份：1借款人，2出借人，旧记录可为空',
   `repayment_method` varchar(16) DEFAULT NULL COMMENT 'once/annuity/principal/interest/flat/custom',
+  `fixed_interest_amount` decimal(18,2) DEFAULT NULL COMMENT '固定本息约定总利息',
+  `create_request_key` varchar(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL COMMENT '创建幂等键，内部使用',
+  `create_request_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL COMMENT '原创建请求摘要，内部使用',
+  `active_sign_context` longtext COMMENT '双方手写签署幂等与凭证上下文，内部使用',
   `installment_count` int DEFAULT NULL COMMENT '约定还款期数，一次性为1',
   `repayment_cycle_months` int DEFAULT NULL COMMENT '标准还款周期月数，自定义可为空',
   `first_due_date` date DEFAULT NULL COMMENT '首期还款日期',
@@ -60,6 +64,7 @@ CREATE TABLE IF NOT EXISTS `iou_note` (
   `row_version` bigint NOT NULL DEFAULT 0 COMMENT '并发版本号，由条件更新推进',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_iou_note_note_no` (`note_no`),
+  UNIQUE KEY `uk_iou_note_create_request` (`creator_user_id`, `create_request_key`),
   KEY `idx_iou_note_borrower_status` (`borrower_id_no_hash`, `status`),
   KEY `idx_iou_note_lender_status` (`lender_id_no_hash`, `status`),
   KEY `idx_iou_note_creator` (`creator_user_id`)

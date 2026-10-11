@@ -12,6 +12,7 @@ import java.util.Map;
 @PreAuthorize("@iouAccessPolicy.canAccessH5(authentication)")
 public class IouAppQueryController {
     private final IouAppQueryService queries;
+    private final me.zhengjie.iou.service.IouNoteBusinessService business;
 
     @GetMapping("/summary")
     public Map<String, Object> summary() { return queries.summary(SecurityUtils.getCurrentUserId()); }
@@ -26,5 +27,5 @@ public class IouAppQueryController {
     }
 
     @GetMapping("/notes/{id}")
-    public Map<String, Object> detail(@PathVariable long id) { return queries.detail(SecurityUtils.getCurrentUserId(), id); }
+    public Map<String, Object> detail(@PathVariable long id) { return business.detail(SecurityUtils.getCurrentUserId(), id); }
 }

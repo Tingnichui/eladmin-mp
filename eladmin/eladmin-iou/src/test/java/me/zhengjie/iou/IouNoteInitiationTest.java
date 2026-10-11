@@ -73,10 +73,20 @@ class IouNoteInitiationTest {
     @Test void privateSigningFieldsAreNotReturnedAcceptedOrLogged() throws Exception {
         IouNote note=draft(1);note.setTermsSnapshot("secret-snapshot");note.setBorrowerSignRequestId("secret-request");
         note.setLenderSignEvidenceId("secret-evidence");note.setBorrowerSignFile("secret-file");
+        note.setActiveSignContext("secret-identity-context");note.setCreateRequestKey("secret-create-key");note.setCreateRequestHash("secret-create-hash");
         assertFalse(JSON.toJSONString(note).contains("secret-"));assertFalse(new ObjectMapper().writeValueAsString(note).contains("secret-"));
         assertFalse(note.toString().contains("secret-"));
-        String input="{\"termsSnapshot\":\"secret-snapshot\",\"borrowerSignStatus\":2,\"rowVersion\":99}";
+        String input="{\"termsSnapshot\":\"secret-snapshot\",\"borrowerSignStatus\":2,\"rowVersion\":99,\"activeSignContext\":\"secret-context\",\"createRequestKey\":\"secret-key\"}";
         IouNote parsed=JSON.parseObject(input,IouNote.class);assertNull(parsed.getTermsSnapshot());assertNull(parsed.getBorrowerSignStatus());assertNull(parsed.getRowVersion());
         parsed=new ObjectMapper().readValue(input,IouNote.class);assertNull(parsed.getTermsSnapshot());assertNull(parsed.getBorrowerSignStatus());assertNull(parsed.getRowVersion());
+        assertNull(parsed.getActiveSignContext());assertNull(parsed.getCreateRequestKey());
+    }
+    @Test void administratorCannotSeparateH5ConditionsFromSavedPlan() {
+        IouNote managed=draft(1);managed.setId(9L);managed.setCreateRequestKey("h5-managed-draft-key");
+        when(notes.selectOne(any())).thenReturn(managed);when(notes.selectList(any())).thenReturn(Collections.singletonList(managed));
+        IouNote update=draft(1);update.setId(9L);
+        assertThrows(BadRequestException.class,()->service.update(update));
+        assertThrows(BadRequestException.class,()->service.deleteAll(Collections.singletonList(9L)));
+        verify(notes,never()).updateById(any());
     }
 }
