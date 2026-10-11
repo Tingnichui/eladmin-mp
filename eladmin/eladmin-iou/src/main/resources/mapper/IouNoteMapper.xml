@@ -29,10 +29,19 @@
         <result column="cancel_reason" property="cancelReason"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
+        <result column="creator_role" property="creatorRole"/>
+        <result column="repayment_method" property="repaymentMethod"/>
+        <result column="installment_count" property="installmentCount"/>
+        <result column="repayment_cycle_months" property="repaymentCycleMonths"/>
+        <result column="first_due_date" property="firstDueDate"/>
+        <result column="interest_rule" property="interestRule"/>
+        <result column="calculation_version" property="calculationVersion"/>
+        <result column="prepayment_rule" property="prepaymentRule"/>
+        <result column="overdue_terms" property="overdueTerms"/>
     </resultMap>
 
     <sql id="Base_Column_List">
-        id, note_no, creator_user_id, borrower_name, borrower_id_no_hash, borrower_id_no_encrypted, lender_name, lender_id_no_hash, lender_id_no_encrypted, loan_type, principal_amount, annual_rate, loan_date, due_date, interest_amount, total_amount, purpose, remark, service_fee, borrower_signed_at, lender_signed_at, agreement_file, status, effective_at, cancel_reason, create_time, update_time
+        id, note_no, creator_user_id, borrower_name, borrower_id_no_hash, borrower_id_no_encrypted, lender_name, lender_id_no_hash, lender_id_no_encrypted, loan_type, principal_amount, annual_rate, loan_date, due_date, interest_amount, total_amount, purpose, remark, service_fee, borrower_signed_at, lender_signed_at, agreement_file, status, effective_at, cancel_reason, create_time, update_time, creator_role, repayment_method, installment_count, repayment_cycle_months, first_due_date, interest_rule, calculation_version, prepayment_rule, overdue_terms
     </sql>
 
     <select id="findAll" resultMap="BaseResultMap">

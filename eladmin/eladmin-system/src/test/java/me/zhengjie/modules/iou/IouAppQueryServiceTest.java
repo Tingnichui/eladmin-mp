@@ -67,8 +67,15 @@ class IouAppQueryServiceTest {
         assertThrows(BadRequestException.class, () -> service.list(123, "all", null, false, 0, 20));
         assertThrows(BadRequestException.class, () -> service.list(123, "all", null, false, 1, 51));
         assertThrows(BadRequestException.class, () -> service.list(123, "injected", null, false, 1, 20));
-        assertThrows(BadRequestException.class, () -> service.list(123, "all", 7, false, 1, 20));
+        assertThrows(BadRequestException.class, () -> service.list(123, "all", 8, false, 1, 20));
         verifyNoInteractions(notes);
+    }
+    @Test void waitingForSignatureIsQueryableButDoesNotExposeUnboundCounterparty() {
+        QueryWrapper<IouNote> query = service.filtered(user, "all", 7, false);
+        query.getSqlSegment();
+        assertTrue(query.getParamNameValuePairs().containsValue(7));
+        IouNote pending = note(); pending.setStatus(7); pending.setLenderName(null); pending.setLenderIdNoHash(null);
+        assertEquals("待对方加入", service.view(pending, user, false).get("counterpartyName"));
     }
     @Test void unverifiedOrMissingIdentityCannotReadNotes() {
         user.setIdVerifyStatus(0);

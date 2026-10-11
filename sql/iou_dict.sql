@@ -21,4 +21,5 @@ INSERT INTO sys_dict_detail (dict_id,label,value,dict_sort,create_by,update_by,c
 INSERT INTO sys_dict_detail (dict_id,label,value,dict_sort,create_by,update_by,create_time,update_time) SELECT @iou_dict_id,'已取消','4',50,'admin','admin',NOW(),NOW() WHERE NOT EXISTS (SELECT 1 FROM sys_dict_detail WHERE dict_id=@iou_dict_id AND value='4');
 INSERT INTO sys_dict_detail (dict_id,label,value,dict_sort,create_by,update_by,create_time,update_time) SELECT @iou_dict_id,'已拒绝','5',60,'admin','admin',NOW(),NOW() WHERE NOT EXISTS (SELECT 1 FROM sys_dict_detail WHERE dict_id=@iou_dict_id AND value='5');
 INSERT INTO sys_dict_detail (dict_id,label,value,dict_sort,create_by,update_by,create_time,update_time) SELECT @iou_dict_id,'待支付服务费','6',70,'admin','admin',NOW(),NOW() WHERE NOT EXISTS (SELECT 1 FROM sys_dict_detail WHERE dict_id=@iou_dict_id AND value='6');
+INSERT INTO sys_dict_detail (dict_id,label,value,dict_sort,create_by,update_by,create_time,update_time) SELECT @iou_dict_id,'待对方签署','7',80,'admin','admin',NOW(),NOW() WHERE NOT EXISTS (SELECT 1 FROM sys_dict_detail WHERE dict_id=@iou_dict_id AND value='7');
 COMMIT;

@@ -60,7 +60,6 @@ public class IouNote implements Serializable {
     @JSONField(serializeFeatures = com.alibaba.fastjson2.JSONWriter.Feature.WriteLongAsString)
     private Long creatorUserId;
 
-    @NotBlank
     @ApiModelProperty(value = "借款人")
     private String borrowerName;
 
@@ -76,7 +75,6 @@ public class IouNote implements Serializable {
     @ToString.Exclude
     private String borrowerIdNoEncrypted;
 
-    @NotBlank
     @ApiModelProperty(value = "出借人")
     private String lenderName;
 
@@ -167,6 +165,102 @@ public class IouNote implements Serializable {
     @JSONField(serialize = false)
     @ToString.Exclude
     private String lenderIdNo;
+
+
+    // 发起与签署扩展。内部凭证只允许服务端赋值，不进入响应或审计。
+
+    private Integer creatorRole;
+
+    private String repaymentMethod;
+
+    private Integer installmentCount;
+
+    private Integer repaymentCycleMonths;
+
+    private Timestamp firstDueDate;
+
+    private String interestRule;
+
+    private String calculationVersion;
+
+    private String prepaymentRule;
+
+    private String overdueTerms;
+
+    @JsonIgnore
+    @JSONField(serialize = false, deserialize = false)
+    @ToString.Exclude
+    private String termsSnapshot;
+
+    @JsonIgnore
+    @JSONField(serialize = false, deserialize = false)
+    @ToString.Exclude
+    private String termsHash;
+
+    @JsonIgnore
+    @JSONField(serialize = false, deserialize = false)
+    @ToString.Exclude
+    private Timestamp termsLockedAt;
+
+    @JsonIgnore
+    @JSONField(serialize = false, deserialize = false)
+    @ToString.Exclude
+    private Integer borrowerSignStatus;
+
+    @JsonIgnore
+    @JSONField(serialize = false, deserialize = false)
+    @ToString.Exclude
+    private String borrowerSignRequestId;
+
+    @JsonIgnore
+    @JSONField(serialize = false, deserialize = false)
+    @ToString.Exclude
+    private String borrowerSignEvidenceId;
+
+    @JsonIgnore
+    @JSONField(serialize = false, deserialize = false)
+    @ToString.Exclude
+    private String borrowerSignFile;
+
+    @JsonIgnore
+    @JSONField(serialize = false, deserialize = false)
+    @ToString.Exclude
+    private String borrowerSignFileHash;
+
+    @JsonIgnore
+    @JSONField(serialize = false, deserialize = false)
+    @ToString.Exclude
+    private Integer lenderSignStatus;
+
+    @JsonIgnore
+    @JSONField(serialize = false, deserialize = false)
+    @ToString.Exclude
+    private String lenderSignRequestId;
+
+    @JsonIgnore
+    @JSONField(serialize = false, deserialize = false)
+    @ToString.Exclude
+    private String lenderSignEvidenceId;
+
+    @JsonIgnore
+    @JSONField(serialize = false, deserialize = false)
+    @ToString.Exclude
+    private String lenderSignFile;
+
+    @JsonIgnore
+    @JSONField(serialize = false, deserialize = false)
+    @ToString.Exclude
+    private String lenderSignFileHash;
+
+    @JsonIgnore
+    @JSONField(serialize = false, deserialize = false)
+    @ToString.Exclude
+    private String agreementHash;
+
+    @JsonIgnore
+    @JSONField(serialize = false, deserialize = false)
+    @ToString.Exclude
+    private Long rowVersion;
 
     public void copy(IouNote source){
         BeanUtil.copyProperties(source,this, CopyOptions.create().setIgnoreNullValue(true));

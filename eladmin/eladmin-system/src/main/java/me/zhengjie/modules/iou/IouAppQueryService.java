@@ -49,7 +49,7 @@ public class IouAppQueryService {
         else if ("lender".equals(role)) query.eq("lender_id_no_hash", user.getIdNoHash());
         else if (!"all".equals(role)) throw new BadRequestException("借条身份筛选不合法");
         if (status != null) {
-            if (status < 0 || status > 6) throw new BadRequestException("借条状态筛选不合法");
+            if (status < 0 || status > 7) throw new BadRequestException("借条状态筛选不合法");
             query.eq("status", status);
         }
         if (pending) {
@@ -104,7 +104,8 @@ public class IouAppQueryService {
         result.put("id", note.getId().toString());
         result.put("noteNo", note.getNoteNo());
         result.put("role", borrower ? "borrower" : "lender");
-        result.put("counterpartyName", borrower ? note.getLenderName() : note.getBorrowerName());
+        String counterparty = borrower ? note.getLenderName() : note.getBorrowerName();
+        result.put("counterpartyName", counterparty == null ? "待对方加入" : counterparty);
         result.put("principalAmount", money(note.getPrincipalAmount()));
         result.put("dueDate", date(note.getDueDate()));
         result.put("status", note.getStatus());

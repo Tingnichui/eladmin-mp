@@ -37,6 +37,8 @@ import java.io.IOException;
 import javax.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import me.zhengjie.iou.domain.IouUser;
 import me.zhengjie.utils.PageResult;
 
 /**
@@ -71,32 +73,42 @@ public class IouNoteServiceImpl extends ServiceImpl<IouNoteMapper, IouNote> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(IouNote resources) {
-        IouNote iouNote = getById(resources.getId());
+        IouNote iouNote = iouNoteMapper.selectOne(new QueryWrapper<IouNote>().eq("id", resources.getId()).last("FOR UPDATE"));
         if (iouNote == null) {
             throw new BadRequestException("借条不存在");
         }
-        prepare(resources, false);
+        assertEditable(iouNote);
         iouNote.copy(resources);
-        if (iouNote.getBorrowerIdNoHash().equals(iouNote.getLenderIdNoHash())) {
-            throw new BadRequestException("借款人与出借人不能是同一人");
-        }
+        prepare(iouNote, false);
         iouNote.setUpdateTime(null);
+        iouNote.setRowVersion(iouNote.getRowVersion() == null ? 1L : iouNote.getRowVersion() + 1L);
         iouNoteMapper.updateById(iouNote);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteAll(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return;
+        List<IouNote> existing = iouNoteMapper.selectList(new QueryWrapper<IouNote>().in("id", ids).last("FOR UPDATE"));
+        for (IouNote note : existing) assertEditable(note);
         iouNoteMapper.deleteBatchIds(ids);
     }
 
+    private void assertEditable(IouNote note) {
+        if (note.getTermsLockedAt() != null || note.getBorrowerSignedAt() != null || note.getLenderSignedAt() != null
+            || Integer.valueOf(1).equals(note.getBorrowerSignStatus()) || Integer.valueOf(2).equals(note.getBorrowerSignStatus())
+            || Integer.valueOf(1).equals(note.getLenderSignStatus()) || Integer.valueOf(2).equals(note.getLenderSignStatus())
+            || Integer.valueOf(7).equals(note.getStatus())) {
+            throw new BadRequestException("签署处理中或已锁定的借条不能通过后台修改或删除");
+        }
+    }
+
     private void prepare(IouNote note, boolean create) {
-        if (iouUserMapper.selectById(note.getCreatorUserId()) == null) {
+        IouUser creator = iouUserMapper.selectById(note.getCreatorUserId());
+        if (creator == null) {
             throw new BadRequestException("发起人用户不存在");
         }
-        if (create && (!StringUtils.hasText(note.getBorrowerIdNo()) || !StringUtils.hasText(note.getLenderIdNo()))) {
-            throw new BadRequestException("新增借条需要填写双方身份证号");
-        }
+        if (create || Integer.valueOf(7).equals(note.getStatus())) assertEditable(note);
         if (StringUtils.hasText(note.getBorrowerIdNo())) {
             note.setBorrowerIdNoHash(identitySupport.hash(note.getBorrowerIdNo()));
             note.setBorrowerIdNoEncrypted(identitySupport.encrypt(note.getBorrowerIdNo()));
@@ -107,10 +119,36 @@ public class IouNoteServiceImpl extends ServiceImpl<IouNoteMapper, IouNote> impl
         }
         note.setBorrowerIdNo(null);
         note.setLenderIdNo(null);
+        if (note.getCreatorRole() != null) {
+            if (note.getCreatorRole() != 1 && note.getCreatorRole() != 2) throw new BadRequestException("发起人身份不合法");
+            if (!Integer.valueOf(2).equals(creator.getIdVerifyStatus()) || !StringUtils.hasText(creator.getIdNoHash())
+                || !StringUtils.hasText(creator.getIdNoEncrypted()) || !StringUtils.hasText(creator.getRealName())) {
+                throw new BadRequestException("发起人身份尚未核验");
+            }
+            if (note.getCreatorRole() == 1) {
+                note.setBorrowerName(creator.getRealName()); note.setBorrowerIdNoHash(creator.getIdNoHash());
+                note.setBorrowerIdNoEncrypted(creator.getIdNoEncrypted());
+            } else {
+                note.setLenderName(creator.getRealName()); note.setLenderIdNoHash(creator.getIdNoHash());
+                note.setLenderIdNoEncrypted(creator.getIdNoEncrypted());
+            }
+        }
+        boolean borrowerComplete = StringUtils.hasText(note.getBorrowerName()) && StringUtils.hasText(note.getBorrowerIdNoHash()) && StringUtils.hasText(note.getBorrowerIdNoEncrypted());
+        boolean lenderComplete = StringUtils.hasText(note.getLenderName()) && StringUtils.hasText(note.getLenderIdNoHash()) && StringUtils.hasText(note.getLenderIdNoEncrypted());
+        boolean borrowerEmpty = !StringUtils.hasText(note.getBorrowerName()) && !StringUtils.hasText(note.getBorrowerIdNoHash()) && !StringUtils.hasText(note.getBorrowerIdNoEncrypted());
+        boolean lenderEmpty = !StringUtils.hasText(note.getLenderName()) && !StringUtils.hasText(note.getLenderIdNoHash()) && !StringUtils.hasText(note.getLenderIdNoEncrypted());
+        if (borrowerEmpty) note.setBorrowerName(null);
+        if (lenderEmpty) note.setLenderName(null);
+        if (!borrowerComplete || !lenderComplete) {
+            boolean pendingDraft = Integer.valueOf(0).equals(note.getStatus()) &&
+                ((Integer.valueOf(1).equals(note.getCreatorRole()) && borrowerComplete && lenderEmpty)
+                || (Integer.valueOf(2).equals(note.getCreatorRole()) && lenderComplete && borrowerEmpty));
+            if (!pendingDraft) throw new BadRequestException("双方身份须完整，待邀请草稿须指定本人身份并将对方信息留空");
+        }
         if (note.getBorrowerIdNoHash() != null && note.getBorrowerIdNoHash().equals(note.getLenderIdNoHash())) {
             throw new BadRequestException("借款人与出借人不能是同一人");
         }
-        if (note.getLoanType() < 1 || note.getLoanType() > 2 || note.getStatus() < 0 || note.getStatus() > 6) {
+        if (note.getLoanType() < 1 || note.getLoanType() > 2 || note.getStatus() < 0 || note.getStatus() > 7) {
             throw new BadRequestException("借款类型或状态不合法");
         }
         if (note.getPrincipalAmount().signum() <= 0 || note.getAnnualRate().signum() < 0
