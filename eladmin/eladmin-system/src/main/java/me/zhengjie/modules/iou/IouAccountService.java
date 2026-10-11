@@ -16,7 +16,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
-import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.*;
 
@@ -121,9 +120,7 @@ public class IouAccountService {
         String password;
         try {password=RsaUtils.decryptByPrivateKey(RsaProperties.privateKey, encrypted);}
         catch (Exception e) {throw new BadRequestException("密码加密格式不正确");}
-        if (password==null || password.length()<6 || password.getBytes(StandardCharsets.UTF_8).length>72) {
-            throw new BadRequestException("密码至少6位，UTF-8长度不能超过72字节");
-        }
+        IouPasswordPolicy.validate(password);
         return password;
     }
 

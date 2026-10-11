@@ -71,7 +71,7 @@ class IouAccountServiceTest {
     }
     private IouRegisterRequest request() throws Exception {
         IouRegisterRequest r=new IouRegisterRequest(); r.setRealName("测试姓名");r.setIdNo("110101199001010010");
-        r.setPassword(RsaUtils.encryptByPublicKey(keyPair.getPublicKey(),"test-password"));r.setCode("2");r.setUuid("test-uuid");
+        r.setPassword(RsaUtils.encryptByPublicKey(keyPair.getPublicKey(),"111111"));r.setCode("2");r.setUuid("test-uuid");
         r.setAgreementAccepted(true);r.setIdentityConsentAccepted(true);r.setAgreementVersion("v1");return r;
     }
 
@@ -186,6 +186,22 @@ class IouAccountServiceTest {
         IouRegisterRequest r=request();r.setPassword("plaintext");assertThrows(BadRequestException.class,()->service.register(r,"127.0.0.1"));
         r.setPassword(RsaUtils.encryptByPublicKey(keyPair.getPublicKey(),"123"));
         assertThrows(BadRequestException.class,()->service.register(r,"127.0.0.1"));verifyNoInteractions(verifier,guard);
+    }
+    @Test void rejectsInvalidNumericPasswordBeforeCaptchaOrFee() throws Exception {
+        for (String password : Arrays.asList("1234567", "abc123", "12 345", "123456\n", "１２３４５６")) {
+            IouRegisterRequest r=request();
+            r.setPassword(RsaUtils.encryptByPublicKey(keyPair.getPublicKey(),password));
+            assertEquals("密码必须为 6 位数字", assertThrows(BadRequestException.class,
+                () -> service.register(r,"127.0.0.1")).getMessage());
+        }
+        verifyNoInteractions(verifier,guard,passwords,transactions);
+        verify(users,never()).create(any());
+    }
+    @Test void leadingZeroIsPreservedWhenEncodingRegisteredPassword() throws Exception {
+        IouRegisterRequest r=request();
+        r.setPassword(RsaUtils.encryptByPublicKey(keyPair.getPublicKey(),"012345"));
+        service.register(r,"127.0.0.1");
+        verify(passwords).encode("012345");
     }
     @Test void loginResolvesOnlyEnabledIouAccount() {
         IouUser person=new IouUser();person.setSysUserId(123L);when(persons.selectOne(any())).thenReturn(person);

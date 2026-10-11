@@ -27,6 +27,7 @@ import me.zhengjie.annotation.rest.AnonymousGetMapping;
 import me.zhengjie.annotation.rest.AnonymousPostMapping;
 import me.zhengjie.config.properties.RsaProperties;
 import me.zhengjie.exception.BadRequestException;
+import me.zhengjie.modules.iou.IouPasswordPolicy;
 import me.zhengjie.modules.security.config.CaptchaConfig;
 import me.zhengjie.modules.security.config.enums.LoginCodeEnum;
 import me.zhengjie.modules.security.config.LoginProperties;
@@ -82,6 +83,7 @@ public class AuthController {
         boolean iouLogin = "IOU".equals(authUser.getLoginType());
         String username = authUser.getUsername();
         if (iouLogin) {
+            IouPasswordPolicy.validate(password);
             username = iouAccounts.resolveLogin(username);
         } else if (!SpringUtil.isDevEnv()) {
             // 查询验证码
