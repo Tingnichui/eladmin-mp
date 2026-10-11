@@ -19,6 +19,7 @@ import java.util.Map;
 @PreAuthorize("@iouAccessPolicy.canAccessH5(authentication)")
 public class IouNoteBusinessController {
     private final IouNoteBusinessService service;
+    private final IouWechatShareService wechatShare;
     @GetMapping("/note-options") public Map<String,Object> options(){return service.options(SecurityUtils.getCurrentUserId());}
     @PostMapping("/notes/quote") public Map<String,Object> quote(@RequestBody IouNoteConditions body){return service.quote(SecurityUtils.getCurrentUserId(),body);}
     @PostMapping("/notes") public ResponseEntity<Map<String,Object>> create(@RequestHeader("Idempotency-Key") String key,@RequestBody IouNoteConditions body){return ResponseEntity.status(201).body(service.create(SecurityUtils.getCurrentUserId(),key,body));}
@@ -31,6 +32,10 @@ public class IouNoteBusinessController {
     }
     @GetMapping("/notes/{id}/signatures/current") public Map<String,Object> current(@PathVariable long id,@RequestParam(required=false) String shareReference){return service.current(SecurityUtils.getCurrentUserId(),id,shareReference);}
     @GetMapping("/notes/{id}/share") public Map<String,Object> share(@PathVariable long id){return service.share(SecurityUtils.getCurrentUserId(),id);}
+    @PostMapping("/notes/{id}/wechat-share") public ResponseEntity<Map<String,Object>> wechatShare(@PathVariable long id,@RequestBody WechatShare body){
+        Map<String,Object> invitation=service.share(SecurityUtils.getCurrentUserId(),id);
+        return ResponseEntity.ok().header("Cache-Control","no-store").body(wechatShare.configure(body.getPageUrl(),(String)invitation.get("reference")));
+    }
     @GetMapping("/shared-notes/{reference}") public Map<String,Object> shared(@PathVariable String reference){return service.shared(SecurityUtils.getCurrentUserId(),reference);}
     @PostMapping("/notes/{id}/cancel") public Map<String,Object> cancel(@PathVariable long id,@RequestBody Cancel body){return service.cancel(SecurityUtils.getCurrentUserId(),id,body.getVersion(),body.getReason());}
     @GetMapping("/notes/{id}/agreement") public ResponseEntity<byte[]> agreement(@PathVariable long id,@RequestParam(defaultValue="download") String disposition){
@@ -46,6 +51,7 @@ public class IouNoteBusinessController {
     }
     @Data public static class Edit extends StrictBody {private String version;private IouNoteConditions conditions;}
     @Data public static class Cancel extends StrictBody {private String version;private String reason;}
+    @Data public static class WechatShare extends StrictBody {private String pageUrl;}
     @Data public static class Sign extends StrictBody {
         private String version;
         private String previewHash;

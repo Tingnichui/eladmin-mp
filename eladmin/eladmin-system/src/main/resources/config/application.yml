@@ -77,7 +77,17 @@ jasypt:
     password: ${JASYPT_ENCRYPTOR_PASSWORD}
 
 # 身份核验供应商配置；禁止在启动和单元测试中自动真实调用。
+logging:
+  level:
+    me.zhengjie.iou.service.IouWechatHttpClient: WARN
+
 iou:
+  wechat:
+    enabled: ${IOU_WECHAT_ENABLED:false}
+    app-id: ${IOU_WECHAT_APP_ID:}
+    app-secret: ${IOU_WECHAT_APP_SECRET:}
+    public-origin: ${IOU_WECHAT_PUBLIC_ORIGIN:}
+    image-url: ${IOU_WECHAT_IMAGE_URL:}
   notes:
     creation-enabled: true
     signing-enabled: true
