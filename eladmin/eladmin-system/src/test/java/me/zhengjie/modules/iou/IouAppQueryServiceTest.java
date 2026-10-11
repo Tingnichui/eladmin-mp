@@ -8,6 +8,8 @@ import me.zhengjie.iou.domain.IouNote;
 import me.zhengjie.iou.domain.IouUser;
 import me.zhengjie.iou.mapper.IouNoteMapper;
 import me.zhengjie.iou.mapper.IouUserMapper;
+import me.zhengjie.iou.service.IouNoteBusinessService;
+import me.zhengjie.iou.service.IouNoteOptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -27,7 +29,8 @@ class IouAppQueryServiceTest {
     @BeforeEach void setup() {
         users = mock(IouUserMapper.class);
         notes = mock(IouNoteMapper.class);
-        service = new IouAppQueryService(users, notes);
+        IouNoteBusinessService business = new IouNoteBusinessService(null, null, null, null, mock(IouNoteOptions.class), null, null);
+        service = new IouAppQueryService(users, notes, business);
         user = new IouUser();
         user.setId(17L); user.setSysUserId(123L); user.setIdVerifyStatus(2);
         user.setIdNoHash(String.join("", Collections.nCopies(64, "a")));
@@ -97,7 +100,7 @@ class IouAppQueryServiceTest {
         assertTrue(sql.contains("AND id ="));
         assertTrue(captor.getValue().getParamNameValuePairs().containsValue(99L));
         assertFalse(captor.getValue().getSqlSelect().contains("encrypted"));
-        assertFalse(captor.getValue().getSqlSelect().contains("agreement_file"));
+        assertTrue(captor.getValue().getSqlSelect().contains("agreement_hash"));
     }
     @Test void responseKeepsMoneyAndIdentifiersExactAndExcludesSecrets() {
         Map<String, Object> view = service.view(note(), user, true);
@@ -119,6 +122,29 @@ class IouAppQueryServiceTest {
         assertEquals("lender", result.get("role"));
         assertEquals("合成甲", result.get("counterpartyName"));
         assertFalse(result.containsKey("remark"));
+    }
+    @Test void listActionsRespectOwnershipLockAndStatus() {
+        IouNote draft = note(); draft.setStatus(0); draft.setRepaymentMethod("once");
+        List<?> editable = (List<?>) service.view(draft, user, false).get("actions");
+        assertTrue(editable.containsAll(Arrays.asList("EDIT", "DELETE", "CANCEL")));
+        draft.setTermsLockedAt(Timestamp.valueOf("2026-10-11 12:00:00"));
+        List<?> locked = (List<?>) service.view(draft, user, false).get("actions");
+        assertFalse(locked.contains("EDIT")); assertFalse(locked.contains("DELETE"));
+        draft.setStatus(7);
+        List<?> waiting = (List<?>) service.view(draft, user, false).get("actions");
+        assertTrue(waiting.containsAll(Arrays.asList("SHARE", "CANCEL")));
+        draft.setCreatorUserId(99L);
+        assertEquals(Collections.singletonList("VIEW"), service.view(draft, user, false).get("actions"));
+        draft.setCreatorUserId(user.getId()); draft.setStatus(2); draft.setAgreementHash("private-hash");
+        List<?> effective = (List<?>) service.view(draft, user, false).get("actions");
+        assertTrue(effective.contains("VIEW_AGREEMENT"));
+        assertFalse(effective.contains("CANCEL")); assertFalse(effective.contains("SHARE"));
+        String json = com.alibaba.fastjson2.JSON.toJSONString(service.view(draft, user, false));
+        assertFalse(json.contains("private-file-path")); assertFalse(json.contains("private-hash"));
+        draft.setStatus(4); draft.setAgreementFile(null);
+        assertEquals(Collections.singletonList("VIEW"), service.view(draft, user, false).get("actions"));
+        draft.setStatus(0); draft.setRepaymentMethod(null);
+        assertEquals(Collections.singletonList("VIEW"), service.view(draft, user, false).get("actions"));
     }
     @Test void summaryUsesActivePrincipalOnlyAndIncludesZeroValues() {
         Map<String, Object> aggregate = new HashMap<>();

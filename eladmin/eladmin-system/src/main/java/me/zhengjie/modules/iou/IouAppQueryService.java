@@ -9,6 +9,7 @@ import me.zhengjie.iou.domain.IouNote;
 import me.zhengjie.iou.domain.IouUser;
 import me.zhengjie.iou.mapper.IouNoteMapper;
 import me.zhengjie.iou.mapper.IouUserMapper;
+import me.zhengjie.iou.service.IouNoteBusinessService;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -21,11 +22,12 @@ import java.util.stream.Collectors;
 public class IouAppQueryService {
     private final IouUserMapper users;
     private final IouNoteMapper notes;
+    private final IouNoteBusinessService business;
     private static final String[] READ_COLUMNS = {"id", "note_no", "creator_user_id", "borrower_name",
         "lender_name", "borrower_id_no_hash", "lender_id_no_hash", "loan_type", "principal_amount",
         "annual_rate", "loan_date", "due_date", "interest_amount", "total_amount", "purpose", "remark",
         "service_fee", "borrower_signed_at", "lender_signed_at", "status", "effective_at", "cancel_reason",
-        "create_time", "update_time", "creator_role", "repayment_method", "row_version", "terms_locked_at", "borrower_sign_status", "lender_sign_status"};
+        "create_time", "update_time", "creator_role", "repayment_method", "row_version", "terms_locked_at", "borrower_sign_status", "lender_sign_status", "agreement_file", "agreement_hash"};
 
     private IouUser person(long sysUserId) {
         IouUser user = users.selectOne(new LambdaQueryWrapper<IouUser>().eq(IouUser::getSysUserId, sysUserId));
@@ -114,6 +116,7 @@ public class IouAppQueryService {
         result.put("version", String.valueOf(note.getRowVersion() == null ? 0 : note.getRowVersion()));
         result.put("creatorRole", note.getCreatorRole());
         result.put("legacy", note.getRepaymentMethod() == null);
+        result.put("actions", business.actions(note, user));
         if (detail) {
             result.put("borrowerName", note.getBorrowerName());
             result.put("lenderName", note.getLenderName());
