@@ -65,7 +65,9 @@ public class IouNoteBusinessService {
     @Transactional public void delete(long sysId,long id,String version){
         IouUser u=person(sysId,false);IouNote n=notes.selectOne(new QueryWrapper<IouNote>().eq("id",id).last("FOR UPDATE"));
         if(n==null)return;
-        owner(n,u);editable(n);version(n,version);
+        owner(n,u);
+        if(!Integer.valueOf(4).equals(n.getStatus()))editable(n);
+        version(n,version);
         plans.delete(new QueryWrapper<IouNotePlan>().eq("note_id",id));notes.deleteById(id);
     }
     private void apply(IouNote n,IouUser u,IouRepaymentCalculator.Quote q){
@@ -194,7 +196,18 @@ public class IouNoteBusinessService {
         if(reason!=null&&reason.length()>255)fail(400,"INVALID_CONDITIONS","取消原因最多255字");n.setStatus(4);n.setCancelReason(reason);n.setRowVersion(n.getRowVersion()+1);notes.updateById(n);return view(n,u);
     }
     public byte[] agreement(long sysId,long id){IouUser u=person(sysId,false);IouNote n=note(id,false);participant(n,u);if(n.getAgreementFile()==null)fail(409,"AGREEMENT_NOT_READY","最终借条尚未生成");return store.read(n.getAgreementFile(),n.getAgreementHash());}
-    public List<String> actions(IouNote n,IouUser u){List<String>a=new ArrayList<>();a.add("VIEW");if(n.getRepaymentMethod()==null)return a;if(u.getId().equals(n.getCreatorUserId())){if(Integer.valueOf(0).equals(n.getStatus())&&n.getTermsLockedAt()==null){a.addAll(Arrays.asList("EDIT","DELETE","PREVIEW"));if(options.canSign())a.add("SIGN_INITIATOR");}if(Arrays.asList(0,7).contains(n.getStatus()))a.add("CANCEL");if(Integer.valueOf(7).equals(n.getStatus()))a.add("SHARE");}if(n.getAgreementFile()!=null&&n.getAgreementHash()!=null)a.add("VIEW_AGREEMENT");return a;}
+    public List<String> actions(IouNote n,IouUser u){
+        List<String>a=new ArrayList<>();a.add("VIEW");
+        boolean creator=u.getId().equals(n.getCreatorUserId());
+        if(creator&&Integer.valueOf(4).equals(n.getStatus()))a.add("DELETE");
+        if(n.getRepaymentMethod()==null)return a;
+        if(creator){
+            if(Integer.valueOf(0).equals(n.getStatus())&&n.getTermsLockedAt()==null){a.addAll(Arrays.asList("EDIT","DELETE","PREVIEW"));if(options.canSign())a.add("SIGN_INITIATOR");}
+            if(Arrays.asList(0,7).contains(n.getStatus()))a.add("CANCEL");
+            if(Integer.valueOf(7).equals(n.getStatus()))a.add("SHARE");
+        }
+        if(n.getAgreementFile()!=null&&n.getAgreementHash()!=null)a.add("VIEW_AGREEMENT");return a;
+    }
     public static String stage(IouNote n){if(Integer.valueOf(1).equals(n.getStatus()))return "LEGACY_WAITING_CONFIRMATION";if(Integer.valueOf(5).equals(n.getStatus()))return "REJECTED";if(Integer.valueOf(4).equals(n.getStatus()))return "CANCELLED";if(Integer.valueOf(2).equals(n.getStatus()))return "EFFECTIVE";if(Integer.valueOf(3).equals(n.getStatus()))return "SETTLED";if(Integer.valueOf(6).equals(n.getStatus()))return "WAITING_FEE";if(Integer.valueOf(7).equals(n.getStatus()))return "WAITING_COUNTERPARTY";return n.getTermsLockedAt()==null?"DRAFT_EDITABLE":"TERMS_LOCKED";}
     private void enabled(){if(!options.isCreationEnabled())fail(503,"CONFIG_NOT_READY","发起借条暂未开放");}
     private IouNote note(long id,boolean lock){QueryWrapper<IouNote>q=new QueryWrapper<IouNote>().eq("id",id);if(lock)q.last("FOR UPDATE");IouNote n=notes.selectOne(q);if(n==null)fail(404,"NOTE_NOT_FOUND","借条不存在或无权查看");return n;}

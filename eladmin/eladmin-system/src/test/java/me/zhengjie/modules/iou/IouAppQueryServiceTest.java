@@ -142,6 +142,10 @@ class IouAppQueryServiceTest {
         String json = com.alibaba.fastjson2.JSON.toJSONString(service.view(draft, user, false));
         assertFalse(json.contains("private-file-path")); assertFalse(json.contains("private-hash"));
         draft.setStatus(4); draft.setAgreementFile(null);
+        assertEquals(Arrays.asList("VIEW", "DELETE"), service.view(draft, user, false).get("actions"));
+        draft.setRepaymentMethod(null);
+        assertEquals(Arrays.asList("VIEW", "DELETE"), service.view(draft, user, false).get("actions"));
+        draft.setCreatorUserId(99L);
         assertEquals(Collections.singletonList("VIEW"), service.view(draft, user, false).get("actions"));
         draft.setStatus(0); draft.setRepaymentMethod(null);
         assertEquals(Collections.singletonList("VIEW"), service.view(draft, user, false).get("actions"));

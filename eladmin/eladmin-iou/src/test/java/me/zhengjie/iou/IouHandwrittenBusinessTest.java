@@ -45,4 +45,35 @@ class IouHandwrittenBusinessTest {
     @Test void configurationAndBlankSignatureCannotFakeSuccess() throws Exception{draft();options.setSigningEnabled(false);assertThrows(IouBusinessException.class,()->sign("initiator-sign-key-123",null));options.setSigningEnabled(true);assertThrows(IouBusinessException.class,()->IouAgreementStore.signature("data:image/png;base64,AAAA"));assertEquals(0,stored.getStatus());}
     @Test void fileIntegrityAndPathTraversalAreRejected(){IouAgreementStore store=new IouAgreementStore(options);String key=store.write("sample.html","safe".getBytes(java.nio.charset.StandardCharsets.UTF_8));assertThrows(IouBusinessException.class,()->store.read(key,"bad"));assertThrows(IouBusinessException.class,()->store.write("../escape.html",new byte[0]));}
     @Test void wrongRoleUnknownFieldsAndStaleVersionCannotWrite(){IouNoteConditions c=IouRepaymentCalculatorTest.standard("principal");c.setCreatorRole("admin");assertThrows(IouBusinessException.class,()->service.create(17,"create-operation-key-123",c));assertThrows(IouBusinessException.class,()->c.rejectUnknown("borrowerIdNo","secret"));draft();assertThrows(IouBusinessException.class,()->service.cancel(17,91,"9","bad"));verify(notes,never()).updateById(any());}
+    @Test void cancelledSignedNoteCanBeDeletedByCreatorAndOldInviteStopsWorking() throws Exception {
+        draft();sign("initiator-sign-key-123",null);
+        String reference=(String)service.share(17,91).get("reference");
+        service.cancel(17,91,"1","取消测试");
+        assertTrue(service.actions(stored,actor).contains("DELETE"));
+        when(notes.deleteById(91L)).thenAnswer(i->{stored=null;return 1;});
+        service.delete(17,91,"2");
+        org.mockito.InOrder order=inOrder(plans,notes);
+        order.verify(plans).delete(any());order.verify(notes).deleteById(91L);
+        service.delete(17,91,"2");verify(notes,times(1)).deleteById(91L);
+        assertThrows(IouBusinessException.class,()->service.shared(17,reference));
+    }
+    @Test void cancelledDeletionChecksCreatorAndCurrentVersionBeforeRemovingPlans() {
+        draft();service.cancel(17,91,"0","取消测试");
+        assertThrows(IouBusinessException.class,()->service.delete(17,91,"0"));
+        actor=user(18,"b");
+        assertFalse(service.actions(stored,actor).contains("DELETE"));
+        assertThrows(IouBusinessException.class,()->service.delete(18,91,"1"));
+        verify(plans,never()).delete(any());verify(notes,never()).deleteById(anyLong());
+    }
+    @Test void cancelledLegacyNoteCanBeDeletedButOtherNonDraftStatusesCannot() {
+        draft();stored.setStatus(4);stored.setRepaymentMethod(null);
+        assertTrue(service.actions(stored,actor).contains("DELETE"));
+        service.delete(17,91,"0");verify(notes).deleteById(91L);
+        clearInvocations(notes,plans);
+        for(int status:new int[]{1,2,3,5,6,7}) {
+            stored.setStatus(status);
+            assertThrows(IouBusinessException.class,()->service.delete(17,91,"0"));
+        }
+        verify(plans,never()).delete(any());verify(notes,never()).deleteById(anyLong());
+    }
 }
