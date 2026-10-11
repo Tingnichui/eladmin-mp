@@ -26,6 +26,7 @@ public class IouNoteBusinessService {
     private final IouRepaymentCalculator calculator;
     private final IouNoteOptions options;
     private final IouAgreementStore store;
+    private final IouNoteNumberService numbers;
     private final ObjectMapper json=new ObjectMapper().configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS,true);
 
     public IouUser person(long sysId,boolean lock){
@@ -45,7 +46,7 @@ public class IouNoteBusinessService {
         String requestHash=IouAgreementStore.hash(encode(q.getConditions()));
         IouNote old=notes.selectOne(new QueryWrapper<IouNote>().eq("creator_user_id",u.getId()).eq("create_request_key",key));
         if(old!=null){if(!requestHash.equals(old.getCreateRequestHash()))fail(409,"IDEMPOTENCY_CONFLICT","同一操作编号的内容已变化");return view(old,u);}
-        IouNote n=new IouNote();n.setCreatorUserId(u.getId());n.setNoteNo("IOU"+UUID.randomUUID().toString().replace("-","").substring(0,28));
+        IouNote n=new IouNote();n.setCreatorUserId(u.getId());n.setNoteNo(numbers.next());
         n.setStatus(0);n.setRowVersion(0L);n.setBorrowerSignStatus(0);n.setLenderSignStatus(0);n.setServiceFee(BigDecimal.ZERO.setScale(2));
         n.setCreateRequestKey(key);n.setCreateRequestHash(requestHash);apply(n,u,q);
         if(notes.insert(n)!=1)throw new IllegalStateException("草稿保存失败");savePlan(n.getId(),q.getPlan());return view(n,u);

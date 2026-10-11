@@ -24,7 +24,8 @@ class IouHandwrittenBusinessTest {
         when(users.selectOne(any())).thenAnswer(i->actor);when(notes.selectOne(any())).thenAnswer(i->stored);
         when(notes.insert(any())).thenAnswer(i->{stored=i.getArgument(0);stored.setId(91L);return 1;});when(notes.updateById(any())).thenReturn(1);
         when(plans.insert(any())).thenAnswer(i->{plan.add(i.getArgument(0));return 1;});when(plans.selectList(any())).thenAnswer(i->plan);
-        service=new IouNoteBusinessService(notes,plans,users,new IouRepaymentCalculator(options),options,new IouAgreementStore(options));
+        IouNoteNumberService numbers=mock(IouNoteNumberService.class);when(numbers.next()).thenReturn("JT20261011-002020");
+        service=new IouNoteBusinessService(notes,plans,users,new IouRepaymentCalculator(options),options,new IouAgreementStore(options),numbers);
     }
     IouUser user(long id,String h){IouUser u=new IouUser();u.setId(id);u.setSysUserId(id);u.setRealName("合成用户"+id);u.setIdVerifyStatus(2);u.setIdNoHash(String.join("",Collections.nCopies(64,h)));u.setIdNoEncrypted("synthetic-encrypted");return u;}
     String image() throws Exception{BufferedImage b=new BufferedImage(640,240,BufferedImage.TYPE_INT_ARGB);Graphics2D g=b.createGraphics();g.setColor(Color.WHITE);g.fillRect(0,0,640,240);g.setColor(Color.BLACK);g.setStroke(new BasicStroke(4));g.drawLine(20,20,160,120);g.drawLine(160,120,250,40);g.dispose();ByteArrayOutputStream out=new ByteArrayOutputStream();ImageIO.write(b,"png",out);return "data:image/png;base64,"+Base64.getEncoder().encodeToString(out.toByteArray());}
