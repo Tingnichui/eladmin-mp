@@ -32,6 +32,51 @@ import static org.mockito.Mockito.when;
 class BinanceSpotTradeMatcherServiceImplTest {
 
     @Test
+    void shouldRepairOnlyIncompleteMatchesAndIncludePreviousAllocations() {
+        BinanceSpotTradeMatchMapper mapper = mock(BinanceSpotTradeMatchMapper.class);
+        SpotCommissionValuationService valuation = mock(SpotCommissionValuationService.class);
+        BinanceSpotTradeMatcherServiceImpl service = new BinanceSpotTradeMatcherServiceImpl(null, mapper, null);
+        ReflectionTestUtils.setField(service, "commissionValuationService", valuation);
+        SpotActualFeeRebuildResult result = new SpotActualFeeRebuildResult();
+        result.setTradeCount(1);
+        when(valuation.valueIncompleteScope(7, "BTCUSDT")).thenReturn(result);
+        SpotTradeMatchFeeRevaluation first = feeRow(1L, "0.4", 1);
+        SpotTradeMatchFeeRevaluation second = feeRow(2L, "0.6", 0);
+        when(mapper.findFeeRevaluationRows(7, "BTCUSDT")).thenReturn(Arrays.asList(first, second));
+        when(mapper.updateFeeValuation(eq(2L), any(), any(), any(), any(), any(), any(), eq(1), any(), any())).thenReturn(1);
+
+        service.repairIncompleteFees(7, "BTCUSDT");
+
+        assertEquals(1, result.getUpdatedMatchCount());
+        verify(mapper, never()).updateFeeValuation(eq(1L), any(), any(), any(), any(), any(), any(), any(Integer.class), any(), any());
+        verify(mapper).updateFeeValuation(eq(2L), eq("USDT"), eq(new BigDecimal("0.6000000000000000")),
+                eq(new BigDecimal("0.6000000000000000")), eq("USDT"),
+                eq(new BigDecimal("0.6000000000000000")), eq(new BigDecimal("0.6000000000000000")),
+                eq(1), eq(new BigDecimal("1.2000000000000000")), eq(new BigDecimal("8.8000000000000000")));
+    }
+
+    private SpotTradeMatchFeeRevaluation feeRow(long id, String qty, int complete) {
+        SpotTradeMatchFeeRevaluation row = new SpotTradeMatchFeeRevaluation();
+        row.setId(id);
+        row.setFeeValuationComplete(complete);
+        row.setBuyTradeId(10L);
+        row.setSellTradeId(20L);
+        row.setMatchedQty(new BigDecimal(qty));
+        row.setPnl(new BigDecimal("10"));
+        row.setBuyTradeQty(BigDecimal.ONE);
+        row.setSellTradeQty(BigDecimal.ONE);
+        row.setBuyCommission(BigDecimal.ONE);
+        row.setSellCommission(BigDecimal.ONE);
+        row.setBuyCommissionAsset("USDT");
+        row.setSellCommissionAsset("USDT");
+        row.setBuyCommissionQuoteAmount(BigDecimal.ONE);
+        row.setSellCommissionQuoteAmount(BigDecimal.ONE);
+        row.setBuyCommissionValuationStatus("COMPLETED");
+        row.setSellCommissionValuationStatus("COMPLETED");
+        return row;
+    }
+
+    @Test
     void shouldRevalueExistingMatchesWithoutRebuildingFifo() {
         BinanceSpotTradeMatchStateMapper stateMapper = mock(BinanceSpotTradeMatchStateMapper.class);
         BinanceSpotTradeMatchMapper matchMapper = mock(BinanceSpotTradeMatchMapper.class);

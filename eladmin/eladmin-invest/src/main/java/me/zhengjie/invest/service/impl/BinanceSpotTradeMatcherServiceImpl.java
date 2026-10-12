@@ -5,6 +5,7 @@ import me.zhengjie.invest.domain.BinanceSpotTradeMatch;
 import me.zhengjie.invest.domain.BinanceSpotTradeMatchState;
 import me.zhengjie.invest.domain.dto.BinanceSpotSellSourceDto;
 import me.zhengjie.invest.domain.dto.BinanceSpotTradeMatchResult;
+import me.zhengjie.invest.domain.dto.BinanceSpotTradeStatsAggregate;
 import me.zhengjie.invest.domain.dto.SpotActualFeeRebuildResult;
 import me.zhengjie.invest.domain.dto.SpotTradeMatchFeeRevaluation;
 import me.zhengjie.invest.mapper.BinanceSpotTradeMatchMapper;
@@ -224,6 +225,25 @@ public class BinanceSpotTradeMatcherServiceImpl implements BinanceSpotTradeMatch
     public SpotActualFeeRebuildResult rebuildWithActualFees(Integer uid, String symbol) {
         validateScope(uid, symbol);
         SpotActualFeeRebuildResult result = commissionValuationService.valueScope(uid, symbol);
+        return updateMatchFees(uid, symbol, result, false);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public SpotActualFeeRebuildResult repairIncompleteFees(Integer uid, String symbol) {
+        validateScope(uid, symbol);
+        SpotActualFeeRebuildResult result = commissionValuationService.valueIncompleteScope(uid, symbol);
+        BinanceSpotTradeStatsAggregate aggregate = matchMapper.aggregateStats(uid, symbol);
+        if (result.getTradeCount() == 0 && (aggregate == null
+                || aggregate.getIncompleteFeeCount() == null || aggregate.getIncompleteFeeCount() == 0)) {
+            return result;
+        }
+        return updateMatchFees(uid, symbol, result, true);
+    }
+
+    private SpotActualFeeRebuildResult updateMatchFees(Integer uid, String symbol,
+                                                      SpotActualFeeRebuildResult result,
+                                                      boolean onlyIncomplete) {
         if (result.getFailedCount() > 0) {
             return result;
         }
@@ -246,13 +266,15 @@ public class BinanceSpotTradeMatcherServiceImpl implements BinanceSpotTradeMatch
                     && buyFeeQuoteAmount != null && sellFeeQuoteAmount != null;
             BigDecimal fee = valuationComplete
                     ? buyFeeQuoteAmount.add(sellFeeQuoteAmount) : BigDecimal.ZERO;
-            updatedCount += matchMapper.updateFeeValuation(
-                    row.getId(),
-                    row.getBuyCommissionAsset(), buyFeeAmount, buyFeeQuoteAmount,
-                    row.getSellCommissionAsset(), sellFeeAmount, sellFeeQuoteAmount,
-                    valuationComplete ? 1 : 0,
-                    fee,
-                    valuationComplete ? row.getPnl().subtract(fee) : null);
+            if (!onlyIncomplete || !Integer.valueOf(1).equals(row.getFeeValuationComplete())) {
+                updatedCount += matchMapper.updateFeeValuation(
+                        row.getId(),
+                        row.getBuyCommissionAsset(), buyFeeAmount, buyFeeQuoteAmount,
+                        row.getSellCommissionAsset(), sellFeeAmount, sellFeeQuoteAmount,
+                        valuationComplete ? 1 : 0,
+                        fee,
+                        valuationComplete ? row.getPnl().subtract(fee) : null);
+            }
             buyMatchedQty.put(row.getBuyTradeId(), buyPreviouslyMatched.add(row.getMatchedQty()));
             sellMatchedQty.put(row.getSellTradeId(), sellPreviouslyMatched.add(row.getMatchedQty()));
         }

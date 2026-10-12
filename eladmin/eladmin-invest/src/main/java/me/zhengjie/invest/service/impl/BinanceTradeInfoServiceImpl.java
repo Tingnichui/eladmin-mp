@@ -220,6 +220,7 @@ public class BinanceTradeInfoServiceImpl extends ServiceImpl<BinanceTradeInfoMap
                 }
             }
         });
+        binanceSpotTradeMatcherService.repairIncompleteFees(accountInfo.getUid(), symbol);
         binanceSpotTradeMatcherService.initializeAndMatch(accountInfo.getUid(), symbol);
         return syncedCount[0];
     }

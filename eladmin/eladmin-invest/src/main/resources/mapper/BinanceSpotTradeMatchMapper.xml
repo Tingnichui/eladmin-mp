@@ -113,6 +113,7 @@
 
     <select id="findFeeRevaluationRows" resultType="me.zhengjie.invest.domain.dto.SpotTradeMatchFeeRevaluation">
         SELECT m.id,
+               m.fee_valuation_complete AS feeValuationComplete,
                m.buy_trade_id AS buyTradeId,
                m.sell_trade_id AS sellTradeId,
                m.matched_qty AS matchedQty,

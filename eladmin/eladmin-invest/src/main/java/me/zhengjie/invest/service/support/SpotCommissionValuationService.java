@@ -43,10 +43,22 @@ public class SpotCommissionValuationService {
     }
 
     public SpotActualFeeRebuildResult valueScope(Integer uid, String symbol) {
+        return valueScope(uid, symbol, false);
+    }
+
+    public SpotActualFeeRebuildResult valueIncompleteScope(Integer uid, String symbol) {
+        return valueScope(uid, symbol, true);
+    }
+
+    private SpotActualFeeRebuildResult valueScope(Integer uid, String symbol, boolean onlyIncomplete) {
         List<BinanceTradeInfo> trades = binanceTradeInfoMapper.findScopeForFeeValuation(uid, symbol);
         SpotActualFeeRebuildResult result = new SpotActualFeeRebuildResult();
-        result.setTradeCount(trades.size());
         for (BinanceTradeInfo trade : trades) {
+            if (onlyIncomplete && STATUS_COMPLETED.equals(trade.getCommissionValuationStatus())
+                    && trade.getCommissionQuoteAmount() != null) {
+                continue;
+            }
+            result.setTradeCount(result.getTradeCount() + 1);
             value(trade);
             binanceTradeInfoMapper.updateById(trade);
             if (STATUS_COMPLETED.equals(trade.getCommissionValuationStatus())) {

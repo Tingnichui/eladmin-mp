@@ -75,6 +75,7 @@ class BinanceTradeIncrementalSyncTest {
 
         assertEquals(0, count);
         verify(service, times(0)).saveOrUpdateBatch(anyCollection());
+        verify(matcherService).repairIncompleteFees(9, "BNBUSDT");
         verify(matcherService).initializeAndMatch(9, "BNBUSDT");
         assertNull(BinanceAccountContextHolder.get());
     }

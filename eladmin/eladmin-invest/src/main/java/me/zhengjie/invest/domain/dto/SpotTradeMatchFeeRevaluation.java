@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 public class SpotTradeMatchFeeRevaluation {
 
     private Long id;
+    private Integer feeValuationComplete;
     private Long buyTradeId;
     private Long sellTradeId;
     private BigDecimal matchedQty;

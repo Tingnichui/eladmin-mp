@@ -15,4 +15,6 @@ public interface BinanceSpotTradeMatcherService {
     BinanceSpotTradeMatchResult initializeAndMatch(Integer uid, String symbol);
 
     SpotActualFeeRebuildResult rebuildWithActualFees(Integer uid, String symbol);
+
+    SpotActualFeeRebuildResult repairIncompleteFees(Integer uid, String symbol);
 }
