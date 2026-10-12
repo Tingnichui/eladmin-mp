@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS `iou_note` (
   `purpose` varchar(255) DEFAULT NULL COMMENT '借款用途',
   `remark` varchar(500) DEFAULT NULL COMMENT '备注',
   `service_fee` decimal(18,2) NOT NULL DEFAULT 0 COMMENT '借款人应付服务费',
+  `payment_order_no` varchar(32) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL COMMENT '当前微信商户订单号',
+  `service_fee_pay_status` tinyint NOT NULL DEFAULT 0 COMMENT '服务费支付状态0未付1待确认2已付3已关闭',
   `borrower_signed_at` datetime DEFAULT NULL COMMENT '借款人签署时间',
   `lender_signed_at` datetime DEFAULT NULL COMMENT '出借人签署时间',
   `agreement_file` varchar(255) DEFAULT NULL COMMENT '协议文件存储标识',
@@ -65,6 +67,8 @@ CREATE TABLE IF NOT EXISTS `iou_note` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_iou_note_note_no` (`note_no`),
   UNIQUE KEY `uk_iou_note_create_request` (`creator_user_id`, `create_request_key`),
+  UNIQUE KEY `uk_iou_note_payment_order` (`payment_order_no`),
+  KEY `idx_iou_note_fee_pending` (`service_fee_pay_status`, `update_time`, `id`),
   KEY `idx_iou_note_borrower_status` (`borrower_id_no_hash`, `status`),
   KEY `idx_iou_note_lender_status` (`lender_id_no_hash`, `status`),
   KEY `idx_iou_note_creator` (`creator_user_id`)

@@ -38,7 +38,7 @@ public class IouNoteBusinessService {
     }
     public Map<String,Object> options(long sysId){person(sysId,false);return options.view();}
     public Map<String,Object> quote(long sysId,IouNoteConditions input){person(sysId,false);return quoteView(calculator.calculate(input));}
-    private Map<String,Object> quoteView(IouRepaymentCalculator.Quote q){return map("conditions",q.getConditions(),"summary",q.getSummary(),"plan",planView(q.getPlan()),"interestRule",q.getInterestRule(),"calculationVersion",q.getCalculationVersion(),"warnings",q.getWarnings());}
+    private Map<String,Object> quoteView(IouRepaymentCalculator.Quote q){return map("conditions",q.getConditions(),"summary",q.getSummary(),"plan",planView(q.getPlan()),"interestRule",q.getInterestRule(),"calculationVersion",q.getCalculationVersion(),"warnings",q.getWarnings(),"fee",options.fee(new BigDecimal(q.getConditions().getPrincipalAmount())));}
     private static List<Map<String,Object>> planView(List<IouNotePlan> rows){List<Map<String,Object>>r=new ArrayList<>();for(IouNotePlan p:rows)r.add(map("periodNo",p.getPeriodNo(),"dueDate",p.getDueDate().toString(),"principalAmount",money(p.getPrincipalAmount()),"interestAmount",money(p.getInterestAmount()),"totalAmount",money(p.getTotalAmount()),"remainingPrincipal",money(p.getRemainingPrincipal())));return r;}
 
     @Transactional public Map<String,Object> create(long sysId,String key,IouNoteConditions input){
@@ -47,7 +47,7 @@ public class IouNoteBusinessService {
         IouNote old=notes.selectOne(new QueryWrapper<IouNote>().eq("creator_user_id",u.getId()).eq("create_request_key",key));
         if(old!=null){if(!requestHash.equals(old.getCreateRequestHash()))fail(409,"IDEMPOTENCY_CONFLICT","同一操作编号的内容已变化");return view(old,u);}
         IouNote n=new IouNote();n.setCreatorUserId(u.getId());n.setNoteNo(numbers.next());
-        n.setStatus(0);n.setRowVersion(0L);n.setBorrowerSignStatus(0);n.setLenderSignStatus(0);n.setServiceFee(BigDecimal.ZERO.setScale(2));
+        n.setStatus(0);n.setRowVersion(0L);n.setBorrowerSignStatus(0);n.setLenderSignStatus(0);n.setServiceFeePayStatus(0);
         n.setCreateRequestKey(key);n.setCreateRequestHash(requestHash);apply(n,u,q);
         if(notes.insert(n)!=1)throw new IllegalStateException("草稿保存失败");savePlan(n.getId(),q.getPlan());return view(n,u);
     }
@@ -75,6 +75,8 @@ public class IouNoteBusinessService {
         n.setBorrowerName(borrower?u.getRealName():null);n.setBorrowerIdNoHash(borrower?u.getIdNoHash():null);n.setBorrowerIdNoEncrypted(borrower?u.getIdNoEncrypted():null);
         n.setLenderName(borrower?null:u.getRealName());n.setLenderIdNoHash(borrower?null:u.getIdNoHash());n.setLenderIdNoEncrypted(borrower?null:u.getIdNoEncrypted());
         n.setPrincipalAmount(new BigDecimal(c.getPrincipalAmount()));n.setAnnualRate(new BigDecimal(c.getAnnualRate()));
+        Map<String,Object> fixedFee=options.fee(n.getPrincipalAmount());Object feeAmount=fixedFee.get("amount");n.setServiceFee(feeAmount==null?BigDecimal.ZERO:new BigDecimal(feeAmount.toString()));
+        Map<String,Object> draftContext=new TreeMap<>();draftContext.put("fee",fixedFee);n.setActiveSignContext(encode(draftContext));
         n.setLoanDate(day(c.getLoanDate()));n.setDueDate(day(q.getSummary().get("dueDate")));n.setFirstDueDate(day(q.getPlan().get(0).getDueDate().toString()));
         n.setInterestAmount(new BigDecimal(q.getSummary().get("interestAmount")));n.setTotalAmount(new BigDecimal(q.getSummary().get("totalAmount")));
         n.setFixedInterestAmount(c.getFixedInterestAmount()==null?null:new BigDecimal(c.getFixedInterestAmount()));n.setRepaymentMethod(c.getRepaymentMethod());
@@ -93,9 +95,10 @@ public class IouNoteBusinessService {
             "borrowerName",n.getBorrowerName(),"lenderName",n.getLenderName(),"counterpartyName",borrower?n.getLenderName():n.getBorrowerName(),
             "principalAmount",money(n.getPrincipalAmount()),"annualRate",n.getAnnualRate()==null?null:n.getAnnualRate().toPlainString(),"loanType",n.getLoanType(),"loanDate",date(n.getLoanDate()),"dueDate",date(n.getDueDate()),
             "interestAmount",money(n.getInterestAmount()),"totalAmount",money(n.getTotalAmount()),"serviceFee",money(n.getServiceFee()),"purpose",n.getPurpose(),"remark",n.getRemark(),
-            "borrowerSignedAt",time(n.getBorrowerSignedAt()),"lenderSignedAt",time(n.getLenderSignedAt()),"effectiveAt",time(n.getEffectiveAt()),"createTime",time(n.getCreateTime()),"cancelReason",n.getCancelReason(),
+            "borrowerSignedAt",time(n.getBorrowerSignedAt()),"lenderSignedAt",time(n.getLenderSignedAt()),"serviceFeePayStatus",n.getServiceFeePayStatus()==null?0:n.getServiceFeePayStatus(),"effectiveAt",time(n.getEffectiveAt()),"createTime",time(n.getCreateTime()),"cancelReason",n.getCancelReason(),
             "mySignStatus",borrower?n.getBorrowerSignStatus():n.getLenderSignStatus(),"counterpartySignStatus",borrower?n.getLenderSignStatus():n.getBorrowerSignStatus(),"legacy",n.getRepaymentMethod()==null);
         v.put("conditions",conditions(n));v.put("plan",planView(rows(n.getId())));v.put("actions",actions(n,u));v.put("calculationVersion",n.getCalculationVersion());v.put("interestRule",n.getInterestRule());
+        v.put("fee",fee(n));
         if(v.get("counterpartyName")==null)v.put("counterpartyName","待对方加入");return v;
     }
     private IouNoteConditions conditions(IouNote n){
@@ -109,15 +112,30 @@ public class IouNoteBusinessService {
         if("flat".equals(n.getRepaymentMethod()))c.setFixedInterestAmount(money(n.getFixedInterestAmount()));return c;
     }
     public Map<String,Object> preview(long sysId,long id){IouUser u=person(sysId,false);IouNote n=note(id,false);participant(n,u);return previewView(n,u);}
-    private Map<String,Object> baseTerms(IouNote n){return map("templateVersion","handwritten-v1","calculationVersion",n.getCalculationVersion(),"interestRule",n.getInterestRule(),"noteNo",n.getNoteNo(),"conditions",conditions(n),"plan",planView(rows(n.getId())),"principalAmount",money(n.getPrincipalAmount()),"interestAmount",money(n.getInterestAmount()),"totalAmount",money(n.getTotalAmount()),"serviceFeePolicy","DISABLED","initiatorName",Integer.valueOf(1).equals(n.getCreatorRole())?n.getBorrowerName():n.getLenderName());}
+    private Map<String,Object> baseTerms(IouNote n){
+        if(n.getTermsSnapshot()!=null)return decode(n.getTermsSnapshot());
+        Map<String,Object> f=fee(n);
+        return map("templateVersion","handwritten-v2","calculationVersion",n.getCalculationVersion(),"interestRule",n.getInterestRule(),"noteNo",n.getNoteNo(),"conditions",conditions(n),"plan",planView(rows(n.getId())),"principalAmount",money(n.getPrincipalAmount()),"interestAmount",money(n.getInterestAmount()),"totalAmount",money(n.getTotalAmount()),"serviceFeePolicy",f.get("policy"),"fee",f,"initiatorName",Integer.valueOf(1).equals(n.getCreatorRole())?n.getBorrowerName():n.getLenderName());
+    }
+    private Map<String,Object> fee(IouNote n){
+        if(n.getTermsSnapshot()==null){Map<String,Object> context=n.getActiveSignContext()==null?Collections.emptyMap():decode(n.getActiveSignContext());return context.get("fee") instanceof Map?(Map<String,Object>)context.get("fee"):map("policy",n.getServiceFee()==null||n.getServiceFee().signum()==0?"DISABLED":"UNCONFIGURED","amount",money(n.getServiceFee()),"payer","borrower","version","historical");}
+        Map<String,Object> snapshot=decode(n.getTermsSnapshot());
+        if(snapshot.get("fee") instanceof Map)return (Map<String,Object>)snapshot.get("fee");
+        // Historical signed notes remain free, even when the current policy changes.
+        return map("policy","DISABLED","amount","0.00","payer","borrower","version","historical-free");
+    }
     private String termsHash(IouNote n){return n.getTermsHash()==null?IouAgreementStore.hash(encode(baseTerms(n))):n.getTermsHash();}
     private String previewHash(IouNote n,IouUser u){return IouAgreementStore.hash(termsHash(n)+":"+u.getIdNoHash()+":"+u.getRealName()+":"+n.getRowVersion());}
-    private Map<String,Object> previewView(IouNote n,IouUser u){return map("noteId",n.getId().toString(),"version",String.valueOf(n.getRowVersion()),"previewHash",previewHash(n,u),"termsHash",termsHash(n),"terms",baseTerms(n),"borrowerName",n.getBorrowerName(),"lenderName",n.getLenderName(),"joiningName",u.getRealName(),"actions",actions(n,u));}
+    private Map<String,Object> previewView(IouNote n,IouUser u){
+        Map<String,Object> presented=new LinkedHashMap<>(baseTerms(n));presented.put("fee",fee(n));
+        return map("noteId",n.getId().toString(),"version",String.valueOf(n.getRowVersion()),"previewHash",previewHash(n,u),"termsHash",termsHash(n),"terms",presented,"borrowerName",n.getBorrowerName(),"lenderName",n.getLenderName(),"joiningName",u.getRealName(),"actions",actions(n,u));
+    }
 
     /** Atomic local signing: signature files plus evidence are created before the single DB commit. */
     @Transactional public Map<String,Object> sign(long sysId,long id,String version,String hash,String key,String reference,String signature,boolean confirmed,String remote,String agent){
-        if(!options.canSign())fail(503,"CONFIG_NOT_READY","签署尚未开放");validateKey(key);if(!confirmed)fail(400,"CONFIRMATION_REQUIRED","请核对条款与还款计划");
+        validateKey(key);if(!confirmed)fail(400,"CONFIRMATION_REQUIRED","请核对条款与还款计划");
         IouUser u=person(sysId,true);IouNote n=note(id,true);boolean initiator=u.getId().equals(n.getCreatorUserId());
+        if(!canSign(n))fail(503,"CONFIG_NOT_READY","签署或微信支付配置尚未就绪");
         if(!initiator){checkReference(reference,id);if(u.getIdNoHash().equals(initiatorHash(n)))fail(403,"SELF_SIGN_NOT_ALLOWED","本人不能签署另一方");}
         if(n.getRepaymentMethod()==null)fail(409,"LEGACY_NOTE","历史借条不支持当前签署流程");
         boolean borrower=initiator?Integer.valueOf(1).equals(n.getCreatorRole()):!Integer.valueOf(1).equals(n.getCreatorRole());
@@ -126,6 +144,11 @@ public class IouNoteBusinessService {
         byte[] png=IouAgreementStore.signature(signature);String signHash=IouAgreementStore.hash(png);
         Map<String,Object> context=n.getActiveSignContext()==null?new TreeMap<>():decode(n.getActiveSignContext());
         String side=borrower?"borrower":"lender";
+        if(borrower&&Integer.valueOf(1).equals(status)&&context.get("pendingBorrower") instanceof Map){
+            Map<String,Object> pending=(Map<String,Object>)context.get("pendingBorrower");
+            if(u.getIdNoHash().equals(pending.get("identityHash"))&&key.equals(pending.get("requestId"))&&signHash.equals(pending.get("signatureHash"))&&Objects.equals(hash,pending.get("previewHash")))return view(n,u);
+            fail(409,"SIGNING_IN_PROGRESS","已有待付款签署，请继续付款，无需重新签名");
+        }
         if(Integer.valueOf(2).equals(status)) {
             String bound=borrower?n.getBorrowerIdNoHash():n.getLenderIdNoHash();
             Map<String,Object> prior=context.get(side) instanceof Map?(Map<String,Object>)context.get(side):Collections.emptyMap();
@@ -151,23 +174,56 @@ public class IouNoteBusinessService {
         Map<String,Object> evidence=map("method","HANDWRITTEN","requestId",key,"name",u.getRealName(),"identityHash",u.getIdNoHash(),"identityEncrypted",u.getIdNoEncrypted(),"signedAt",time(now),"termsHash",n.getTermsHash(),"signatureHash",signHash,"signatureFile",imageFile,"previewHash",hash,"remoteAddress",limit(remote,128),"userAgent",limit(agent,512));
         String evidenceText=encode(evidence);String evidenceSeal=store.seal("iou-handwritten-evidence-v1:"+evidenceText);
         String evidenceFile=store.write(filePrefix+".json",encode(map("evidence",evidence,"seal",evidenceSeal)).getBytes(StandardCharsets.UTF_8));
+        if(borrower&&requiresPayment(n)&&!Integer.valueOf(2).equals(n.getServiceFeePayStatus())){
+            Map<String,Object> pending=new TreeMap<>(evidence);pending.put("userId",u.getId().toString());pending.put("shareReference",reference);pending.put("evidenceFile",evidenceFile);pending.put("evidenceHash",IouAgreementStore.hash(encode(map("evidence",evidence,"seal",evidenceSeal))));
+            context.put("pendingBorrower",pending);n.setActiveSignContext(encode(context));n.setBorrowerSignStatus(1);n.setBorrowerSignRequestId(key);n.setStatus(6);
+            n.setRowVersion(n.getRowVersion()+1);if(notes.updateById(n)!=1)throw new IllegalStateException("待付款签署保存失败");return view(n,u);
+        }
         context.put(side,evidence);n.setActiveSignContext(encode(context));
         String html=render(n,context,false);String signedFile=store.write(filePrefix+".html",html.getBytes(StandardCharsets.UTF_8));
         if(borrower){n.setBorrowerSignStatus(2);n.setBorrowerSignedAt(now);n.setBorrowerSignRequestId(key);n.setBorrowerSignEvidenceId(evidenceFile);n.setBorrowerSignFile(signedFile);n.setBorrowerSignFileHash(IouAgreementStore.hash(html));}
         else{n.setLenderSignStatus(2);n.setLenderSignedAt(now);n.setLenderSignRequestId(key);n.setLenderSignEvidenceId(evidenceFile);n.setLenderSignFile(signedFile);n.setLenderSignFileHash(IouAgreementStore.hash(html));}
-        if(initiator)n.setStatus(7);
-        else{String finalHtml=render(n,context,true);n.setAgreementFile(store.write(filePrefix+"-final.html",finalHtml.getBytes(StandardCharsets.UTF_8)));n.setAgreementHash(IouAgreementStore.hash(finalHtml));n.setStatus(2);n.setEffectiveAt(now);}
+        boolean unpaid=requiresPayment(n)&&!Integer.valueOf(2).equals(n.getServiceFeePayStatus());
+        if(initiator)n.setStatus(borrower&&unpaid?6:7);
+        else{String finalHtml=render(n,context,true);n.setAgreementFile(store.write(filePrefix+"-final.html",finalHtml.getBytes(StandardCharsets.UTF_8)));n.setAgreementHash(IouAgreementStore.hash(finalHtml));n.setStatus(unpaid?6:2);if(!unpaid)n.setEffectiveAt(now);}
         n.setRowVersion(n.getRowVersion()+1);if(notes.updateById(n)!=1)throw new IllegalStateException("签署保存失败");return view(n,u);
+    }
+    public boolean requiresPayment(IouNote n){return "ENABLED".equals(fee(n).get("policy"))&&n.getServiceFee()!=null&&n.getServiceFee().signum()>0;}
+    private boolean canSign(IouNote n){return options.basicSigningReady()&&("DISABLED".equals(fee(n).get("policy"))||"ENABLED".equals(fee(n).get("policy"))&&(!requiresPayment(n)||Integer.valueOf(2).equals(n.getServiceFeePayStatus())||options.canSign()));}
+
+    /** Caller must hold the note row lock and commit payment plus signing in the same transaction. */
+    public void completePaidBorrower(IouNote n){
+        if(Integer.valueOf(2).equals(n.getBorrowerSignStatus()))return;
+        if(!Integer.valueOf(2).equals(n.getServiceFeePayStatus())||!Integer.valueOf(1).equals(n.getBorrowerSignStatus()))fail(409,"SIGNATURE_NOT_PENDING","没有可完成的待付款签署");
+        Map<String,Object> context=decode(n.getActiveSignContext());
+        if(!(context.get("pendingBorrower") instanceof Map))fail(409,"SIGNATURE_NOT_PENDING","待付款签署缺失");
+        Map<String,Object> pending=(Map<String,Object>)context.get("pendingBorrower");
+        Map<String,Object> envelope=decode(new String(store.read((String)pending.get("evidenceFile"),(String)pending.get("evidenceHash")),StandardCharsets.UTF_8));
+        Map<String,Object> evidence=(Map<String,Object>)envelope.get("evidence");
+        if(!store.seal("iou-handwritten-evidence-v1:"+encode(evidence)).equals(envelope.get("seal"))
+            ||!n.getTermsHash().equals(evidence.get("termsHash"))||!n.getBorrowerIdNoHash().equals(evidence.get("identityHash")))fail(409,"SIGNATURE_EVIDENCE_INVALID","待付款签署凭证不一致");
+        store.read((String)evidence.get("signatureFile"),(String)evidence.get("signatureHash"));
+        Timestamp now=new Timestamp(System.currentTimeMillis());
+        Map<String,Object> completed=new TreeMap<>(evidence);completed.put("acceptedAt",evidence.get("signedAt"));completed.put("signedAt",time(now));
+        String prefix=n.getId()+"/"+UUID.randomUUID().toString();String text=encode(completed);
+        String evidenceFile=store.write(prefix+".json",encode(map("evidence",completed,"seal",store.seal("iou-handwritten-evidence-v1:"+text))).getBytes(StandardCharsets.UTF_8));
+        context.remove("pendingBorrower");context.put("borrower",completed);n.setActiveSignContext(encode(context));
+        String html=render(n,context,false);n.setBorrowerSignFile(store.write(prefix+".html",html.getBytes(StandardCharsets.UTF_8)));n.setBorrowerSignFileHash(IouAgreementStore.hash(html));
+        n.setBorrowerSignStatus(2);n.setBorrowerSignedAt(now);n.setBorrowerSignEvidenceId(evidenceFile);
+        if(Integer.valueOf(2).equals(n.getLenderSignStatus())){
+            String finalHtml=render(n,context,true);n.setAgreementFile(store.write(prefix+"-final.html",finalHtml.getBytes(StandardCharsets.UTF_8)));n.setAgreementHash(IouAgreementStore.hash(finalHtml));n.setStatus(2);n.setEffectiveAt(now);
+        }else n.setStatus(7);
     }
     private String render(IouNote n,Map<String,Object> context,boolean complete){
         StringBuilder h=new StringBuilder("<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>借条</title><style>body{max-width:800px;margin:24px auto;padding:20px;font:16px/1.8 sans-serif}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ccc;padding:6px}img{max-width:280px}pre{white-space:pre-wrap;overflow-wrap:anywhere}h1{text-align:center}</style></head><body><h1>借条</h1>");
         h.append("<p>编号：").append(IouAgreementStore.escape(n.getNoteNo())).append("</p><p>借款人：").append(IouAgreementStore.escape(n.getBorrowerName()==null?"待实名签署者加入":n.getBorrowerName())).append("；出借人：").append(IouAgreementStore.escape(n.getLenderName()==null?"待实名签署者加入":n.getLenderName())).append("</p>");
         h.append("<p>本金人民币 ").append(money(n.getPrincipalAmount())).append(" 元，借款日期 ").append(date(n.getLoanDate())).append("，最终还款日期 ").append(date(n.getDueDate())).append("。借款用途：").append(IouAgreementStore.escape(n.getPurpose())).append("。</p>");
         h.append("<p>本息合计 ").append(money(n.getTotalAmount())).append(" 元，总利息 ").append(money(n.getInterestAmount())).append(" 元。还款方式：").append(IouAgreementStore.escape(n.getRepaymentMethod())).append("，年利率比例：").append(n.getAnnualRate().toPlainString()).append("。固定总利息方式以约定总利息分配，各期不按余额计算利息。</p>");
+        h.append("<p>平台服务费：").append(IouAgreementStore.escape(String.valueOf(fee(n).get("amount")))).append(" 元，由借款方承担，与约定本息分别计算。借款方签署时一并支付；本文件记录签署内容，付款状态另行记录。</p>");
         h.append("<p>标准周期的等额本息/等额本金按年利率×周期月数/12计息，非整周期首期及其他按天方式按实际天数/365计息；包含起日、不含止日，金额四舍五入至分，最后一期调整尾差。规则版本：").append(IouAgreementStore.escape(n.getCalculationVersion())).append("。</p>");
         h.append("<p>提前还款约定：").append("actual".equals(n.getPrepaymentRule())?"允许提前还款，按双方约定重算利息；固定总利息减免须双方确认。":"提前结清金额由双方协商确认。")
             .append("逾期约定：").append(IouAgreementStore.escape(n.getOverdueTerms())).append("。其他约定：").append(IouAgreementStore.escape(n.getRemark())).append("。</p>");
-        h.append("<p>本期平台服务费为0元。签署是借款条款确认，不表示平台已放款或已确认实际资金交付。发起人先签署固定条款，另一位实名用户确认并手写签署后加入；另一方不得修改条件，不需要发起人再次确认。</p><table><tr><th>期次</th><th>日期</th><th>本金</th><th>利息</th><th>合计</th></tr>");
+        h.append("<p>签署是借款条款确认，不表示平台已放款或已确认实际资金交付。发起人先签署固定条款，另一位实名用户确认并手写签署后加入；另一方不得修改条件，不需要发起人再次确认。</p><table><tr><th>期次</th><th>日期</th><th>本金</th><th>利息</th><th>合计</th></tr>");
         for(IouNotePlan p:rows(n.getId()))h.append("<tr><td>").append(p.getPeriodNo()).append("</td><td>").append(p.getDueDate()).append("</td><td>").append(money(p.getPrincipalAmount())).append("</td><td>").append(money(p.getInterestAmount())).append("</td><td>").append(money(p.getTotalAmount())).append("</td></tr>");h.append("</table>");
         for(String side:Arrays.asList("borrower","lender"))if(context.get(side) instanceof Map){Map<String,Object>e=(Map<String,Object>)context.get(side);byte[] image=store.read((String)e.get("signatureFile"),(String)e.get("signatureHash"));h.append("<p>").append("borrower".equals(side)?"借款人":"出借人").append("：").append(IouAgreementStore.escape((String)e.get("name"))).append("；签署时间：").append(IouAgreementStore.escape((String)e.get("signedAt"))).append("</p><img alt=\"手写签名\" src=\"data:image/png;base64,").append(Base64.getEncoder().encodeToString(image)).append("\">");}
         h.append("<p>锁定条款SHA256：").append(n.getTermsHash()).append("。</p>");
@@ -177,11 +233,11 @@ public class IouNoteBusinessService {
         return h.append("</body></html>").toString();
     }
     public Map<String,Object> current(long sysId,long id,String reference){IouUser u=person(sysId,false);IouNote n=note(id,false);participant(n,u);boolean b=u.getIdNoHash().equals(n.getBorrowerIdNoHash());return map("noteId",String.valueOf(id),"status",n.getStatus(),"stage",stage(n),"version",String.valueOf(n.getRowVersion()),"signStatus",b?n.getBorrowerSignStatus():n.getLenderSignStatus(),"requestId",b?n.getBorrowerSignRequestId():n.getLenderSignRequestId());}
-    public Map<String,Object> share(long sysId,long id){IouUser u=person(sysId,false);IouNote n=note(id,false);owner(n,u);if(!Integer.valueOf(7).equals(n.getStatus()))fail(409,"NOTE_NOT_SIGNABLE","当前借条不能邀请签署");String ref=id+"."+store.seal("iou-share-v1:"+id);return map("reference",ref,"shareUrl",options.getShareBaseUrl().replaceAll("/+$","")+"/#/notes/join?reference="+ref,"status",n.getStatus(),"canSign",options.canSign());}
+    public Map<String,Object> share(long sysId,long id){IouUser u=person(sysId,false);IouNote n=note(id,false);owner(n,u);if(!Integer.valueOf(7).equals(n.getStatus()))fail(409,"NOTE_NOT_SIGNABLE","当前借条不能邀请签署");String ref=id+"."+store.seal("iou-share-v1:"+id);return map("reference",ref,"shareUrl",options.getShareBaseUrl().replaceAll("/+$","")+"/#/notes/join?reference="+ref,"status",n.getStatus(),"canSign",canSign(n));}
     public Map<String,Object> shared(long sysId,String ref){long id=checkReference(ref,null);IouUser u=person(sysId,false);IouNote n=note(id,false);
         if(u.getIdNoHash().equals(n.getBorrowerIdNoHash())||u.getIdNoHash().equals(n.getLenderIdNoHash()))return previewView(n,u);
         if(!Integer.valueOf(7).equals(n.getStatus()))return map("noteId",String.valueOf(id),"status",n.getStatus(),"stage",stage(n),"actions",Collections.emptyList());
-        Map<String,Object>r=previewView(n,u);r.put("joiningRole",Integer.valueOf(1).equals(n.getCreatorRole())?"lender":"borrower");r.put("actions",options.canSign()?Arrays.asList("SIGN_COUNTERPARTY"):Collections.emptyList());return r;
+        Map<String,Object>r=previewView(n,u);r.put("joiningRole",Integer.valueOf(1).equals(n.getCreatorRole())?"lender":"borrower");r.put("actions",canSign(n)?Arrays.asList("SIGN_COUNTERPARTY"):Collections.emptyList());return r;
     }
     private long checkReference(String ref,Long expected){
         if(ref==null||!ref.matches("[0-9]{1,19}\\.[a-f0-9]{64}"))fail(404,"NOTE_NOT_FOUND","借条不存在或无权查看");
@@ -192,6 +248,7 @@ public class IouNoteBusinessService {
     @Transactional public Map<String,Object> cancel(long sysId,long id,String version,String reason){IouUser u=person(sysId,false);IouNote n=note(id,true);owner(n,u);
         if(Integer.valueOf(4).equals(n.getStatus()))return view(n,u);version(n,version);
         if(!Arrays.asList(0,7).contains(n.getStatus()))fail(409,"NOTE_NOT_CANCELLABLE","当前借条不能撤销");
+        if(Integer.valueOf(2).equals(n.getServiceFeePayStatus()))fail(409,"PAID_NOTE_NOT_CANCELLABLE","服务费已支付，本期不处理退款撤销");
         if(Integer.valueOf(1).equals(n.getBorrowerSignStatus())||Integer.valueOf(1).equals(n.getLenderSignStatus()))fail(409,"SIGNING_IN_PROGRESS","请等待签署结果");
         if(reason!=null&&reason.length()>255)fail(400,"INVALID_CONDITIONS","取消原因最多255字");n.setStatus(4);n.setCancelReason(reason);n.setRowVersion(n.getRowVersion()+1);notes.updateById(n);return view(n,u);
     }
@@ -202,10 +259,11 @@ public class IouNoteBusinessService {
         if(creator&&Integer.valueOf(4).equals(n.getStatus()))a.add("DELETE");
         if(n.getRepaymentMethod()==null)return a;
         if(creator){
-            if(Integer.valueOf(0).equals(n.getStatus())&&n.getTermsLockedAt()==null){a.addAll(Arrays.asList("EDIT","DELETE","PREVIEW"));if(options.canSign())a.add("SIGN_INITIATOR");}
-            if(Arrays.asList(0,7).contains(n.getStatus()))a.add("CANCEL");
+            if(Integer.valueOf(0).equals(n.getStatus())&&n.getTermsLockedAt()==null){a.addAll(Arrays.asList("EDIT","DELETE","PREVIEW"));if(canSign(n))a.add("SIGN_INITIATOR");}
+            if(Arrays.asList(0,7).contains(n.getStatus())&&!Integer.valueOf(2).equals(n.getServiceFeePayStatus()))a.add("CANCEL");
             if(Integer.valueOf(7).equals(n.getStatus()))a.add("SHARE");
         }
+        if(Integer.valueOf(6).equals(n.getStatus())&&u.getIdNoHash().equals(n.getBorrowerIdNoHash()))a.add("PAY_FEE");
         if(n.getAgreementFile()!=null&&n.getAgreementHash()!=null)a.add("VIEW_AGREEMENT");return a;
     }
     public static String stage(IouNote n){if(Integer.valueOf(1).equals(n.getStatus()))return "LEGACY_WAITING_CONFIRMATION";if(Integer.valueOf(5).equals(n.getStatus()))return "REJECTED";if(Integer.valueOf(4).equals(n.getStatus()))return "CANCELLED";if(Integer.valueOf(2).equals(n.getStatus()))return "EFFECTIVE";if(Integer.valueOf(3).equals(n.getStatus()))return "SETTLED";if(Integer.valueOf(6).equals(n.getStatus()))return "WAITING_FEE";if(Integer.valueOf(7).equals(n.getStatus()))return "WAITING_COUNTERPARTY";return n.getTermsLockedAt()==null?"DRAFT_EDITABLE":"TERMS_LOCKED";}

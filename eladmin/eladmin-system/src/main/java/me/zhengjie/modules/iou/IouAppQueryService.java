@@ -26,7 +26,7 @@ public class IouAppQueryService {
     private static final String[] READ_COLUMNS = {"id", "note_no", "creator_user_id", "borrower_name",
         "lender_name", "borrower_id_no_hash", "lender_id_no_hash", "loan_type", "principal_amount",
         "annual_rate", "loan_date", "due_date", "interest_amount", "total_amount", "purpose", "remark",
-        "service_fee", "borrower_signed_at", "lender_signed_at", "status", "effective_at", "cancel_reason",
+        "service_fee", "service_fee_pay_status", "borrower_signed_at", "lender_signed_at", "status", "effective_at", "cancel_reason",
         "create_time", "update_time", "creator_role", "repayment_method", "row_version", "terms_locked_at", "borrower_sign_status", "lender_sign_status", "agreement_file", "agreement_hash"};
 
     private IouUser person(long sysUserId) {
@@ -87,6 +87,7 @@ public class IouAppQueryService {
         result.put("borrowed", aggregate(user, "borrower_id_no_hash"));
         result.put("lent", aggregate(user, "lender_id_no_hash"));
         result.put("pendingCount", notes.selectCount(filtered(user, "all", null, true)));
+        result.put("pendingFeeCount", notes.selectCount(filtered(user, "borrower", 6, false)));
         return result;
     }
 

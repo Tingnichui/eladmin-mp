@@ -128,6 +128,17 @@ public class IouNote implements Serializable {
     @ApiModelProperty(value = "服务费")
     private BigDecimal serviceFee;
 
+    @ApiModelProperty(value = "当前微信商户订单号，内部使用")
+    @JsonIgnore
+    @JSONField(serialize = false, deserialize = false)
+    @ToString.Exclude
+    private String paymentOrderNo;
+
+    @ApiModelProperty(value = "服务费支付状态：0未付、1待确认、2已付、3订单关闭")
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @JSONField(deserialize = false)
+    private Integer serviceFeePayStatus;
+
     @ApiModelProperty(value = "借款人签署时间")
     private Timestamp borrowerSignedAt;
 

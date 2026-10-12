@@ -80,6 +80,8 @@ jasypt:
 logging:
   level:
     me.zhengjie.iou.service.IouWechatHttpClient: WARN
+    me.zhengjie.iou.service.IouHuifuGateway$PaymentHttpClient: WARN
+    me.zhengjie.iou.service.IouNativeWechatGateway$NativePaymentHttpClient: WARN
 
 iou:
   wechat:
@@ -91,8 +93,44 @@ iou:
   notes:
     creation-enabled: true
     signing-enabled: true
-    service-fee-policy: DISABLED
+    service-fee-policy: ${IOU_SERVICE_FEE_POLICY:ENABLED}
+    service-fee-rate: ${IOU_SERVICE_FEE_RATE:0.025}
+    service-fee-min: ${IOU_SERVICE_FEE_MIN:0.00}
+    service-fee-max: ${IOU_SERVICE_FEE_MAX:}
+    service-fee-version: ${IOU_SERVICE_FEE_VERSION:principal-ratio-v1}
     seal-key: ${IOU_NOTE_SEAL_KEY:}
+  payment:
+    # 斗拱旧实现保留，默认不注册相关业务 Bean，不访问支付表。
+    huifu-legacy-enabled: false
+    enabled: ${IOU_PAYMENT_ENABLED:false}
+    sys-id: ${IOU_HUIFU_SYS_ID:}
+    product-id: ${IOU_HUIFU_PRODUCT_ID:}
+    huifu-id: ${IOU_HUIFU_MERCHANT_ID:}
+    private-key: ${IOU_HUIFU_PRIVATE_KEY:}
+    public-key: ${IOU_HUIFU_PUBLIC_KEY:}
+    app-id: ${IOU_WECHAT_APP_ID:}
+    app-secret: ${IOU_WECHAT_APP_SECRET:}
+    notify-url: ${IOU_HUIFU_NOTIFY_URL:}
+    oauth-callback-url: ${IOU_WECHAT_PAY_CALLBACK_URL:}
+    h5-origin: ${IOU_WECHAT_PUBLIC_ORIGIN:}
+    gateway-url: ${IOU_HUIFU_GATEWAY_URL:https://api.huifu.com}
+    expire-minutes: 10
+    reconcile-delay-ms: 60000
+  wechat-payment:
+    enabled: ${IOU_WECHAT_PAYMENT_ENABLED:false}
+    app-id: ${IOU_WECHAT_APP_ID:}
+    app-secret: ${IOU_WECHAT_APP_SECRET:}
+    merchant-id: ${IOU_WECHAT_MERCHANT_ID:}
+    merchant-serial-no: ${IOU_WECHAT_MERCHANT_SERIAL_NO:}
+    private-key: ${IOU_WECHAT_MERCHANT_PRIVATE_KEY:}
+    api-v3-key: ${IOU_WECHAT_API_V3_KEY:}
+    wechatpay-public-key: ${IOU_WECHAT_PAY_PUBLIC_KEY:}
+    wechatpay-public-key-id: ${IOU_WECHAT_PAY_PUBLIC_KEY_ID:}
+    notify-url: ${IOU_WECHAT_PAY_NOTIFY_URL:}
+    oauth-callback-url: ${IOU_WECHAT_PAY_CALLBACK_URL:}
+    h5-origin: ${IOU_WECHAT_PUBLIC_ORIGIN:}
+    expire-minutes: 30
+    reconcile-delay-ms: 60000
   identity:
     # 身份证 HMAC 查重密钥：已有账号后不可随意更换，跨环境须保持一致。
     hmac-key: ENC(gRrVazCxI4V79i3EzTa0JDBFnFFX8dQ37New/Rd+PdSm+zQRbUqj2EAYKB2B7L/CZluyZlOVbsGI5TrmaNwePV1hL3VpP/v+ixuTaCiFl7U=)

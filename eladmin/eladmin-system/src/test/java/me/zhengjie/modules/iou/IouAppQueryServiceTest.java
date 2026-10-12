@@ -158,6 +158,12 @@ class IouAppQueryServiceTest {
         Map<String, Object> result = service.summary(123);
         assertEquals("0.00", ((Map<?, ?>) result.get("borrowed")).get("principal"));
         assertEquals(0L, result.get("pendingCount"));
+        assertEquals(0L, result.get("pendingFeeCount"));
+        ArgumentCaptor<QueryWrapper> counts=ArgumentCaptor.forClass(QueryWrapper.class);
+        verify(notes,times(2)).selectCount(counts.capture());
+        QueryWrapper feeQuery=counts.getAllValues().get(1);feeQuery.getSqlSegment();
+        assertTrue(feeQuery.getParamNameValuePairs().containsValue(6));
+        assertTrue(feeQuery.getSqlSegment().contains("AND borrower_id_no_hash ="));
         ArgumentCaptor<QueryWrapper> captor = ArgumentCaptor.forClass(QueryWrapper.class);
         verify(notes, times(2)).selectMaps(captor.capture());
         for (QueryWrapper query : captor.getAllValues()) {
