@@ -111,8 +111,8 @@ iou:
     app-id: ${iou.wechat.app-id}
     app-secret: ${iou.wechat.app-secret}
     notify-url: ${IOU_HUIFU_NOTIFY_URL:}
-    oauth-callback-url: ${IOU_WECHAT_PAY_CALLBACK_URL:}
-    h5-origin: ${IOU_WECHAT_PUBLIC_ORIGIN:}
+    oauth-callback-url: ${IOU_WECHAT_PAY_CALLBACK_URL:https://ajc.tingnichui.com/api/iou/payment/wechat/callback}
+    h5-origin: ${iou.wechat.public-origin}
     gateway-url: ${IOU_HUIFU_GATEWAY_URL:https://api.huifu.com}
     expire-minutes: 10
     reconcile-delay-ms: 60000
@@ -120,15 +120,15 @@ iou:
     enabled: ${IOU_WECHAT_PAYMENT_ENABLED:false}
     app-id: ${iou.wechat.app-id}
     app-secret: ${iou.wechat.app-secret}
-    merchant-id: ${IOU_WECHAT_MERCHANT_ID:}
-    merchant-serial-no: ${IOU_WECHAT_MERCHANT_SERIAL_NO:}
-    private-key: ${IOU_WECHAT_MERCHANT_PRIVATE_KEY:}
-    api-v3-key: ${IOU_WECHAT_API_V3_KEY:}
-    wechatpay-public-key: ${IOU_WECHAT_PAY_PUBLIC_KEY:}
-    wechatpay-public-key-id: ${IOU_WECHAT_PAY_PUBLIC_KEY_ID:}
-    notify-url: ${IOU_WECHAT_PAY_NOTIFY_URL:}
-    oauth-callback-url: ${IOU_WECHAT_PAY_CALLBACK_URL:}
-    h5-origin: ${IOU_WECHAT_PUBLIC_ORIGIN:}
+    merchant-id: ENC(etk6Y43Itxc7dc6Iy91o95zDB3v9d5rq6xLQlw4nAw2KMx/zm6f/DEBRG+smPPoN)
+    merchant-serial-no: ENC(wIxuZ/FRZtwv+RpVsCPjWodu+FZNxq5xelNknDrMcrQbZJsNiuWA2V7jybE4cs1rip5TYVauMuANHCESw8yMG9OocGHB78FZKB5mW/6Rqck=)
+    private-key: ENC(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)
+    api-v3-key: ENC(IDDRgiJpJvEqAUK2kuXLWd1ZYRUbvC2ez3lP2v0nlH4rGCx8D3jWaAyDedCLkAXGrVmi3Cf+uYtIZaCErfLdOnVPnq8us65m7HW4oFDWdes=)
+    wechatpay-public-key: ENC(6UTkFPFdYQSf93giOkX4UPq9O8lOXwguicnaekxuKKg9SAgriy6nig6zERKxOfpgIx3ULqbs1NJfD8K8EcEi+/kgodm3/Stp9pQtza1SL6acuf9dqRpzpYScuHDHbRQg/aScCUY+e5xdnLoK6WSmBDldippf5YGHLZWMoYuUzARklvz8MlBfznrfCsL1uklGkT3sz61uqWpJQHXPj94C/NgM+SUkFlc6KmduCsubZkf8hLhDpgNFvRwU0sWHO1+e1A3BdQ8n+NsCCk767kn7KF/HCSQnRBIOlNos+lpECBIn8B5Jq9vf7h2+28MKwspy+CZg288Fz3390R9PyZL76hUmt0K1unJLTUIFWAj90aVHetmAe9up7jtF5I3WtyrusYeA1ezjSxjUUu9xsTPlNAEDjHLYYrWtqyWHx9MUBcAK4udYrTV3dixapQnDAIu7tNzQJi1eEpOYe4V3QuaquZNSDWhEk7iqTup3qCIsR5Y1hDZ0kxOG6wycrQgmj/7ZWS3o2JPWGVWoS6vlaAwtTZsFZlzbIwemzCBA3CjDGJERMAWD9CEMfCT8MOkGjQah)
+    wechatpay-public-key-id: ENC(n6qBqW99tGSJvTjEkw/J5KV8bzktonGdyAczYbxwLN6AVvqEwScSRsckFa2L8z7HjsZtlOlsF1h8kwyqBZRhe1/9pya8rscJCYYL6aV3FCw=)
+    notify-url: ${IOU_WECHAT_PAY_NOTIFY_URL:https://ajc.tingnichui.com/api/iou/payment/wechat/notify}
+    oauth-callback-url: ${IOU_WECHAT_PAY_CALLBACK_URL:https://ajc.tingnichui.com/api/iou/payment/wechat/callback}
+    h5-origin: ${iou.wechat.public-origin}
     expire-minutes: 30
     reconcile-delay-ms: 60000
   identity:
