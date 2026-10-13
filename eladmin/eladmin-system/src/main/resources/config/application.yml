@@ -117,7 +117,7 @@ iou:
     expire-minutes: 10
     reconcile-delay-ms: 60000
   wechat-payment:
-    enabled: ${IOU_WECHAT_PAYMENT_ENABLED:false}
+    enabled: ${IOU_WECHAT_PAYMENT_ENABLED:true}
     app-id: ${iou.wechat.app-id}
     app-secret: ${iou.wechat.app-secret}
     merchant-id: ENC(etk6Y43Itxc7dc6Iy91o95zDB3v9d5rq6xLQlw4nAw2KMx/zm6f/DEBRG+smPPoN)
