@@ -85,10 +85,10 @@ logging:
 
 iou:
   wechat:
-    enabled: ${IOU_WECHAT_ENABLED:false}
-    app-id: ${IOU_WECHAT_APP_ID:}
-    app-secret: ${IOU_WECHAT_APP_SECRET:}
-    public-origin: ${IOU_WECHAT_PUBLIC_ORIGIN:}
+    enabled: ${IOU_WECHAT_ENABLED:true}
+    app-id: ENC(QGecvxZ5xV2zThOtcbvCV3PZbdjHgyq6h/Lo8Qjm00J59Pyrt8Ku+BteQ8AbH70/+wid48u7r6xmfsdQDmB2/w==)
+    app-secret: ENC(pydW/9X+XFTRkZ1Kn1hewMWaEkxZFw5Efq/+BKrdOkj6bpxpE5upaniqk8pJoiIJpTCDx4aagpMiFK9fPxdxDzqD3jioRGw2VW0VnMXSUy8=)
+    public-origin: ${IOU_WECHAT_PUBLIC_ORIGIN:https://ajc.tingnichui.com}
     image-url: ${IOU_WECHAT_IMAGE_URL:}
   notes:
     creation-enabled: true
@@ -108,8 +108,8 @@ iou:
     huifu-id: ${IOU_HUIFU_MERCHANT_ID:}
     private-key: ${IOU_HUIFU_PRIVATE_KEY:}
     public-key: ${IOU_HUIFU_PUBLIC_KEY:}
-    app-id: ${IOU_WECHAT_APP_ID:}
-    app-secret: ${IOU_WECHAT_APP_SECRET:}
+    app-id: ${iou.wechat.app-id}
+    app-secret: ${iou.wechat.app-secret}
     notify-url: ${IOU_HUIFU_NOTIFY_URL:}
     oauth-callback-url: ${IOU_WECHAT_PAY_CALLBACK_URL:}
     h5-origin: ${IOU_WECHAT_PUBLIC_ORIGIN:}
@@ -118,8 +118,8 @@ iou:
     reconcile-delay-ms: 60000
   wechat-payment:
     enabled: ${IOU_WECHAT_PAYMENT_ENABLED:false}
-    app-id: ${IOU_WECHAT_APP_ID:}
-    app-secret: ${IOU_WECHAT_APP_SECRET:}
+    app-id: ${iou.wechat.app-id}
+    app-secret: ${iou.wechat.app-secret}
     merchant-id: ${IOU_WECHAT_MERCHANT_ID:}
     merchant-serial-no: ${IOU_WECHAT_MERCHANT_SERIAL_NO:}
     private-key: ${IOU_WECHAT_MERCHANT_PRIVATE_KEY:}
