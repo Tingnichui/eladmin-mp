@@ -25,7 +25,7 @@ public class IouNoteOptions {
     private IouPaymentOptions paymentOptions;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private IouNativeWechatOptions nativeWechatOptions;
-    @org.springframework.beans.factory.annotation.Value("${iou.notes.seal-key:${IOU_NOTE_SEAL_KEY:}}")
+    @org.springframework.beans.factory.annotation.Value("${iou.notes.seal-key:}")
     private String sealKey = "";
     private String shareBaseUrl = "";
     private String storagePath = System.getProperty("user.home") + "/.eladmin/iou-agreements";

@@ -16,6 +16,7 @@ class IouPaymentConfigurationTest {
                 new FileSystemResource("../eladmin-system/src/main/resources/config/application.yml")))environment.getPropertySources().addFirst(source);
         IouNoteOptions notes=Binder.get(environment).bind("iou.notes",Bindable.of(IouNoteOptions.class)).get();
         IouPaymentOptions payment=Binder.get(environment).bind("iou.payment",Bindable.of(IouPaymentOptions.class)).get();
+        assertTrue(notes.isCreationEnabled());assertTrue(notes.isSigningEnabled());assertTrue(notes.getSealKey().startsWith("ENC("));
         assertEquals(new java.math.BigDecimal("0.025"),notes.getServiceFeeRate());assertNull(notes.getServiceFeeMax());assertFalse(payment.ready());assertEquals("ENABLED",notes.getServiceFeePolicy());
         IouNativeWechatOptions nativeOptions=Binder.get(environment).bind("iou.wechat-payment",Bindable.of(IouNativeWechatOptions.class)).get();assertTrue(nativeOptions.isEnabled());assertFalse(nativeOptions.ready()); // Raw binding does not decrypt ENC values.
     }

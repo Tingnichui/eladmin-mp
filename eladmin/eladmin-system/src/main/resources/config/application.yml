@@ -85,39 +85,39 @@ logging:
 
 iou:
   wechat:
-    enabled: ${IOU_WECHAT_ENABLED:true}
+    enabled: true
     app-id: ENC(QGecvxZ5xV2zThOtcbvCV3PZbdjHgyq6h/Lo8Qjm00J59Pyrt8Ku+BteQ8AbH70/+wid48u7r6xmfsdQDmB2/w==)
     app-secret: ENC(pydW/9X+XFTRkZ1Kn1hewMWaEkxZFw5Efq/+BKrdOkj6bpxpE5upaniqk8pJoiIJpTCDx4aagpMiFK9fPxdxDzqD3jioRGw2VW0VnMXSUy8=)
-    public-origin: ${IOU_WECHAT_PUBLIC_ORIGIN:https://ajc.tingnichui.com}
-    image-url: ${IOU_WECHAT_IMAGE_URL:}
+    public-origin: https://ajc.tingnichui.com
+    image-url: ''
   notes:
     creation-enabled: true
     signing-enabled: true
-    service-fee-policy: ${IOU_SERVICE_FEE_POLICY:ENABLED}
-    service-fee-rate: ${IOU_SERVICE_FEE_RATE:0.025}
-    service-fee-min: ${IOU_SERVICE_FEE_MIN:0.00}
-    service-fee-max: ${IOU_SERVICE_FEE_MAX:}
-    service-fee-version: ${IOU_SERVICE_FEE_VERSION:principal-ratio-v1}
-    seal-key: ${IOU_NOTE_SEAL_KEY:}
+    service-fee-policy: ENABLED
+    service-fee-rate: 0.025
+    service-fee-min: 0.00
+    service-fee-max:
+    service-fee-version: principal-ratio-v1
+    seal-key: ENC(zEnUpOdJNaB0NbMrYdqA6ajQ5SArhkuQkZ2l/B072BRduQ7Lc4aUlW3ojp+HwB+ACC+nW0sZoC+SLulZ+aZwwR547n4ZXMj7w/t+yBl3U23GA6qml8KO2sv2VLTvoxPaYSzwz60mXu9sGYsVIBcXrQ==)
   payment:
     # 斗拱旧实现保留，默认不注册相关业务 Bean，不访问支付表。
     huifu-legacy-enabled: false
-    enabled: ${IOU_PAYMENT_ENABLED:false}
-    sys-id: ${IOU_HUIFU_SYS_ID:}
-    product-id: ${IOU_HUIFU_PRODUCT_ID:}
-    huifu-id: ${IOU_HUIFU_MERCHANT_ID:}
-    private-key: ${IOU_HUIFU_PRIVATE_KEY:}
-    public-key: ${IOU_HUIFU_PUBLIC_KEY:}
+    enabled: false
+    sys-id: ''
+    product-id: ''
+    huifu-id: ''
+    private-key: ''
+    public-key: ''
     app-id: ${iou.wechat.app-id}
     app-secret: ${iou.wechat.app-secret}
-    notify-url: ${IOU_HUIFU_NOTIFY_URL:}
-    oauth-callback-url: ${IOU_WECHAT_PAY_CALLBACK_URL:https://ajc.tingnichui.com/api/iou/payment/wechat/callback}
+    notify-url: ''
+    oauth-callback-url: https://ajc.tingnichui.com/api/iou/payment/wechat/callback
     h5-origin: ${iou.wechat.public-origin}
-    gateway-url: ${IOU_HUIFU_GATEWAY_URL:https://api.huifu.com}
+    gateway-url: https://api.huifu.com
     expire-minutes: 10
     reconcile-delay-ms: 60000
   wechat-payment:
-    enabled: ${IOU_WECHAT_PAYMENT_ENABLED:true}
+    enabled: true
     app-id: ${iou.wechat.app-id}
     app-secret: ${iou.wechat.app-secret}
     merchant-id: ENC(etk6Y43Itxc7dc6Iy91o95zDB3v9d5rq6xLQlw4nAw2KMx/zm6f/DEBRG+smPPoN)
@@ -126,8 +126,8 @@ iou:
     api-v3-key: ENC(IDDRgiJpJvEqAUK2kuXLWd1ZYRUbvC2ez3lP2v0nlH4rGCx8D3jWaAyDedCLkAXGrVmi3Cf+uYtIZaCErfLdOnVPnq8us65m7HW4oFDWdes=)
     wechatpay-public-key: ENC(6UTkFPFdYQSf93giOkX4UPq9O8lOXwguicnaekxuKKg9SAgriy6nig6zERKxOfpgIx3ULqbs1NJfD8K8EcEi+/kgodm3/Stp9pQtza1SL6acuf9dqRpzpYScuHDHbRQg/aScCUY+e5xdnLoK6WSmBDldippf5YGHLZWMoYuUzARklvz8MlBfznrfCsL1uklGkT3sz61uqWpJQHXPj94C/NgM+SUkFlc6KmduCsubZkf8hLhDpgNFvRwU0sWHO1+e1A3BdQ8n+NsCCk767kn7KF/HCSQnRBIOlNos+lpECBIn8B5Jq9vf7h2+28MKwspy+CZg288Fz3390R9PyZL76hUmt0K1unJLTUIFWAj90aVHetmAe9up7jtF5I3WtyrusYeA1ezjSxjUUu9xsTPlNAEDjHLYYrWtqyWHx9MUBcAK4udYrTV3dixapQnDAIu7tNzQJi1eEpOYe4V3QuaquZNSDWhEk7iqTup3qCIsR5Y1hDZ0kxOG6wycrQgmj/7ZWS3o2JPWGVWoS6vlaAwtTZsFZlzbIwemzCBA3CjDGJERMAWD9CEMfCT8MOkGjQah)
     wechatpay-public-key-id: ENC(n6qBqW99tGSJvTjEkw/J5KV8bzktonGdyAczYbxwLN6AVvqEwScSRsckFa2L8z7HjsZtlOlsF1h8kwyqBZRhe1/9pya8rscJCYYL6aV3FCw=)
-    notify-url: ${IOU_WECHAT_PAY_NOTIFY_URL:https://ajc.tingnichui.com/api/iou/payment/wechat/notify}
-    oauth-callback-url: ${IOU_WECHAT_PAY_CALLBACK_URL:https://ajc.tingnichui.com/api/iou/payment/wechat/callback}
+    notify-url: https://ajc.tingnichui.com/api/iou/payment/wechat/notify
+    oauth-callback-url: https://ajc.tingnichui.com/api/iou/payment/wechat/callback
     h5-origin: ${iou.wechat.public-origin}
     expire-minutes: 30
     reconcile-delay-ms: 60000
@@ -136,9 +136,9 @@ iou:
     hmac-key: ENC(gRrVazCxI4V79i3EzTa0JDBFnFFX8dQ37New/Rd+PdSm+zQRbUqj2EAYKB2B7L/CZluyZlOVbsGI5TrmaNwePV1hL3VpP/v+ixuTaCiFl7U=)
   registration:
     # 修改协议正文时同步更新版本；域名部署需将 /api 转发到后端。
-    agreement-version: ${IOU_REGISTRATION_AGREEMENT_VERSION:2026-10-13-v1}
-    user-agreement-url: ${IOU_USER_AGREEMENT_URL:https://ajc.tingnichui.com/api/iou/auth/policies/agreement}
-    privacy-policy-url: ${IOU_PRIVACY_POLICY_URL:https://ajc.tingnichui.com/api/iou/auth/policies/privacy}
+    agreement-version: 2026-10-13-v1
+    user-agreement-url: https://ajc.tingnichui.com/api/iou/auth/policies/agreement
+    privacy-policy-url: https://ajc.tingnichui.com/api/iou/auth/policies/privacy
   # 测试、生产共用；凭据使用现有 Jasypt 密钥解密。
   shumai:
     url: https://api.shumaidata.com
