@@ -26,6 +26,22 @@ class IouNativeWechatGatewayTest {
     }
     HttpHeaders signedHeaders(String raw){HttpHeaders h=new HttpHeaders();String time=String.valueOf(Instant.now().getEpochSecond());h.set("Wechatpay-Timestamp",time);h.set("Wechatpay-Nonce","synthetic-nonce");h.set("Wechatpay-Serial",options.getWechatpayPublicKeyId());h.set("Wechatpay-Signature",gateway.sign(time+"\nsynthetic-nonce\n"+raw+"\n"));return h;}
     @Test void defaultsFailClosedAndDoNotPrintCredentials(){assertTrue(options.ready());assertEquals("IouNativeWechatOptions",options.toString());options.setApiV3Key("");assertFalse(options.ready());}
+    @Test void oauthDecodesJsonReturnedAsPlainText(){
+        server.expect(requestTo("https://api.weixin.qq.com/sns/oauth2/access_token?appid=wxsynthetic&secret=synthetic-secret&code=synthetic-code&grant_type=authorization_code"))
+            .andRespond(withSuccess("{\"openid\":\"synthetic-openid\",\"access_token\":\"synthetic-token\"}",MediaType.TEXT_PLAIN));
+        assertEquals("synthetic-openid",gateway.oauthOpenid("synthetic-code"));server.verify();
+    }
+    @Test void oauthDecodesJsonReturnedAsApplicationJson(){
+        server.expect(requestTo("https://api.weixin.qq.com/sns/oauth2/access_token?appid=wxsynthetic&secret=synthetic-secret&code=synthetic-code&grant_type=authorization_code"))
+            .andRespond(withSuccess("{\"openid\":\"synthetic-openid\"}",MediaType.APPLICATION_JSON));
+        assertEquals("synthetic-openid",gateway.oauthOpenid("synthetic-code"));server.verify();
+    }
+    @Test void oauthRejectsPlainTextErrorWithoutExposingUpstreamCredentials(){
+        server.expect(requestTo("https://api.weixin.qq.com/sns/oauth2/access_token?appid=wxsynthetic&secret=synthetic-secret&code=synthetic-code&grant_type=authorization_code"))
+            .andRespond(withSuccess("{\"errcode\":40163,\"errmsg\":\"code been used synthetic-secret\"}",MediaType.TEXT_PLAIN));
+        IouBusinessException error=assertThrows(IouBusinessException.class,()->gateway.oauthOpenid("synthetic-code"));
+        assertEquals("WECHAT_AUTH_FAILED",error.getCode());assertFalse(error.getMessage().contains("synthetic-secret"));server.verify();
+    }
     @Test void prepayUsesV3CentsAndVerifiedResponse(){String raw="{\"prepay_id\":\"wxsyntheticprepay123\"}";
         server.expect(requestTo("https://api.mch.weixin.qq.com/v3/pay/transactions/jsapi")).andExpect(method(HttpMethod.POST))
             .andExpect(header("Wechatpay-Serial",options.getWechatpayPublicKeyId())).andExpect(header("Authorization",org.hamcrest.Matchers.startsWith("WECHATPAY2-SHA256-RSA2048 ")))

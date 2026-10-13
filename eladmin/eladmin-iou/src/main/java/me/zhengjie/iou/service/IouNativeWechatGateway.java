@@ -75,7 +75,9 @@ public class IouNativeWechatGateway {
     }
     public String sign(String value){try{Signature signature=Signature.getInstance("SHA256withRSA");signature.initSign(KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(IouPaymentOptions.keyBytes(options.getPrivateKey()))));signature.update(value.getBytes(StandardCharsets.UTF_8));return Base64.getEncoder().encodeToString(signature.sign());}catch(Exception ignored){throw unavailable();}}
     public String oauthOpenid(String code){
-        options.requireReady();try{Map<?,?> response=http.getForObject("https://api.weixin.qq.com/sns/oauth2/access_token?appid={appid}&secret={secret}&code={code}&grant_type=authorization_code",Map.class,options.getAppId(),options.getAppSecret(),code);
+        // WeChat can return JSON with Content-Type text/plain. Read text before decoding.
+        options.requireReady();try{String raw=http.getForObject("https://api.weixin.qq.com/sns/oauth2/access_token?appid={appid}&secret={secret}&code={code}&grant_type=authorization_code",String.class,options.getAppId(),options.getAppSecret(),code);
+            Map<?,?> response=decode(raw);
             Object id=response==null?null:response.get("openid");if(id==null||response.containsKey("errcode")||!id.toString().matches("[a-zA-Z0-9_-]{10,128}"))throw unavailable();return id.toString();
         }catch(Exception ignored){throw new IouBusinessException(502,"WECHAT_AUTH_FAILED","微信授权失败，请返回页面重新授权");}
     }
